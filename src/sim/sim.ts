@@ -574,7 +574,7 @@ function volley(S: State, A: Unit, T: Unit) {
 // 鐵砲齊射：60 m 內命中 50%、到射程邊 25%；森林與煙霧減半；每輪士氣 −3；裝填 15 秒（三段撃ち減半）
 function gunVolley(S: State, A: Unit, T: Unit) {
   const R = S.R, d = dist(A, T), RG = UT.gun.range;
-  let p = d <= 60 ? 0.5 : 0.5 - Math.min(1, (d - 60) / (RG - 60)) * 0.25;
+  const H = R.gunHit; let p = d <= 60 ? H : H - Math.min(1, (d - 60) / (RG - 60)) * H * 0.5;
   if (inForest(T.x, T.y)) p *= 0.5;
   if (T.form === 'loose') p *= 0.6; else if (T.form === 'dense') p *= 1.3;
   if (S.smokes.some(s => s.until > S.t && Math.hypot(T.x - s.x, T.y - s.y) <= 60)) p *= 0.5;
@@ -590,12 +590,12 @@ function gunVolley(S: State, A: Unit, T: Unit) {
 function cannonVolley(S: State, A: Unit, T: Unit) {
   const R = S.R, d = dist(A, T);
   if (d < R.cannonMin) return;
-  let lam = d < 150 ? 1.8 : 1.3; if (T.form === 'dense') lam *= 1.3; else if (T.form === 'loose') lam *= 0.7;
+  let lam = d < 150 ? R.cannonLam : R.cannonLam * 0.72; if (T.form === 'dense') lam *= 1.3; else if (T.form === 'loose') lam *= 0.7;
   const hits = poisson(S.rng, lam);
   fx(S, { k: 'volley', a: A.id, b: T.id, n: hits, s: 'cannon' });
   if (hits > 0) damage(S, T, hits * R.cannonDmg, A);
   mHit(S, T, R.cannonVolley, 'cannon');
-  for (const X of S.units) if (X !== T && X.side === T.side && active(X) && dist(X, T) <= 30) mHit(S, X, R.cannonTerror, 'cannon');
+  for (const X of S.units) if (X !== T && X.side === T.side && active(X) && dist(X, T) <= 30) { mHit(S, X, R.cannonTerror, 'cannon'); if (R.cannonSplash > 0 && dist(X, T) <= 20) { const h2 = poisson(S.rng, R.cannonSplash); if (h2 > 0) damage(S, X, h2 * R.cannonDmg, A); } }
   T.lastArrowT = S.t;
   A.ammo--; A.reload = R.cannonReload;
 }
