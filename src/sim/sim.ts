@@ -1,5 +1,5 @@
 // 《決戰》士氣模擬器 — 核心模擬（部隊層級，固定時間步長）
-import { UT, MAP, CLANS, STEALTH_R, ROSTER_T, ROSTER_U, STREAMS, type Side, type UType, type RosterEntry } from './data.ts';
+import { UT, MAP, CLANS, STEALTH_R, ROSTER_T, ROSTER_U, STREAMS, isRangedType, type Side, type UType, type RosterEntry } from './data.ts';
 import type { Rules } from './rules.ts';
 
 export type Formation = 'line' | 'dense' | 'loose';
@@ -141,6 +141,7 @@ export function cat(X: { x: number; y: number }, Y: Unit) {
   return d <= Math.PI / 3 ? 0 : d < 2 * Math.PI / 3 ? 1 : 2;
 }
 export const isCav = (u: Unit) => UT[u.type].cav;
+export const isRanged = (u: Unit) => isRangedType(u.type); // 弓、鐵砲、大筒
 export const onField = (u: Unit) => u.state !== 'gone';
 export const active = (u: Unit) => u.state === 'high' || u.state === 'steady' || u.state === 'waver';
 export const fighting = (u: Unit, t: number) => active(u) && !u.retreating && u.disUntil <= t;
@@ -377,7 +378,7 @@ export function useSkill(S: State, u: Unit, targetId = -1): boolean {
     case 'fujimi': addEff(S, u, 'dmg50', 10); break;
     case 'teppeki': u.form = 'dense'; updDims(u); addEff(S, u, 'noFlankMorale', 15); break;
     case 'koshu': addEff(S, u, 'koshu', 15); break;
-    case 'kyusha': addEff(S, u, 'rapid', 15); break;
+    case 'kyusha': case 'sandan': addEff(S, u, 'rapid', 15); break;
     case 'toseki': {
       const tg = S.units[targetId]; if (!tg || !onField(tg) || dist(u, tg) > 50) return false;
       const hits = poisson(S.rng, u.men * 0.35); damage(S, tg, hits * R.arrowDmg, u); mHit(S, tg, R.tosekiMorale, 'toseki'); break;
@@ -393,7 +394,7 @@ export function useSkill(S: State, u: Unit, targetId = -1): boolean {
       break;
     case 'kuruma': {
       S.kurumaAct++;
-      for (const v of S.units) if (v.side === u.side && active(v) && v.type !== 'archer' && dist(u, v) <= 100) addEff(S, v, 'kuruma', 20, S.kurumaAct);
+      for (const v of S.units) if (v.side === u.side && active(v) && !isRanged(v) && dist(u, v) <= 100) addEff(S, v, 'kuruma', 20, S.kurumaAct);
       break;
     }
     default: return false;
@@ -541,14 +542,16 @@ function meleeAttack(S: State, A: Unit, T: Unit, nShare: number) {
   if (ku) { const k = ku.act + ':' + T.id; if (!S.kurumaHit.has(k)) { S.kurumaHit.add(k); mHit(S, T, R.kurumaExtra, 'kuruma'); } }
 }
 
-function archerRange(S: State, A: Unit, T: Unit) {
-  let r = S.R.archerRange + (passiveOn(A, 'range20') ? 20 : 0);
+export function archerRange(S: State, A: Unit, T: Unit) {
+  let r = (A.type === 'archer' ? S.R.archerRange : UT[A.type].range) + (passiveOn(A, 'range20') ? 20 : 0);
   if (height(A.x, A.y) - height(T.x, T.y) >= 5) r *= 1.2;
   return r;
 }
 export function canSee(S: State, side: Side, T: Unit) { return S.vis[side][T.id] >= 2 || T.contacts.some(c => S.units[c].side === side); }
 
 function volley(S: State, A: Unit, T: Unit) {
+  if (A.type === 'gun') return gunVolley(S, A, T);
+  if (A.type === 'cannon') return cannonVolley(S, A, T);
   const d = dist(A, T);
   const RG = S.R.archerRange;
   let p = d <= 50 ? 0.35 : d <= RG ? 0.35 - (d - 50) / (RG - 50) * 0.2 : 0.15 * Math.max(0.3, 1 - (d - RG) / 60);
@@ -566,6 +569,35 @@ function volley(S: State, A: Unit, T: Unit) {
     const h2 = poisson(S.rng, A.men * p * S.R.arrowSplash); if (h2 > 0) { damage(S, X, h2 * S.R.arrowDmg, A); mHit(S, X, S.R.volley * 0.5, 'volley'); X.lastArrowT = S.t; }
   }
   A.ammo--; A.reload = has(S, A, 'rapid') ? 3 : 6;
+}
+
+// 鐵砲齊射：60 m 內命中 50%、到射程邊 25%；森林與煙霧減半；每輪士氣 −3；裝填 15 秒（三段撃ち減半）
+function gunVolley(S: State, A: Unit, T: Unit) {
+  const R = S.R, d = dist(A, T), RG = UT.gun.range;
+  let p = d <= 60 ? 0.5 : 0.5 - Math.min(1, (d - 60) / (RG - 60)) * 0.25;
+  if (inForest(T.x, T.y)) p *= 0.5;
+  if (T.form === 'loose') p *= 0.6; else if (T.form === 'dense') p *= 1.3;
+  if (S.smokes.some(s => s.until > S.t && Math.hypot(T.x - s.x, T.y - s.y) <= 60)) p *= 0.5;
+  const hits = poisson(S.rng, A.men * p);
+  fx(S, { k: 'volley', a: A.id, b: T.id, n: hits, s: 'gun' });
+  damage(S, T, hits * R.gunDmg, A);
+  mHit(S, T, R.gunVolley, 'gun');
+  if (R.arrowSplash > 0) for (const X of S.units) { if (X === T || X.side !== T.side || !active(X) || Math.hypot(X.x - T.x, X.y - T.y) > 15) continue; const h2 = poisson(S.rng, A.men * p * R.arrowSplash); if (h2 > 0) damage(S, X, h2 * R.gunDmg, A); }
+  T.lastArrowT = S.t;
+  A.ammo--; A.reload = has(S, A, 'rapid') ? R.gunReload / 2 : R.gunReload;
+}
+// 大筒：60 m 內打不到；每發 1～3 彈、每彈 10 傷害；目標士氣 −8，30 m 內其他敵隊 −3（恐懼）；裝填 40 秒
+function cannonVolley(S: State, A: Unit, T: Unit) {
+  const R = S.R, d = dist(A, T);
+  if (d < R.cannonMin) return;
+  let lam = d < 150 ? 1.8 : 1.3; if (T.form === 'dense') lam *= 1.3; else if (T.form === 'loose') lam *= 0.7;
+  const hits = poisson(S.rng, lam);
+  fx(S, { k: 'volley', a: A.id, b: T.id, n: hits, s: 'cannon' });
+  if (hits > 0) damage(S, T, hits * R.cannonDmg, A);
+  mHit(S, T, R.cannonVolley, 'cannon');
+  for (const X of S.units) if (X !== T && X.side === T.side && active(X) && dist(X, T) <= 30) mHit(S, X, R.cannonTerror, 'cannon');
+  T.lastArrowT = S.t;
+  A.ammo--; A.reload = R.cannonReload;
 }
 
 // ---------------- 移動 ----------------
@@ -823,7 +855,7 @@ export function step(S: State) {
   }
   // 遠程
   for (const A of U) {
-    if (A.type !== 'archer') continue;
+    if (!isRanged(A)) continue;
     A.reload -= dt;
     if (!active(A) || A.contacts.length || A.retreating || A.ammo <= 0 || A.reload > 0) continue;
     const T = U[A.fireTarget];
@@ -886,7 +918,7 @@ export function step(S: State) {
     }
     const sp = S.points[2];
     if (sp.owner >= 0 && sp.burnedUntil <= t) for (const u of U) {
-      if (u.type !== 'archer' || u.side !== sp.owner || !active(u) || dist(u, sp) > 60) continue;
+      if (!isRanged(u) || u.side !== sp.owner || !active(u) || dist(u, sp) > 60) continue;
       u.supplyAcc += 1; if (u.supplyAcc >= 20) { u.supplyAcc = 0; u.ammo = Math.min(u.ammoMax, u.ammo + 1); }
     }
   }

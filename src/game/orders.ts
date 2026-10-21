@@ -3,7 +3,7 @@
 // 敵軍：M5 起由 sim/ai.ts 指揮（holdAI 保留給測試）。
 // 戰場迷霧：追擊與射擊只用「玩家看得到的位置」（識別＝實際位置；察覺＝概略位置；看不到＝最後位置）。
 
-import { active, effM, dist, isCav, canSee, angDiff, type State, type Unit } from '../sim/sim.ts';
+import { active, effM, dist, isCav, canSee, angDiff, type State, type Unit, isRanged } from '../sim/sim.ts';
 
 
 export const retreatOrders = new Set<number>(); // 玩家下令撤退中的部隊
@@ -68,9 +68,9 @@ export function playerOrders(S: State) {
     if (u.retreating && effM(S, u) >= 50 && !u.contacts.length) u.retreating = false;
     let T = u.target >= 0 ? S.units[u.target] : null;
     if (T && (T.state === 'gone' || (routing(T) && !isCav(u) && dist(u, T) > 40))) {
-      u.target = -1; T = null; if (u.type !== 'archer') u.hasDest = false;
+      u.target = -1; T = null; if (!isRanged(u)) u.hasDest = false;
     }
-    if (u.type === 'archer') {
+    if (isRanged(u)) {
       const p = T ? seenPos(S, 0, T) : null;
       if (T && p) {
         const see = canSee(S, 0, T), want = see ? S.R.archerRange - 30 : 50;
@@ -105,7 +105,7 @@ export function holdAI(S: State) {
       if (effM(S, u) >= 55 && !u.contacts.length) u.retreating = false;
       else { goHome(); continue; }
     }
-    if (u.type === 'archer') {
+    if (isRanged(u)) {
       u.fireTarget = bestArrowTarget(S, u);
       if (!u.contacts.length && u.fireTarget >= 0 && !u.hasDest) { const F = S.units[u.fireTarget]; faceToward(u, F.x, F.y, 0.8 * S.dt); }
       if (!u.contacts.length) goHome();

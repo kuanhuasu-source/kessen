@@ -1,6 +1,6 @@
 // 《決戰》M5：敵軍 AI、戰場迷霧、忍者情報與忍術、武將技／鬨聲／軍略。M4：士氣與軍勢可視化、連鎖潰逃、側背扇區、地形。M3：攻擊指令、近戰、射擊、衝鋒與傷亡畫面。戰鬥核心沿用士氣模擬器（src/sim）。
 import * as THREE from 'three';
-import { newState, step, effM, updDims, height, active, dist, cat, general, passiveOn, inForest, inPaddy, inMarsh, inWater, onTrail, mulberry32, useSkill, useStrategy, battleCry, useJutsu, skillBlocked, canSee, type Unit, type Formation, type Ninja } from '../sim/sim.ts';
+import { newState, step, effM, updDims, height, active, dist, cat, general, passiveOn, inForest, inPaddy, inMarsh, inWater, onTrail, isRanged, archerRange, mulberry32, useSkill, useStrategy, battleCry, useJutsu, skillBlocked, canSee, type Unit, type Formation, type Ninja } from '../sim/sim.ts';
 import { MAP, UT } from '../sim/data.ts';
 import { setup, issueCommand, cmdOf, applyDeploy, DEFAULT_DOCTRINE, DEFAULT_DEPLOY, type Doctrine, type CmdKind, type Deploy, type Wing } from '../sim/ai.ts';
 import { ROSTER_T } from '../sim/data.ts';
@@ -65,8 +65,9 @@ function saveDoctrine() { try { localStorage.setItem(DOCTRINE_KEY, JSON.stringif
 let deploy0: Deploy = JSON.parse(JSON.stringify(DEFAULT_DEPLOY));
 let roster0: Record<string, string> = Object.fromEntries(ROSTER_T.filter(r => r.key !== 'gen').map(r => [r.key, r.cmd])); // 部隊 key → 將領名
 try {
-  const d = localStorage.getItem('kessen.deploy'); if (d) { const j = JSON.parse(d); if (Array.isArray(j.line) && j.line.length >= 3) deploy0 = { ...deploy0, ...j, wings: { ...deploy0.wings, ...(j.wings ?? {}) } }; }
-  const r = localStorage.getItem('kessen.roster'); if (r) { const j = JSON.parse(r); const names = new Set(ROSTER_T.map(x => x.cmd)); if (Object.values(j).every(v => names.has(v as string)) && new Set(Object.values(j)).size === 7) roster0 = { ...roster0, ...j }; }
+  const lineKeys = new Set(ROSTER_T.filter(r => r.type === 'spear' || r.type === 'samurai').map(r => r.key));
+  const d = localStorage.getItem('kessen.deploy'); if (d) { const j = JSON.parse(d); const keys = [...(j.line ?? []), ...(j.reserve ? [j.reserve] : [])]; if (Array.isArray(j.line) && j.line.length >= 3 && keys.every((k: string) => lineKeys.has(k)) && new Set(keys).size === lineKeys.size) deploy0 = { ...deploy0, ...j, wings: { ...deploy0.wings, ...(j.wings ?? {}) } }; }
+  const r = localStorage.getItem('kessen.roster'); if (r) { const j = JSON.parse(r); const names = new Set(ROSTER_T.map(x => x.cmd)); const keys = new Set(ROSTER_T.filter(x => x.key !== 'gen').map(x => x.key)); if (Object.keys(j).every(k => keys.has(k)) && Object.values(j).every(v => names.has(v as string)) && new Set(Object.values(j)).size === keys.size && Object.keys(j).length === keys.size) roster0 = { ...roster0, ...j }; }
 } catch { /* 無法讀取時用預設 */ }
 function saveDeploy() { try { localStorage.setItem('kessen.deploy', JSON.stringify(deploy0)); localStorage.setItem('kessen.roster', JSON.stringify(roster0)); } catch { /* 略過 */ } }
 const WING_LABEL: Record<Wing, string> = { hold: '固守', steady: '穩進', press: '猛攻' };
@@ -82,7 +83,8 @@ function depHtml(): string {
   const n = deploy0.line.length; const labels = n === 3 ? ['左翼', '中央', '右翼'] : POS_LABEL;
   const line = deploy0.line.map((k, i) => depBox('line' + i, labels[i], k)).join('');
   const res = depBox('reserve', '預備', deploy0.reserve);
-  const rest = ['archer1', 'archer2', 'cav'].map(k => depBox(k, k === 'cav' ? `騎兵（${deploy0.cavWing === 'W' ? '左' : '右'}翼）` : k === 'archer1' ? '弓・左' : '弓・右', k)).join('');
+  const rKeys = ROSTER_T.filter(r => isRanged({ type: r.type } as Unit)).map(r => r.key), cKeys = ROSTER_T.filter(r => r.type === 'cav').map(r => r.key);
+  const rest = [...rKeys.map((k, i) => depBox(k, `${TYPE_NAME[ROSTER_T.find(r => r.key === k)!.type]}・${i === 0 ? '左' : '右'}`, k)), ...cKeys.map((k, i) => depBox(k, `騎兵・${((deploy0.cavWing === 'W') === (i === 0)) ? '左' : '右'}翼`, k))].join('');
   const wings = (['L', 'C', 'R'] as const).map(w => `<div class="pick"><span>${w === 'L' ? '左翼方針' : w === 'C' ? '中央方針' : '右翼方針'}</span>${(['hold', 'steady', 'press'] as Wing[]).map(v => `<button type="button" class="chip" data-x="wing:${w}:${v}" aria-pressed="${deploy0.wings[w] === v}">${WING_LABEL[v]}</button>`).join('')}</div>`).join('');
   return `<div class="pick"><span>配置</span><div class="modes sm" style="margin:0;flex:1"><button type="button" data-x="mode:pos" aria-pressed="${depMode === 'pos'}">調位置</button><button type="button" data-x="mode:cmd" aria-pressed="${depMode === 'cmd'}">換將領</button></div></div>
     <p class="m">${depMode === 'pos' ? '點兩個格子交換位置；放一隊到「預備」就成三隊戰線，預備隊在中央後方，友軍動搖時出動。' : '點兩個格子交換將領，武將技與被動跟著將領走（急射只對弓兵有用，赤備衝鋒對騎兵最好）。'}</p>
@@ -99,7 +101,7 @@ function depAct(act: string) {
   else if (k === 'wing') { deploy0.wings[a as 'L' | 'C' | 'R'] = b as Wing; }
   else if (k === 'box') {
     const lineBox = (id: string) => id.startsWith('line') || id === 'reserve';
-    if (depMode === 'pos' && !lineBox(a)) { hud.toast('弓兵與騎兵的位置固定（騎兵可換翼）'); return; }
+    if (depMode === 'pos' && !lineBox(a)) { hud.toast('遠程與騎兵的位置固定（騎兵可換翼）'); return; }
     if (!depSel) { depSel = a; }
     else if (depSel === a) depSel = null;
     else {
@@ -108,7 +110,7 @@ function depAct(act: string) {
         if (depSel === 'reserve' || a === 'reserve') {
           const lineId = depSel === 'reserve' ? a : depSel; const lineKey = depKeyOf(lineId)!; const resKey = deploy0.reserve;
           if (resKey) { depSet(lineId, resKey); deploy0.reserve = lineKey; } // 預備與戰線互換
-          else { if (deploy0.line.length <= 3) { hud.toast('戰線至少要三隊'); depSel = null; hud.setWarExtra(depHtml()); return; } deploy0.line.splice(+lineId.slice(4), 1); deploy0.reserve = lineKey; }
+          else { if (deploy0.line.length <= 2) { hud.toast('戰線至少要兩隊'); depSel = null; hud.setWarExtra(depHtml()); return; } deploy0.line.splice(+lineId.slice(4), 1); deploy0.reserve = lineKey; }
         } else { depSet(depSel, kb); depSet(a, ka); }
       } else if (ka && kb) { const t = roster0[ka]; roster0[ka] = roster0[kb]; roster0[kb] = t; }
       depSel = null;
@@ -125,7 +127,7 @@ function applyWarCouncil() {
     const u = unitByKey(key); const r = byName(name); if (!u || !r) continue;
     const hadAmmo = u.passive === 'ammo5';
     u.cmd = r.cmd; u.skill = r.skill; u.passive = r.passive;
-    if (u.type === 'archer') { if (hadAmmo && r.passive !== 'ammo5') { u.ammo -= 5; u.ammoMax -= 5; } else if (!hadAmmo && r.passive === 'ammo5') { u.ammo += 5; u.ammoMax += 5; } }
+    if (isRanged(u)) { if (hadAmmo && r.passive !== 'ammo5') { u.ammo -= 5; u.ammoMax -= 5; } else if (!hadAmmo && r.passive === 'ammo5') { u.ammo += 5; u.ammoMax += 5; } }
     hud.refreshCard(u);
   }
   S.meta.tenkyu = S.units.find(u => u.side === 0 && u.passive === 'tenkyu'); // 典廄光環跟著武田信繁走
@@ -375,9 +377,9 @@ function orderRetreat() {
 }
 function orderAttack(T: Unit, run: boolean) {
   const us = selUnits(); if (!us.length) return;
-  for (const u of us) { u.target = T.id; u.retreating = false; retreatOrders.delete(u.id); attackRun.set(u.id, run); if (u.type === 'archer') u.fireTarget = T.id; }
+  for (const u of us) { u.target = T.id; u.retreating = false; retreatOrders.delete(u.id); attackRun.set(u.id, run); if (isRanged(u)) u.fireTarget = T.id; }
   flash(T.x, T.y, true, Math.max(T.width, T.depth) / 2 + 4);
-  const allArch = us.every(u => u.type === 'archer');
+  const allArch = us.every(u => isRanged(u));
   hud.toast((allArch ? `射擊 ${nameOf(T)}` : run ? `突擊 ${nameOf(T)}` : `攻擊 ${nameOf(T)}`) + takeOver(us));
 }
 function enemyInfo(T: Unit) { inspect = T.id; selNin = -1; }
@@ -497,11 +499,11 @@ function evalAdvice() {
   // 敵弓兵沒有長槍掩護
   const cav = own.find(u => u.type === 'cav' && !u.contacts.length);
   if (cav) {
-    const ea = seen.filter(E => E.type === 'archer' && dist(cav, E) < 260 && !seen.some(X => X.type === 'spear' && !X.contacts.length && dist(X, E) < 60)).sort((a, b) => dist(a, cav) - dist(b, cav))[0];
+    const ea = seen.filter(E => isRanged(E) && dist(cav, E) < 260 && !seen.some(X => X.type === 'spear' && !X.contacts.length && dist(X, E) < 60)).sort((a, b) => dist(a, cav) - dist(b, cav))[0];
     if (ea) push('raid:' + ea.id, `敵${nameOf(ea)}弓兵沒有長槍掩護，讓騎兵繞到背後衝鋒。`, 'raid', ea.id);
   }
   // 敵軍動搖：集中弓火
-  const wav = seen.filter(E => (E.state === 'waver' || intelOf(E) >= 3 && effM(S, E) < 50) && own.some(u => u.type === 'archer' && active(u) && dist(u, E) <= S.R.archerRange)).sort((a, b) => effM(S, a) - effM(S, b))[0];
+  const wav = seen.filter(E => (E.state === 'waver' || intelOf(E) >= 3 && effM(S, E) < 50) && own.some(u => isRanged(u) && active(u) && dist(u, E) <= archerRange(S, u, E))).sort((a, b) => effM(S, a) - effM(S, b))[0];
   if (wav) push('focus:' + wav.id, `敵${nameOf(wav)}士氣動搖，弓兵集火就能逼它潰走。`, 'focus', wav.id);
   // 敵主將孤立
   const eg = general(S, 1);
@@ -854,12 +856,12 @@ function terrainNotes(u: Unit): string[] {
   if (t) n.push(t);
   else if (inMarsh(S, u.x, u.y)) n.push('陷入泥濘（移動 −60%）');
   if (inForest(u.x, u.y) && UT[u.type].cav && !t.startsWith('森林：受箭')) n.push('受箭減半');
-  if (height(u.x, u.y) >= 8) n.push('小丘高處：視野 +50%' + (u.type === 'archer' ? '、射程 +20%' : ''));
+  if (height(u.x, u.y) >= 8) n.push('小丘高處：視野 +50%' + (isRanged(u) ? '、射程 +20%' : ''));
   return n;
 }
 const MORALE_SRC: Record<string, string> = {
   losses: '傷亡', flank: '側擊', rear: '背襲', chargeHit: '騎兵衝鋒', volley: '箭雨', friendRout: '友軍潰走', cmdDeath: '武將討死',
-  kuruma: '車懸', akazonae: '赤備', kesshiEnd: '決死結束', rumor: '流言', toseki: '投石', enemyCry: '敵方鬨聲', _drain: '持續消耗', water: '半渡而擊',
+  kuruma: '車懸', akazonae: '赤備', kesshiEnd: '決死結束', rumor: '流言', toseki: '投石', enemyCry: '敵方鬨聲', _drain: '持續消耗', water: '半渡而擊', gun: '鐵砲', cannon: '大筒',
 };
 const ARMY_SRC: Record<string, string> = {
   unitRout: '部隊潰走', unitShatter: '部隊潰滅', bannerFall: '馬印倒下', enemyRout: '敵軍潰走', genDeath: '大將討死', viceDeath: '武將討死',
@@ -973,7 +975,7 @@ function infoHtml(u: Unit): string {
     rows.push(`<div class="row"><span>重整</span><span>${left > 0 ? `脫離戰鬥 ${Math.ceil(left)} 秒後，` : ''}士氣回到 ${R.rallyAt} 即可重整${R.rallyCap > 0 ? `（重整後士氣上限 ${R.rallyCap}，再潰走即潰滅）` : ''}${g.cmdAlive && active(g) && dist(u, g) <= R.genAuraR ? '（大將在側，等待減半）' : ''}</span></div>`);
   } else if (u.state === 'shattered') rows.push(`<div class="row"><span>　</span><span class="neg">已第 ${u.routCount} 次潰逃，無法再重整</span></div>`);
   else if (u.retreating) rows.push(`<div class="row"><span>　</span><span>重整後不會主動出擊；下達指令或士氣回到 50 即恢復</span></div>`);
-  if (u.type === 'archer') rows.push(`<div class="row"><span>箭矢</span><span class="${u.ammo <= 3 ? 'warn' : ''}">${u.ammo}／${u.ammoMax} 輪</span></div>`);
+  if (isRanged(u)) rows.push(`<div class="row"><span>${u.type === 'archer' ? '箭矢' : u.type === 'gun' ? '彈藥' : '砲彈'}</span><span class="${u.ammo <= 2 ? 'warn' : ''}">${u.ammo}／${u.ammoMax} 輪${u.reload > 0 && u.type !== 'archer' ? `・裝填 ${Math.ceil(u.reload)} 秒` : ''}${u.type === 'cannon' ? `・${S.R.cannonMin} m 內打不到` : ''}</span></div>`);
   if (u.cmd) rows.push(`<div class="row"><span>武將</span><span>${u.cmd}${u.cmdAlive ? '' : '（討死）'}${u.advisor ? `・軍師 ${u.advisor}${u.advAlive ? '' : '（討死）'}` : ''}</span></div>`);
   return `<div class="hd">${kanBox('k', KANJI[u.type], side === 0 ? 'var(--takeda)' : 'var(--uesugi)', portraitOf(u.cmd))}
     <div><div class="nm">${WATCH ? `${SIDE_NAME[side]}・` : side === 1 ? '敵・' : ''}${u.cmd || '援軍'}隊</div><div class="sub">${TYPE_NAME[u.type]}${form}・${lvl >= 3 ? `${u.men}／${u.men0} 人` : `約 ${Math.max(5, Math.round(u.men / 5) * 5)} 人`}${side !== viewSide() && !(WATCH && visMode === 'all') ? (lvl >= 3 ? '・<span class="pos">洞悉</span>' : '・識別') : ''}</div></div>
@@ -1210,7 +1212,7 @@ function afterStep() {
   for (const e of S.fx!) {
     const A = S.units[e.a], T = e.b !== undefined ? S.units[e.b] : null;
     switch (e.k) {
-      case 'volley': if (T) volleyFx(A, T); break;
+      case 'volley': if (T) { if (e.s === 'gun') { for (let i = 0; i < 6; i++) dust.burst(A!.x + (Math.random() - 0.5) * A!.width, A!.y + Math.cos(A!.f) * 2, 1, 2.2); if (intelOf(A!) >= 2 || mine(A!)) floatText(A!, '放銃', 'hit'); } else if (e.s === 'cannon') { dust.burst(A!.x, A!.y, 14, 6); floatText(T, `轟 ${e.n ? `−${e.n * S.R.cannonDmg / 8 | 0}` : ''}`, 'bad'); } else volleyFx(A, T); } break;
       case 'charge': if (T) {
         const d = dist(A, T) || 1, dx = (T.x - A.x) / d, dy = (T.y - A.y) / d;
         const ix = T.x - dx * Math.min(d * 0.5, T.depth / 2 + 2), iy = T.y - dy * Math.min(d * 0.5, T.depth / 2 + 2);

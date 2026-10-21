@@ -7,8 +7,8 @@ import { toWorld, yawOf, rng } from './coords.ts';
 import { kamonImg, artVersion } from './art.ts';
 
 const VISUAL_SCALE = 1.4; // 士兵略為放大，遠景時比較看得清楚
-export const KANJI: Record<UType, string> = { spear: '槍', archer: '弓', samurai: '侍', cav: '騎', general: '將' };
-export const TYPE_NAME: Record<UType, string> = { spear: '長槍足輕', archer: '弓足輕', samurai: '武士刀武士', cav: '騎馬武士', general: '大將旗本' };
+export const KANJI: Record<UType, string> = { spear: '槍', archer: '弓', samurai: '侍', cav: '騎', general: '將', gun: '銃', cannon: '砲' };
+export const TYPE_NAME: Record<UType, string> = { spear: '長槍足輕', archer: '弓足輕', samurai: '武士刀武士', cav: '騎馬武士', general: '大將旗本', gun: '鐵砲足輕', cannon: '大筒' };
 const SIDE_COLOR = ['#b8322a', '#2f4f86'];
 const SIDE_DARK = ['#3a2622', '#22293a'];
 
@@ -38,6 +38,8 @@ function infantry(type: UType, side: number) {
   }
   if (type === 'spear') parts.push(colored(new THREE.CylinderGeometry(0.025, 0.025, 4.2, 4).rotateX(0.18).translate(0.3, 2.0, 0.2), '#6b4b32'));
   if (type === 'archer') parts.push(colored(new THREE.TorusGeometry(0.7, 0.025, 3, 10, Math.PI).rotateZ(Math.PI / 2).translate(-0.3, 1.2, 0.1), '#4a3020'));
+  if (type === 'gun') parts.push(colored(new THREE.BoxGeometry(0.07, 0.07, 1.5).rotateX(-0.25).translate(0.3, 1.25, 0.3), '#4a3a2a'), colored(new THREE.BoxGeometry(0.1, 0.12, 0.5).rotateX(-0.25).translate(0.3, 1.13, -0.1), '#6b4b32')); // 火繩銃
+  if (type === 'cannon') parts.push(colored(new THREE.CylinderGeometry(0.12, 0.12, 1.2, 5).rotateX(1.2).translate(0.32, 1.0, 0.2), '#6b4b32')); // 砲手拿火把／推桿
   return mergeGeometries(parts)!;
 }
 
@@ -133,9 +135,18 @@ export class UnitView {
   // 靜止偵測：全隊站定且沒有接戰、沒有待處理的陣亡時，跳過士兵矩陣更新（手機 CPU 的大頭）
   private settled = false; private lastCx = NaN; private lastCy = NaN; private lastF = NaN; private lastAlive = -1;
   galloping = false;
+  cannonMesh: THREE.Mesh | null = null; // 大筒本體（砲手之外另畫一座砲）
 
   constructor(scene: THREE.Scene, u: Unit) {
     this.u = u;
+    if (u.type === 'cannon') {
+      const barrel = colored(new THREE.CylinderGeometry(0.28, 0.4, 3.6, 8).rotateX(Math.PI / 2 - 0.12).translate(0, 1.3, 0.6), '#3a3a3a');
+      const carriage = colored(new THREE.BoxGeometry(1.2, 0.5, 2.6).translate(0, 0.75, -0.2), '#5a4330');
+      const wheelL = colored(new THREE.CylinderGeometry(0.75, 0.75, 0.18, 10).rotateZ(Math.PI / 2).translate(-0.8, 0.75, 0), '#4a3828');
+      const wheelR = colored(new THREE.CylinderGeometry(0.75, 0.75, 0.18, 10).rotateZ(Math.PI / 2).translate(0.8, 0.75, 0), '#4a3828');
+      this.cannonMesh = new THREE.Mesh(mergeGeometries([barrel, carriage, wheelL, wheelR])!, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+      this.cannonMesh.scale.setScalar(VISUAL_SCALE); scene.add(this.cannonMesh);
+    }
     const geo = UT[u.type].cav ? mounted(u.type, u.side) : infantry(u.type, u.side);
     this.geo = geo; this.alive = u.men;
     this.mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), u.men0);
@@ -325,6 +336,7 @@ export class UnitView {
   // 旗號、選取框、目的地旗（士兵矩陣之外的部分）
   private afterSoldiers(dt: number, c: { x: number; y: number }, intel: number, ghost: { x: number; y: number } | undefined, fled: boolean, routing: boolean, morale: number) {
     const u = this.u, n = this.alive;
+    if (this.cannonMesh) { const w = toWorld(c.x, c.y); this.cannonMesh.position.copy(w); this.cannonMesh.rotation.y = yawOf(u.f); this.cannonMesh.visible = this.mesh.visible && u.state !== 'gone'; }
     // 部隊旗號
     const top = toWorld(c.x, c.y);
     this.banner.position.set(top.x, top.y + (UT[u.type].cav ? 9 : 7.5), top.z);

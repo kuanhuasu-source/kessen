@@ -5,6 +5,7 @@ export const SKILL: Record<string, { name: string; desc: string; target?: number
   teppeki: { name: '鐵壁', desc: '立即改為槍衾；15 秒內被側擊不扣士氣' },
   koshu: { name: '固守', desc: '15 秒防禦 +5，正面衝鋒無效' },
   kyusha: { name: '急射', desc: '15 秒內裝填時間減半' },
+  sandan: { name: '三段撃ち', desc: '鐵砲 15 秒內裝填時間減半' },
   toseki: { name: '投石', desc: '對 50 m 內最近的敵軍追加一輪攻擊，目標士氣 −5', target: 50 },
   assei: { name: '壓制', desc: '目標 15 秒移動 −30%', target: 170 },
   kesshi: { name: '決死', desc: '20 秒攻擊 +30%，結束時士氣 −10' },

@@ -67,6 +67,8 @@ export const V1 = {
   nokizaruIntel: 'mid' as 'low' | 'mid' | 'high',
   kogaVision: 1.3,       // 甲賀眾視野倍率
   streams: 'none' as 'none' | 'two' | 'east', // 戰場溪流（data.ts STREAMS）
+  gunDmg: 5, gunReload: 15, gunVolley: -3,          // 鐵砲：每發命中傷害、裝填秒數、每輪士氣打擊（60 m 內命中 50%，射程邊 25%）
+  cannonDmg: 10, cannonReload: 40, cannonVolley: -8, cannonTerror: -3, cannonMin: 60, // 大筒：每發 1～3 彈各 10 傷害、士氣 −8、30 m 內其他敵隊 −3、60 m 內無法射擊
   reliefNoise: 1,        // 地形緩坡起伏倍率（0 = 平地）
   reliefHills: true,     // 是否有寺廟小丘以外的高地
   arrowSplash: 0,        // 箭雨濺射：目標 15 m 內的其他敵隊也吃到這個比例的命中（密集隊形吃箭）

@@ -20,7 +20,6 @@ const STRATS: Record<string, { d: Partial<Doctrine>; dep?: Partial<Deploy> }> = 
   envelop:  { d: { formation: 'crane', attack: 'volley', cav: 'raid' }, dep: { wings: { L: 'press', C: 'hold', R: 'press' } } },
   hold:     { d: { formation: 'line', attack: 'hold', cav: 'guard', retreatAt: 35 } },
   skirmish: { d: { formation: 'line', attack: 'waver', cav: 'free', retreatAt: 45 } },
-  reserve:  { d: { formation: 'line', attack: 'volley', cav: 'raid' }, dep: { line: ['spear1', 'samurai1', 'spear2'], reserve: 'samurai2' } },
 };
 const N = Number(process.argv[2] || 40), rv = process.argv[3] || 'base';
 const only = process.argv[4]?.split(',');

@@ -1,6 +1,6 @@
 // 《決戰》士氣模擬器 — 遊戲資料（依 MVP 設計文件）
 export type Side = 0 | 1; // 0 = 武田（南方，y 小），1 = 上杉（北方，y 大）
-export type UType = 'spear' | 'archer' | 'samurai' | 'cav' | 'general';
+export type UType = 'spear' | 'archer' | 'samurai' | 'cav' | 'general' | 'gun' | 'cannon';
 
 export const UT: Record<UType, {
   men: number; hp: number; atk: number; def: number; charge: number;
@@ -11,6 +11,8 @@ export const UT: Record<UType, {
   samurai: { men: 40, hp: 12, atk: 12, def: 10, charge: 6,  speed: 4.0, range: 0,   morale: 60, cav: false, ammo: 0 },
   cav:     { men: 20, hp: 20, atk: 10, def: 8,  charge: 25, speed: 9.0, range: 0,   morale: 60, cav: true,  ammo: 0 },
   general: { men: 12, hp: 25, atk: 12, def: 12, charge: 20, speed: 8.0, range: 0,   morale: 80, cav: true,  ammo: 0 },
+  gun:     { men: 30, hp: 8,  atk: 3,  def: 3,  charge: 1,  speed: 3.3, range: 120, morale: 35, cav: false, ammo: 10 }, // 鐵砲足輕：射程短、命中高、裝填慢、聲勢嚇人
+  cannon:  { men: 8,  hp: 8,  atk: 1,  def: 2,  charge: 0,  speed: 1.6, range: 260, morale: 40, cav: false, ammo: 6 },  // 大筒：射程遠、每發打倒數人、恐懼效果，但極慢、近戰無力
 };
 
 export type RosterEntry = {
@@ -18,38 +20,39 @@ export type RosterEntry = {
   advisor?: string; strategy?: string; advisorPassive?: string;
 };
 
-// 武田軍（side 0）
+// 武田軍（side 0）：甲州流，以騎兵與火器見長。長槍 2、武士 1、騎兵 2、弓 1、鐵砲 1（282 人）
 export const ROSTER_T: RosterEntry[] = [
   { key: 'gen', type: 'general', cmd: '武田信玄', skill: 'furin', passive: 'hitowa',
     advisor: '山本勘助', strategy: 'kitsutsuki', advisorPassive: 'heiho' },
   { key: 'spear1', type: 'spear', cmd: '馬場信春', skill: 'fujimi', passive: 'def2' },
+  { key: 'samurai1', type: 'samurai', cmd: '武田信繁', skill: 'kesshi', passive: 'tenkyu' },
   { key: 'spear2', type: 'spear', cmd: '內藤昌豐', skill: 'teppeki', passive: 'cap12' },
   { key: 'archer1', type: 'archer', cmd: '高坂昌信', skill: 'kyusha', passive: 'nigedanjo' },
-  { key: 'archer2', type: 'archer', cmd: '小山田信茂', skill: 'toseki', passive: 'ammo5' },
-  { key: 'samurai1', type: 'samurai', cmd: '武田信繁', skill: 'kesshi', passive: 'tenkyu' },
-  { key: 'samurai2', type: 'samurai', cmd: '飯富虎昌', skill: 'shinsa', passive: 'atk2' },
+  { key: 'gun1', type: 'gun', cmd: '小山田信茂', skill: 'sandan', passive: 'ammo5' },
   { key: 'cav', type: 'cav', cmd: '山縣昌景', skill: 'akazonae', passive: 'flank20' },
+  { key: 'cav2', type: 'cav', cmd: '飯富虎昌', skill: 'shinsa', passive: 'atk2' },
 ];
 
-// 上杉軍（side 1）
+// 上杉軍（side 1）：越後精兵，武士多、有大筒。長槍 2、武士 2、騎兵 1、弓 1、大筒 1（280 人）
 export const ROSTER_U: RosterEntry[] = [
   { key: 'gen', type: 'general', cmd: '上杉謙信', skill: 'kuruma', passive: 'bishamon',
     advisor: '宇佐美定滿', strategy: 'kanpa', advisorPassive: 'echigo' },
   { key: 'spear1', type: 'spear', cmd: '直江景綱', skill: 'koshu', passive: 'def2' },
-  { key: 'spear2', type: 'spear', cmd: '中條藤資', skill: 'kobu', passive: 'cap12' },
-  { key: 'archer1', type: 'archer', cmd: '色部勝長', skill: 'kyusha', passive: 'ammo5' },
-  { key: 'archer2', type: 'archer', cmd: '安田長秀', skill: 'assei', passive: 'range20' },
   { key: 'samurai1', type: 'samurai', cmd: '柿崎景家', skill: 'senpo', passive: 'charge4' },
   { key: 'samurai2', type: 'samurai', cmd: '甘粕景持', skill: 'shingari', passive: 'retreat30' },
+  { key: 'spear2', type: 'spear', cmd: '中條藤資', skill: 'kobu', passive: 'cap12' },
+  { key: 'archer1', type: 'archer', cmd: '色部勝長', skill: 'kyusha', passive: 'ammo5' },
+  { key: 'cannon1', type: 'cannon', cmd: '安田長秀', skill: 'assei', passive: 'range20' },
   { key: 'cav', type: 'cav', cmd: '齋藤朝信', skill: 'shoki', passive: 'atk2' },
 ];
+export const isRangedType = (t: UType) => UT[t].range > 0;
 
 export const SKILL_KIND: Record<string, 'def' | 'atk' | 'morale' | 'charge' | 'ranged' | 'main'> = {
   fujimi: 'def', teppeki: 'def', koshu: 'def',
   kesshi: 'atk', senpo: 'atk', shinsa: 'atk',
   kobu: 'morale', shingari: 'morale',
   akazonae: 'charge', shoki: 'charge',
-  kyusha: 'ranged', toseki: 'ranged', assei: 'ranged',
+  kyusha: 'ranged', toseki: 'ranged', assei: 'ranged', sandan: 'ranged',
   furin: 'main', kuruma: 'main',
 };
 

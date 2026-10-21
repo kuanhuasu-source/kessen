@@ -65,8 +65,8 @@ function one(seed: number, verbose: boolean) {
 
 const n = Number(process.argv[2] || 20);
 const rs = Array.from({ length: n }, (_, i) => one(1000 + i, i === 0));
-const types = ['spear', 'samurai', 'archer', 'cav', 'general'];
-const cnt: Record<string, number> = { spear: 4, samurai: 4, archer: 4, cav: 2, general: 2 };
+const types = ['spear', 'samurai', 'archer', 'gun', 'cannon', 'cav', 'general'];
+const cnt: Record<string, number> = { spear: 4, samurai: 3, archer: 2, gun: 1, cannon: 1, cav: 3, general: 2 };
 console.log(`局數 ${n}，平均時長 ${(rs.reduce((a, r) => a + r.t, 0) / n).toFixed(0)}s，首戰 ${(rs.reduce((a, r) => a + r.first, 0) / n).toFixed(0)}s，騎兵退衝循環 ${(rs.reduce((a, r) => a + r.cavCycles, 0) / n).toFixed(1)} 次/局，戰線 y 散開 ${(rs.reduce((a, r) => a + r.spread, 0) / n).toFixed(0)} m`);
 console.log('每隊每局：目標切換 / 目的地大跳 / 回頭 / 落單秒 / 移動秒 / 待機秒');
 for (const k of types) {

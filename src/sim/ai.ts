@@ -1,7 +1,7 @@
 // 《決戰》士氣模擬器 — 雙方共用的 AI（普通難度：反應延遲約 1 秒，受戰爭迷霧限制）
-import { UT, MAP, CLANS, STEALTH_R, ROSTER_T, ROSTER_U, STREAMS, type Side, type UType } from './data.ts';
+import { UT, MAP, CLANS, STEALTH_R, ROSTER_T, ROSTER_U, STREAMS, isRangedType, type Side, type UType } from './data.ts';
 import {
-  type State, type Unit, type Ninja, makeUnit, dist, cat, clamp, active, fighting, has, isCav, effM, general,
+  type State, type Unit, type Ninja, makeUnit, dist, cat, clamp, active, fighting, has, isCav, isRanged, effM, general, archerRange,
   useSkill, useStrategy, battleCry, useJutsu, inForest, inPaddy, updDims, onField,
 } from './sim.ts';
 
@@ -9,7 +9,7 @@ type SideAI = { posture: 'advance' | 'hold' | 'attack'; attackT: number; aggr: n
   nextTac: number; nextStrat: number; nextNin: number; giseiDone: boolean;
   // 戰線式指揮（aiLine）：錨點（己方座標）、階段、各隊槽位
   ax: number; ayl: number; phase: 'form' | 'approach' | 'volley' | 'advance' | 'melee'; volleyUntil: number;
-  ids: Record<string, number>; slots: Map<number, { x: number; yl: number }>; reserveId: number };
+  ids: Record<string, number>; slots: Map<number, { x: number; yl: number }>; reserveId: number; rangedKeys: string[]; cavKeys: string[] };
 
 // 大名模式：玩家在軍議定的方針（S.meta.doctrine[side]）、親自接管的部隊（S.meta.manual）、戰中的大名令（S.meta.cmd[side]）
 export type Formation = 'line' | 'crane' | 'fish' | 'blob' | 'oblique' | 'stack'; // blob＝全軍擠成一團（量測用）、oblique＝斜線陣（右翼前伸、左翼後縮）
@@ -18,7 +18,7 @@ export const DEFAULT_DOCTRINE: Doctrine = { attack: 'auto', cav: 'auto', retreat
 // 配置（S.meta.deployment[side]；S.meta.deploy 是佈陣紀錄字串，別撞名）：戰線順序（由左到右的部隊 key，3 或 4 隊）、預備隊、騎兵翼、各翼方針
 export type Wing = 'hold' | 'steady' | 'press';
 export type Deploy = { line: string[]; reserve: string | null; cavWing: 'W' | 'E'; wings: { L: Wing; C: Wing; R: Wing } };
-export const DEFAULT_DEPLOY: Deploy = { line: ['spear1', 'samurai1', 'samurai2', 'spear2'], reserve: null, cavWing: 'W', wings: { L: 'steady', C: 'steady', R: 'steady' } };
+export const DEFAULT_DEPLOY: Deploy = { line: ['spear1', 'samurai1', 'spear2'], reserve: null, cavWing: 'W', wings: { L: 'steady', C: 'steady', R: 'steady' } }; // 武田：三隊戰線（長槍 2、武士 1）
 export function deployOf(S: State, s: Side): Deploy | null { return ((S.meta.deployment as (Deploy | null)[] | undefined)?.[s]) ?? null; }
 // 開戰前套用配置：改戰線順序、預備隊、騎兵翼，並把部隊擺到對應的起始位置（只能在 t = 0 呼叫）
 export function applyDeploy(S: State, s: Side, d: Deploy) {
@@ -29,7 +29,7 @@ export function applyDeploy(S: State, s: Side, d: Deploy) {
   d.line.forEach((k, i) => { const u = byKey(k); if (!u) return; A.ids['line' + i] = u.id; u.role = 'line'; u.x = xs[i]; u.y = Yl(s, 110); u.holdX = u.x; u.holdY = u.y; });
   if (d.reserve) { const u = byKey(d.reserve); if (u) { A.reserveId = u.id; u.role = 'reserve'; u.x = 500; u.y = Yl(s, 75); } } else A.reserveId = -1;
   A.cavWing = d.cavWing;
-  const cav = byKey('cav'); if (cav) { cav.x = d.cavWing === 'W' ? 300 : 700; cav.role = d.cavWing === 'E' ? 'cap:supply' : 'cav'; }
+  A.cavKeys.forEach((k, i) => { const cav = byKey(k); if (!cav) return; const wingW = (d.cavWing === 'W') === (i === 0); cav.x = wingW ? 300 : 700; cav.y = Yl(s, 90); cav.role = wingW ? 'cav' : 'cap:supply'; });
   for (const u of S.units) if (u.side === s) { u.hasDest = false; u.destX = u.x; u.destY = u.y; }
 }
 export type CmdKind = 'charge' | 'regroup' | 'relieve' | 'focus' | 'commit' | 'raid';
@@ -67,7 +67,8 @@ export function issueCommand(S: State, s: Side, kind: CmdKind, target?: number):
 
 const Yl = (side: Side, y: number) => side === 0 ? y : 700 - y; // 己方座標 → 絕對座標
 const fwd = (side: Side) => side === 0 ? 1 : -1;
-const Q: Record<UType, number> = { spear: 1, archer: 0.8, samurai: 2.2, cav: 2.2, general: 2.5 };
+const Q: Record<UType, number> = { spear: 1, archer: 0.8, samurai: 2.2, cav: 2.2, general: 2.5, gun: 1.0, cannon: 1.6 };
+const CLS = (t: UType): 'spear' | 'archer' | 'samurai' | 'cav' | 'general' => isRangedType(t) ? 'archer' : t as 'spear' | 'samurai' | 'cav' | 'general'; // 目標偏好表：遠程兵種視同弓兵
 
 // ---------------- 佈陣 ----------------
 export function setup(S: State) {
@@ -75,18 +76,23 @@ export function setup(S: State) {
   const ai: [SideAI, SideAI] = [0, 1].map(() => ({
     posture: 'advance', attackT: S.R.aiLine ? 30 + rng() * 80 : 45 + rng() * 105, aggr: 0.8 + rng() * 0.4, cavWing: rng() < 0.5 ? 'W' : 'E', // 戰線式：成線推進本身就要 1 分鐘，發起攻勢的時間提早
     nextTac: 0, nextStrat: 0, nextNin: 0, giseiDone: false,
-    ax: 500, ayl: 110, phase: 'form', volleyUntil: 0, ids: {}, slots: new Map(), reserveId: -1,
+    ax: 500, ayl: 110, phase: 'form', volleyUntil: 0, ids: {}, slots: new Map(), reserveId: -1, rangedKeys: [], cavKeys: [],
   } as SideAI)) as [SideAI, SideAI];
   S.meta.ai = ai;
+  // 戰線順序來自名單（長槍與武士）；四成機率把前兩隊對調
   const order: string[][] = [];
-  for (const s of [0, 1] as Side[]) order[s] = rng() < 0.6 ? ['spear1', 'samurai1', 'samurai2', 'spear2'] : ['samurai1', 'spear1', 'spear2', 'samurai2'];
+  for (const s of [0, 1] as Side[]) {
+    const line = (s === 0 ? ROSTER_T : ROSTER_U).filter(r => r.type === 'spear' || r.type === 'samurai').map(r => r.key);
+    if (rng() < 0.4 && line.length >= 2) { const t = line[0]; line[0] = line[1]; line[1] = t; }
+    order[s] = line;
+  }
   // 情報力高的一方可以看到對方佈陣再應對（雙方都高時各自隨機）
   const intel = (s: Side) => !S.R.ninjaOn || !S.R.ninjaSides[s] ? 'low' : S.clan[s] === 'nokizaru' ? S.R.nokizaruIntel : CLANS[S.clan[s]].intel;
   for (const s of [0, 1] as Side[]) {
     const e = (1 - s) as Side;
     if (S.R.counterDeploy && S.R.fogOn && !S.R.fogV2 && intel(s) === 'high' && intel(e) !== 'high') { // v2：開戰看不到敵方佈陣，不做針對性佈陣
       ai[s].cavWing = ai[e].cavWing === 'W' ? 'E' : 'W';
-      order[s] = ai[e].cavWing === 'W' ? ['spear2', 'samurai1', 'samurai2', 'spear1'] : ['spear1', 'samurai1', 'samurai2', 'spear2'];
+      if (ai[e].cavWing === 'W') order[s].reverse();
     }
   }
   S.meta.deploy = order.map((o, s) => o.join(',') + '|' + ai[s].cavWing);
@@ -95,12 +101,15 @@ export function setup(S: State) {
     const R = (k: string) => roster.find(r => r.key === k)!;
     const mk = (k: string, x: number, yl: number) => makeUnit(S, s, R(k), R(k).type, k, x, Yl(s, yl));
     mk('gen', 500, 40).role = 'general';
-    const xs = [410, 470, 530, 590];
+    const n = order[s].length; const xs = n === 3 ? [440, 500, 560] : [410, 470, 530, 590];
     order[s].forEach((k, i) => { const u = mk(k, xs[i], 110); u.role = 'line'; });
-    mk('archer1', 445, 70).role = 'archer'; mk('archer2', 555, 70).role = 'archer';
-    mk('cav', ai[s].cavWing === 'W' ? 300 : 700, 90).role = 'cav';
+    const ranged = roster.filter(r => isRangedType(r.type)).map(r => r.key);
+    ranged.forEach((k, i) => { mk(k, 500 + (i - (ranged.length - 1) / 2) * 110, 70).role = 'archer'; });
+    const cavs = roster.filter(r => r.type === 'cav').map(r => r.key);
+    cavs.forEach((k, i) => { const wingW = (ai[s].cavWing === 'W') === (i === 0); mk(k, wingW ? 300 : 700, 90).role = 'cav'; });
     for (const u of S.units) if (u.side === s) ai[s].ids[u.key] = u.id;
-    ai[s].ids.line0 = ai[s].ids[order[s][0]]; ai[s].ids.line1 = ai[s].ids[order[s][1]]; ai[s].ids.line2 = ai[s].ids[order[s][2]]; ai[s].ids.line3 = ai[s].ids[order[s][3]];
+    order[s].forEach((k, i) => { ai[s].ids['line' + i] = ai[s].ids[k]; });
+    ai[s].rangedKeys = ranged; ai[s].cavKeys = cavs;
   }
   S.meta.tenkyu = S.units.find(u => u.side === 0 && u.key === 'samurai1');
   // 據點分派：西端的長槍取村落、另一隊長槍取寺廟；騎兵先取自己那一翼的據點
@@ -108,7 +117,7 @@ export function setup(S: State) {
     const mine = S.units.filter(u => u.side === s);
     const spears = mine.filter(u => u.type === 'spear').sort((a, b) => a.x - b.x);
     if (!S.R.aiLine) { spears[0].role = 'cap:village'; spears[1].role = 'cap:temple'; } // 戰線式：據點由戰線推進順路佔領
-    const cav = mine.find(u => u.type === 'cav')!; cav.role = ai[s].cavWing === 'E' ? 'cap:supply' : 'cav';
+    for (const cav of mine.filter(u => u.type === 'cav')) cav.role = cav.x > 500 ? 'cap:supply' : 'cav'; // 東翼的騎兵先去佔補給點
     // 伏兵：知道己方半場的伏兵處時，有一半機率派西側的武士埋伏
     const myAmb = S.secrets.ambush.map((a, i) => ({ a, i })).filter(o => S.known[s].has('a' + o.i) && (s === 0 ? o.a.y < 350 : o.a.y > 350));
     if (S.R.fogOn && myAmb.length && rng() < 0.5) {
@@ -184,7 +193,7 @@ function strategic(S: State, s: Side, A: SideAI) {
   const D = doctrineOf(S, s);
   if (D.attack !== 'auto') {
     const mine = S.units.filter(u => u.side === s && active(u));
-    const arch = mine.filter(u => u.type === 'archer');
+    const arch = mine.filter(u => isRanged(u));
     const spent = !arch.length || arch.every(u => u.ammo <= u.ammoMax * 0.5);
     const enemyWaver = known(S, s).some(E => vis(S, s, E) >= 2 && (E.state === 'waver' || E.state === 'rout'));
     const late = t > 300 && S.army[s] <= enemyArmy;
@@ -207,14 +216,15 @@ function targetScore(S: State, u: Unit, E: Unit): number {
   const pt = pType(S, s, E);
   const routing = E.state === 'rout' || E.state === 'shattered';
   let sc = -d / 100;
-  const pref: Record<UType, Record<UType, number>> = {
+  type C5 = 'spear' | 'archer' | 'samurai' | 'cav' | 'general';
+  const pref: Record<C5, Record<C5, number>> = {
     samurai: { archer: 1.0, spear: 0.6, samurai: 0.3, cav: -0.5, general: 0.5 },
     spear: { cav: 1.2, general: 1.0, samurai: 0.2, spear: 0.3, archer: 0.6 },
     cav: { archer: 1.5, general: 0.8, samurai: 0.3, spear: -1.5, cav: 0.5 },
     general: { archer: 0.8, spear: 0.2, samurai: 0.4, cav: 0.4, general: 0.6 },
     archer: { archer: 0.5, spear: 0.5, samurai: 0.5, cav: 0.5, general: 0.5 },
   };
-  sc += pref[u.type][pt];
+  sc += pref[CLS(u.type)][CLS(pt)];
   const m = pMorale(S, s, E);
   sc += (100 - m) / 50;                                   // 優先攻擊士氣最低的敵軍
   if (E.contacts.some(c => S.units[c].side === s)) sc += 1.0; // 圍攻已接戰的敵人
@@ -323,7 +333,7 @@ function tactical(S: State, s: Side, A: SideAI) {
       const cv = nearestEnemyCav(S, u, S.R.aiSteady && u.form === 'dense' ? 170 : 120);
       if (cv && !has(S, u, 'noFlankMorale')) { if (u.form !== 'dense') { u.form = 'dense'; updDims(u); } }
       else if (u.form !== 'line' && !has(S, u, 'noFlankMorale')) { u.form = 'line'; updDims(u); }
-    } else if (u.type === 'archer') {
+    } else if (isRanged(u) && u.type !== 'cannon') {
       const want = t - u.lastArrowT < 8 ? 'loose' : 'line';
       if (u.form !== want) { u.form = want; updDims(u); }
     }
@@ -337,7 +347,7 @@ function tactical(S: State, s: Side, A: SideAI) {
       // 一般部隊：附近 60 m 內有被發現的忍者時順手追殺
     }
     switch (u.type) {
-      case 'archer': archerAI(S, u, A); break;
+      case 'archer': case 'gun': case 'cannon': archerAI(S, u, A); break;
       case 'cav': cavAI(S, u, A); break;
       case 'general': generalAI(S, u, A); break;
       default: infantryAI(S, u, A); break;
@@ -412,7 +422,7 @@ function infantryAI(S: State, u: Unit, A: SideAI) {
   if (u.type === 'spear') {
     const cv = nearestEnemyCav(S, u, 220);
     if (cv) {
-      const prot = S.units.filter(v => v.side === s && active(v) && (v.type === 'archer' || v.type === 'general'))
+      const prot = S.units.filter(v => v.side === s && active(v) && (isRanged(v) || v.type === 'general'))
         .sort((a, b) => dist(a, cv) - dist(b, cv))[0];
       if (prot && dist(prot, cv) < 200) { moveTo(u, (prot.x * 2 + cv.x) / 3, (prot.y * 2 + cv.y) / 3, true); return; }
     }
@@ -444,10 +454,11 @@ function archerAI(S: State, u: Unit, A: SideAI) {
   if (u.contacts.length) return;
   // 選擇射擊目標
   let best: Unit | null = null, bs = -1e9;
-  const rng = S.R.archerRange + (u.passive === 'range20' && u.cmdAlive ? 20 : 0);
+  const rng = archerRange(S, u, u);
+  const minR = u.type === 'cannon' ? S.R.cannonMin : 0;
   for (const E of known(S, s)) {
     if (vis(S, s, E) < 2 || E.state === 'gone') continue;
-    const d = dist(u, E); if (d > rng * 1.2) continue;
+    const d = dist(u, E); if (d > rng * 1.2 || d < minR) continue;
     let sc = -d / 150 + (100 - pMorale(S, s, E)) / 60;
     if (E.contacts.some(c => S.units[c].side === s)) sc += 0.6;
     if (inForest(E.x, E.y)) sc -= 0.8;
@@ -471,7 +482,7 @@ function archerAI(S: State, u: Unit, A: SideAI) {
   if (steady && u.aiLockK === 'cv') u.aiLockK = '';
   if (S.R.aiLine) { const sl = A.slots.get(u.id); if (sl) { moveTo(u, sl.x, Yl(s, sl.yl)); return; } } // 戰線式：守在線後的槽位，不追目標
   if (A.posture === 'advance' || A.posture === 'hold') {
-    moveTo(u, u.key === 'archer1' ? 455 : 545, Yl(s, 245)); return;
+    moveTo(u, 500 + (A.rangedKeys.indexOf(u.key) - (A.rangedKeys.length - 1) / 2) * 90, Yl(s, 245)); return;
   }
   // 攻勢：跟在主戰線後方，保持射距（止抖：80～160 m 不動、每 3 秒才重新決定）
   if (steady && u.hasDest && t - u.aiLockT < 3) return;
@@ -485,7 +496,7 @@ function archerAI(S: State, u: Unit, A: SideAI) {
     else u.hasDest = false;
   } else {
     const c = lineCentroid(S, s);
-    if (c) moveTo(u, c.x + (u.key === 'archer1' ? -30 : 30), c.y - fwd(s) * 60);
+    if (c) moveTo(u, c.x + (A.rangedKeys.indexOf(u.key) - (A.rangedKeys.length - 1) / 2) * 60, c.y - fwd(s) * 60);
   }
   void t;
 }
@@ -523,7 +534,7 @@ function cavAI(S: State, u: Unit, A: SideAI) {
     const Dc = doctrineOf(S, s).cav;
     const sl = A.slots.get(u.id)!;
     const E = pickTarget(S, u);
-    const threat = E && dist(u, E) < 130 && (isCav(E) || E.type === 'archer' || E.state === 'rout');
+    const threat = E && dist(u, E) < 130 && (isCav(E) || isRanged(E) || E.state === 'rout');
     const rc = cmdOf(S, s, 'raid');
     if (rc && rc.target !== undefined) { const T = S.units[rc.target]; if (T && active(T) && T.state !== 'gone') { cavAttack(S, u, T); return; } }
     const loose = cmdOf(S, s, 'charge') || (Dc === 'free' && A.posture === 'attack') || (Dc !== 'guard' && A.phase === 'melee');
@@ -532,7 +543,7 @@ function cavAI(S: State, u: Unit, A: SideAI) {
   }
   if (A.posture === 'advance') { moveTo(u, A.cavWing === 'W' ? 320 : 690, Yl(s, 200)); return; }
   const E = pickTarget(S, u);
-  if (!E || (A.posture === 'hold' && dist(u, E) > 160 && !(E.type === 'archer' || E.state === 'rout'))) {
+  if (!E || (A.posture === 'hold' && dist(u, E) > 160 && !(isRanged(E) || E.state === 'rout'))) {
     moveTo(u, A.cavWing === 'W' ? 320 : 690, Yl(s, 230)); return;
   }
   cavAttack(S, u, E);
@@ -655,7 +666,7 @@ function lineAI(S: State, s: Side, A: SideAI) {
   const lineUnits = mine.filter(u => u.role === 'line');
   const engaged = lineUnits.filter(u => u.contacts.length);
   // 敵線估計（己方座標）：看得到的敵軍（弓兵除外）中最靠近我方的第 2 隊，避免被單一突出的部隊誤導
-  const ens = S.units.filter(E => E.side === e && onField(E) && active(E) && vis(S, s, E) >= 1 && pType(S, s, E) !== 'archer')
+  const ens = S.units.filter(E => E.side === e && onField(E) && active(E) && vis(S, s, E) >= 1 && !isRangedType(pType(S, s, E)))
     .map(E => { const p = seenPos(S, s, E); return { yl: Yl(s, p.y), x: p.x }; }).filter(o => Math.abs(o.x - A.ax) < 320).sort((a, b) => a.yl - b.yl);
   const frontYl = ens.length ? ens[Math.min(1, ens.length - 1)].yl : 999;
   const HL = R.aiHoldYl;
@@ -666,8 +677,8 @@ function lineAI(S: State, s: Side, A: SideAI) {
     A.ayl += clamp(m - A.ayl, -3, 3); targetYl = A.ayl;
   } else if (A.posture === 'attack') {
     const gap = frontYl - A.ayl;
-    const archersReady = mine.some(u => u.type === 'archer' && u.ammo >= 3);
-    const shooting = mine.some(u => u.type === 'archer' && t - u.lastArrowT < 12); // 對峙時已經在射就不必再停下齊射
+    const archersReady = mine.some(u => isRanged(u) && u.ammo >= 3);
+    const shooting = mine.some(u => isRanged(u) && t - u.lastArrowT < 12); // 對峙時已經在射就不必再停下齊射
     if (A.phase !== 'volley' && A.phase !== 'advance' && gap <= R.archerRange - 30 && archersReady && !shooting && doctrineOf(S, s).attack !== 'now' && !cmdOf(S, s, 'charge')) { A.phase = 'volley'; A.volleyUntil = t + 20; }
     else if (A.phase !== 'volley' && A.phase !== 'advance' && gap <= R.archerRange - 30 && shooting) A.phase = 'advance';
     if (A.phase === 'volley') { if (t < A.volleyUntil && gap > 60) targetYl = A.ayl; else A.phase = 'advance'; }
@@ -703,15 +714,17 @@ function lineAI(S: State, s: Side, A: SideAI) {
     A.slots.set(id, { x: A.ax + offs[i][0] * squeeze, yl: A.ayl + offs[i][1] + wy });
   }
   if (A.reserveId >= 0) A.slots.set(A.reserveId, { x: A.ax, yl: A.ayl - 35 });
-  if (formationOf(S, s) === 'stack') { for (const k of ['archer1', 'archer2', 'gen', 'cav']) A.slots.set(A.ids[k], { x: A.ax, yl: A.ayl }); }
-  else if (formationOf(S, s) === 'blob') { // 一團：弓兵、主將、騎兵都擠在裡面
-    A.slots.set(A.ids.archer1, { x: A.ax - 14, yl: A.ayl - 20 }); A.slots.set(A.ids.archer2, { x: A.ax + 14, yl: A.ayl - 20 });
+  const fm = formationOf(S, s); const nr = A.rangedKeys.length;
+  if (fm === 'stack') { for (const k of [...A.rangedKeys, 'gen', ...A.cavKeys]) A.slots.set(A.ids[k], { x: A.ax, yl: A.ayl }); }
+  else if (fm === 'blob') { // 一團：遠程、主將、騎兵都擠在裡面
+    A.rangedKeys.forEach((k, i) => A.slots.set(A.ids[k], { x: A.ax + (i - (nr - 1) / 2) * 28, yl: A.ayl - 20 }));
     A.slots.set(A.ids.gen, { x: A.ax, yl: A.ayl - 12 });
-    A.slots.set(A.ids.cav, { x: A.ax + 32, yl: A.ayl - 6 });
+    A.cavKeys.forEach((k, i) => A.slots.set(A.ids[k], { x: A.ax + (i ? -32 : 32), yl: A.ayl - 6 }));
   } else {
-    A.slots.set(A.ids.archer1, { x: A.ax - 45, yl: A.ayl - 45 }); A.slots.set(A.ids.archer2, { x: A.ax + 45, yl: A.ayl - 45 });
+    // 遠程在線後 45 m（大筒再退 15 m，打得遠也怕被衝）
+    A.rangedKeys.forEach((k, i) => { const u = S.units[A.ids[k]]; A.slots.set(A.ids[k], { x: A.ax + (i - (nr - 1) / 2) * 90, yl: A.ayl - (u?.type === 'cannon' ? 60 : 45) }); });
     A.slots.set(A.ids.gen, { x: A.ax, yl: A.ayl - R.aiGenBack });
-    A.slots.set(A.ids.cav, { x: clamp(A.ax + (A.cavWing === 'W' ? -230 : 230), 60, 940), yl: A.ayl - 10 });
+    A.cavKeys.forEach((k, i) => { const wingW = (A.cavWing === 'W') === (i === 0); A.slots.set(A.ids[k], { x: clamp(A.ax + (wingW ? -230 : 230), 60, 940), yl: A.ayl - 10 }); });
   }
   // 據點：守勢時派槽位 170 m 內、附近沒有敵軍的步兵去佔；敵軍握有全部據點時不計姿態，派最近的部隊去搶回
   const busy = mine.some(u => u.role.startsWith('cap:') && u.type !== 'cav');
@@ -822,7 +835,7 @@ function skillAI(S: State, u: Unit, eff: number) {
       if (tg && active(tg) && !engaged) { const d = dist(u, tg); if (d > 40 && d < 160 && pType(S, s, tg) !== 'spear') useSkill(S, u); }
       break;
     }
-    case 'kyusha': { const tg = S.units[u.fireTarget]; if (tg && u.ammo >= 5 && dist(u, tg) < 160 && !engaged) useSkill(S, u); break; }
+    case 'kyusha': case 'sandan': { const tg = S.units[u.fireTarget]; if (tg && u.ammo >= 4 && dist(u, tg) < archerRange(S, u, tg) * 0.9 && !engaged) useSkill(S, u); break; }
     case 'toseki': {
       const tg = S.units.filter(x => x.side !== s && active(x) && dist(u, x) <= 50 && vis(S, s, x) >= 2).sort((a, b) => dist(a, u) - dist(b, u))[0];
       if (tg) useSkill(S, u, tg.id); break;
@@ -838,7 +851,7 @@ function skillAI(S: State, u: Unit, eff: number) {
       if (n >= 3) useSkill(S, u); break;
     }
     case 'kuruma': {
-      const near = S.units.filter(v => v.side === s && active(v) && v.type !== 'archer' && dist(u, v) <= 100 && (v.contacts.length || known(S, s).some(x => active(x) && dist(v, x) < 70))).length;
+      const near = S.units.filter(v => v.side === s && active(v) && !isRanged(v) && dist(u, v) <= 100 && (v.contacts.length || known(S, s).some(x => active(x) && dist(v, x) < 70))).length;
       if (near >= 3) useSkill(S, u); break;
     }
   }
