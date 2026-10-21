@@ -33,7 +33,7 @@
 | M6 | 完成 | 勝負與結算、據點呈現、撤退指令、Gemini 2D 美術 |
 | AI 動作優化 | 完成 | 止抖（aiSteady）＋戰線式指揮（aiLine） |
 | 大名模式 | 完成 | 第一階段：軍議方針、AI 帶兵、軍師建議卡、大名令、接管單隊。第二階段：配置（戰線順序、預備隊、騎兵翼、各翼方針）與將領互換。傳令延遲未做（使用者決定） |
-| M7 | 未開始 | 手機效能（真機 fps 尚未回報）、平衡、跨瀏覽器 |
+| M7 | 進行中 | 效能：士兵矩陣更新優化、每幀分段計時（`__kessen.prof`）；跨瀏覽器：es2020／Safari 14 目標、roundRect polyfill；平衡：矩陣與消融量測完成，調整待提案。真機 fps 仍待回報 |
 
 ## 4. 架構與檔案地圖
 
@@ -57,6 +57,7 @@ TypeScript + Vite + Three.js，單一 HTML 輸出（約 1.66 MB，其中美術�
 | `tools/pack-art.mjs` | 原圖 → WebP（肖像 256、插畫 1280、圖示 96、家紋 128 去背、紋理 512）；會自動裁掉生成圖的紙邊 |
 | `tools/pace.ts` | AI 對 AI 批次量測節奏（設定 base／steady／line／crane／craneT） |
 | `tools/ai-diag.ts` | AI 行為診斷：目標切換、回頭、落單、戰線散開 |
+| `tools/matrix.ts`、`tools/ablate.ts` | 忍者眾對戰矩陣與逆轉率；單一組合的機制消融 |
 | `tools/shot.mjs` | 無頭瀏覽器截圖（playwright-core ＋ 工作區預裝的 Chromium） |
 
 ## 5. 建置、測試、發布

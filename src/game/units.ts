@@ -129,6 +129,9 @@ export class UnitView {
   private lastBanner = '';
   private m = new THREE.Matrix4(); private q = new THREE.Quaternion(); private sc = new THREE.Vector3(VISUAL_SCALE, VISUAL_SCALE, VISUAL_SCALE);
   private up = new THREE.Vector3(0, 1, 0); private ax = new THREE.Vector3(1, 0, 0); private q2 = new THREE.Quaternion();
+  private p = new THREE.Vector3(); // 共用的位置向量，避免每名士兵每幀配置
+  // 靜止偵測：全隊站定且沒有接戰、沒有待處理的陣亡時，跳過士兵矩陣更新（手機 CPU 的大頭）
+  private settled = false; private lastCx = NaN; private lastCy = NaN; private lastF = NaN; private lastAlive = -1;
   galloping = false;
 
   constructor(scene: THREE.Scene, u: Unit) {
@@ -177,12 +180,13 @@ export class UnitView {
     return { x: this.prevX + (u.x - this.prevX) * alpha, y: this.prevY + (u.y - this.prevY) * alpha };
   }
 
-  snap() { for (let i = 0; i < this.alive; i++) { const s = this.slot(i, this.u.x, this.u.y, this.u.f); this.px[i] = s.x; this.py[i] = s.y; this.hd[i] = this.u.f; } }
+  snap() { this.settled = false; for (let i = 0; i < this.alive; i++) { const s = this.slot(i, this.u.x, this.u.y, this.u.f); this.px[i] = s.x; this.py[i] = s.y; this.hd[i] = this.u.f; } }
   // 模擬扣掉 n 人；在模擬時間 at 時倒下（箭矢要等落地）
   kill(n: number, at: number, x: number, y: number, arrow: boolean) { if (n > 0) this.deaths.push({ at, n, x, y, arrow }); }
   pending() { let k = 0; for (const d of this.deaths) k += d.n; return k; }
   // 衝鋒撞擊：把 (x,y) 附近的士兵往 (dx,dy) 方向推開
   push(x: number, y: number, dx: number, dy: number, r: number) {
+    this.settled = false;
     for (let i = 0; i < this.alive; i++) {
       const d = Math.hypot(this.px[i] - x, this.py[i] - y); if (d > r) continue;
       const k = (1 - d / r) * (2 + Math.random() * 2.5);
@@ -269,12 +273,26 @@ export class UnitView {
       const a = Math.atan2(fdy, fdx) - u.f;
       frontAt = Math.abs(Math.cos(a)) * u.depth / 2 + Math.abs(Math.sin(a)) * u.width / 2 - 2.2 * u.sp;
     }
+    // 靜止跳過：中心、朝向、人數都沒變，沒接戰、沒陣亡待處理、散開度已穩定 → 畫面不會變，略過整個迴圈
+    const still = !E && !this.deaths.length && Math.abs(c.x - this.lastCx) < 1e-3 && Math.abs(c.y - this.lastCy) < 1e-3 && u.f === this.lastF && n === this.lastAlive
+      && Math.abs(this.scatter - (routing ? 3.2 : 1)) < 1e-3 && Math.abs(this.ox - tx) < 1e-3 && Math.abs(this.oy - ty) < 1e-3;
+    if (still && this.settled) { this.afterSoldiers(dt, c, intel, ghost, fled, routing, morale); return; }
+    this.lastCx = c.x; this.lastCy = c.y; this.lastF = u.f; this.lastAlive = n;
+    let anyMotion = false;
+    // 陣型槽位（展開 slot()，避免每名士兵配置物件）
+    const files = Math.max(1, Math.ceil(u.men / u.ranks));
+    const cfx = Math.cos(u.f), cfy = Math.sin(u.f), crx = Math.sin(u.f), cry = -Math.cos(u.f);
+    const rankSp = u.sp * (cav ? 1.6 : 1), sps = u.sp * this.scatter;
     for (let i = 0; i < n; i++) {
-      const s = this.slot(i, c.x, c.y, u.f);
-      let dx = s.x - this.px[i], dy = s.y - this.py[i];
+      const file = i % files, rank = Math.floor(i / files);
+      const lat = (file - (files - 1) / 2) * u.sp + this.jx[i] * sps;
+      const back = (rank - (u.ranks - 1) / 2) * rankSp + this.jy[i] * sps;
+      const sx = c.x + crx * lat - cfx * back, sy = c.y + cry * lat - cfy * back;
+      let dx = sx - this.px[i], dy = sy - this.py[i];
       const d = Math.hypot(dx, dy);
       let moving = false;
       if (d > 0.05) {
+        anyMotion = true;
         const step = Math.min(d, vmax * dt * (d > 4 ? 1.6 : 1));
         this.px[i] += dx / d * step; this.py[i] += dy / d * step;
         moving = d > 0.4;
@@ -288,12 +306,12 @@ export class UnitView {
         const k = Math.max(0, Math.sin(this.ph[i]));
         lx = fdx * k * 0.5; ly = fdy * k * 0.5; lh = k * 0.08;
         this.hd[i] = turn(this.hd[i], Math.atan2(fdy, fdx), 4 * dt);
-      } else if (!moving) this.hd[i] = turn(this.hd[i], u.f, 3 * dt);
+      } else if (!moving) { const before = this.hd[i]; this.hd[i] = turn(this.hd[i], u.f, 3 * dt); if (this.hd[i] !== before) anyMotion = true; }
       const gallop = cav && moving && running && !front;
       if (moving && !front) this.ph[i] += dt * (gallop ? 17 : running ? 14 : 9);
       const bob = gallop ? Math.abs(Math.sin(this.ph[i])) * 0.32 : moving ? Math.abs(Math.sin(this.ph[i])) * 0.12 : lh;
       const x = this.px[i] + lx, y = this.py[i] + ly;
-      const p = toWorld(x, y, height(x, y) + bob);
+      const p = this.p.set(x - 500, height(x, y) + bob, 350 - y);
       this.q.setFromAxisAngle(this.up, yawOf(this.hd[i]));
       if (gallop) { this.q2.setFromAxisAngle(this.ax, Math.sin(this.ph[i]) * 0.14); this.q.multiply(this.q2); } // 奔馳時前後起伏
       this.m.compose(p, this.q, this.sc);
@@ -301,6 +319,12 @@ export class UnitView {
     }
     this.mesh.count = n;
     this.mesh.instanceMatrix.needsUpdate = true;
+    this.settled = still && !anyMotion;
+    this.afterSoldiers(dt, c, intel, ghost, fled, routing, morale);
+  }
+  // 旗號、選取框、目的地旗（士兵矩陣之外的部分）
+  private afterSoldiers(dt: number, c: { x: number; y: number }, intel: number, ghost: { x: number; y: number } | undefined, fled: boolean, routing: boolean, morale: number) {
+    const u = this.u, n = this.alive;
     // 部隊旗號
     const top = toWorld(c.x, c.y);
     this.banner.position.set(top.x, top.y + (UT[u.type].cav ? 9 : 7.5), top.z);

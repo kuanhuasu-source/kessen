@@ -18,6 +18,13 @@ import { toWorld, toSim } from './coords.ts';
 
 // ---------------- 場景 ----------------
 const canvas = document.getElementById('view') as HTMLCanvasElement;
+// 舊版 Safari（iOS 15 以前）沒有 canvas roundRect：補一個
+if (typeof CanvasRenderingContext2D !== 'undefined' && !('roundRect' in CanvasRenderingContext2D.prototype)) {
+  (CanvasRenderingContext2D.prototype as unknown as { roundRect: (x: number, y: number, w: number, h: number, r: number) => void }).roundRect = function (this: CanvasRenderingContext2D, x, y, w, h, r) {
+    const rr = Math.min(r, w / 2, h / 2);
+    this.moveTo(x + rr, y); this.arcTo(x + w, y, x + w, y + h, rr); this.arcTo(x + w, y + h, x, y + h, rr); this.arcTo(x, y + h, x, y, rr); this.arcTo(x, y, x + w, y, rr); this.closePath();
+  };
+}
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: window.devicePixelRatio < 2, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 const scene = new THREE.Scene();
@@ -1283,6 +1290,8 @@ function autoQuality(fps: number) {
     hud.toast(`畫質自動降低（解析度 ${PR_STEPS[prIdx]}×）`);
   }
 }
+// 每幀分段耗時累計（ms）：sim 模擬步、units 士兵矩陣、fx 特效與其他、hud 介面、render 送出繪製；window.__kessen.prof 可讀取
+const prof = { frames: 0, sim: 0, units: 0, fx: 0, hud: 0, render: 0 };
 function frame(now: number) {
   const t0 = performance.now();
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
@@ -1299,6 +1308,7 @@ function frame(now: number) {
     }
   }
   const alpha = paused ? 1 : Math.min(1, acc / SIM_DT);
+  prof.sim += performance.now() - t0; let tp = performance.now();
   keyboardCamera(dt);
   rig.apply(dt);
   const gdt = paused ? 0 : dt * speed;
@@ -1306,6 +1316,7 @@ function frame(now: number) {
     const lvl = intelOf(v.u);
     v.update(gdt, alpha, effM(S, v.u), S.t, S.units, sink, lvl, lvl === 1 ? seenPos(S, viewSide(), v.u) ?? undefined : undefined);
   }
+  prof.units += performance.now() - tp; tp = performance.now();
   for (const v of ninViews) {
     v.selected = v.n.id === selNin; v.showRange = jutsu !== null && v.n.side === 0;
     v.update(gdt, alpha, visMode === 'all' || v.n.side === visMode || v.n.detUntil > S.t, S.t);
@@ -1373,9 +1384,12 @@ function frame(now: number) {
     marker.scale.setScalar(markerR ? markerR * (1.4 - k * 0.4) : 2 + k * 6); (marker.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 1 - k);
     if (k >= 1) marker.visible = false;
   }
+  prof.fx += performance.now() - tp; tp = performance.now();
   const fs = selUnits().filter(u => u.type !== 'cav' && u.type !== 'general');
   hud.update(S.t, S.army, S.units.filter(mine), selected, u => effM(S, u), paused, speed, fs.length ? FORM_NAME[fs[0].form].slice(0, 1) : '', boxMode, manualSet);
+  prof.hud += performance.now() - tp; tp = performance.now();
   renderer.render(scene, rig.cam);
+  prof.render += performance.now() - tp; prof.frames++;
   cpu += performance.now() - t0; fpsN++; fpsT += dt;
   if (fpsT >= 0.5) {
     const fps = fpsN / fpsT;
@@ -1390,7 +1404,7 @@ requestAnimationFrame(frame);
 
 // 測試用：無頭瀏覽器腳本透過這個介面下指令、快轉
 (window as unknown as Record<string, unknown>).__kessen = {
-  S, rig, focus, setSel, orderAttack, orderMove, selectNinja, startJutsu, trySkill, screenOf, intelOf, doCmd, evalAdvice, manualSet, DAIMYO,
+  S, rig, focus, setSel, orderAttack, orderMove, selectNinja, startJutsu, trySkill, screenOf, intelOf, doCmd, evalAdvice, manualSet, DAIMYO, prof,
   advance(sec: number) {
     for (let i = 0; i < Math.round(sec / SIM_DT); i++) {
       for (const v of views) { v.prevX = v.u.x; v.prevY = v.u.y; }

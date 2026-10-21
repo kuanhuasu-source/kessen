@@ -45,6 +45,8 @@ npm run build:single # 單一 HTML（dist/kessen-m1.html）
 ## 工具
 - `node tools/pace.ts <局數> [設定名…]`：AI 對 AI 批次量測節奏（時長、潰走、重整、AI 撤退、主將與騎兵接戰、移動速度、箭矢命中）；設定含 `base`（legacy AI）、`steady`、`line`、`crane`、`craneT`
 - `node tools/ai-diag.ts <局數> [steady|line|crane]`：AI 行為診斷（目標切換、目的地大跳、回頭、落單、待機、戰線散開）
+- `node tools/matrix.ts <每組局數>`：忍者眾 3×3 對戰矩陣、各家總勝率、逆轉率、每步模擬耗時
+- `node tools/ablate.ts <局數> <武田忍者眾> <上杉忍者眾> [變體…]`：逐項關掉機制看勝率變化（noKiri、noSahou、noRumor、noFog、noNinja…）
 - `node tools/gen-art.mjs [--only id,id] [--group 名稱] [--force]`：Gemini 生成美術。自己電腦：`.env` 寫 `GEMINI_API_KEY=...`；雲端工作區（代理注入金鑰）：`NODE_USE_ENV_PROXY=1 GEMINI_API_KEY=proxy node tools/gen-art.mjs`
 - `node tools/pack-art.mjs`：把 `art/out` 縮成遊戲用 WebP（`art/web`），幾秒完成；之後 `npm run build:single`
 - `node tools/shot.mjs <網址或檔案#參數> <png> [寬] [高] [縮放] [腳本.mjs]`：無頭瀏覽器截圖（用工作區預裝的 Chromium）
