@@ -67,6 +67,13 @@ export const V1 = {
   nokizaruIntel: 'mid' as 'low' | 'mid' | 'high',
   kogaVision: 1.3,       // 甲賀眾視野倍率
   streams: 'none' as 'none' | 'two' | 'east', // 戰場溪流（data.ts STREAMS）
+  fogV2: false,          // 情報 v2：視野縮小、識別要觀察一段時間、情報會隨時間退化、開戰不知敵方佈陣
+  v2UnitSpot: 130, v2UnitSee: 80,    // 部隊：察覺／識別距離（m）
+  v2NinSpot: 190, v2NinSee: 110,     // 忍者：察覺／識別距離
+  v2IdentT: 8, v2InsightT: 12,       // 識別要在識別距離內累積觀察秒數；洞悉要忍者在 insightR 內累積秒數
+  v2Decay2: 40, v2Decay1: 120,       // 沒再看到後，識別退為察覺、察覺退為未知的秒數
+  v2SecretR: 15,                     // 地形秘密要靠到多近才發現（原本 +50）
+  v2NinSpeed: 4.5,                   // v2 忍者移動速度（m/s；v1 為 6，潛行要慢）
   waterSpeed: 0.5, fordSpeed: 0.8, // 涉水／渡口的移動倍率
   waterArrow: 1.3,       // 水中受箭命中倍率
   waterHit: -10,         // 半渡而擊：攻擊水中（非渡口）的部隊，接觸時額外士氣打擊

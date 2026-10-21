@@ -102,6 +102,13 @@ body { font-family: var(--ui); -webkit-user-select: none; user-select: none; -we
 #hud.daimyo .rail .c { display: grid !important; }
 #hud .rail #b-cmd { font-family: var(--display); font-size: 16px; }
 #hud .rail #b-cmd.on { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+/* 情報讀數 */
+.intel { position: fixed; left: var(--edge-l); top: var(--edge-t); display: flex; gap: 6px; align-items: center; padding: 3px 9px; height: 26px; border-radius: 999px;
+  background: var(--ink-a); border: 1px solid var(--line); font-size: 11px; white-space: nowrap; }
+.intel b { font-family: var(--display); font-weight: 700; color: var(--gold); }
+.intel .seg { display: flex; gap: 2px; }
+.intel .seg i { width: 5px; height: 10px; border-radius: 1px; background: rgba(239,230,210,0.15); }
+.intel .seg i.l1 { background: #8b8574; } .intel .seg i.l2 { background: #c9b458; } .intel .seg i.l3 { background: #c9a227; }
 /* 大名模式：親自接管的旗牌、軍師建議卡、軍議 */
 .card.manual::after { content: '手'; position: absolute; left: -4px; top: -6px; font-size: 9px; line-height: 14px; padding: 0 4px; border-radius: 7px; background: var(--gold); color: var(--ink); font-weight: 700; }
 .advice { position: fixed; left: 50%; transform: translateX(-50%); top: calc(var(--edge-t) + 62px); max-width: min(420px, 70vw); pointer-events: auto; z-index: 5;
@@ -281,6 +288,8 @@ export class Hud {
     el.hidden = false;
   }
   hideAdvice() { this.root.querySelector<HTMLElement>('.advice')!.hidden = true; }
+  // 情報讀數（情報 v2）：察覺／識別／洞悉的敵軍數與已知地形秘密
+  setIntel(html: string | null) { const el = this.root.querySelector<HTMLElement>('.intel')!; if (html === null) { el.hidden = true; return; } el.hidden = false; if (el.innerHTML !== html) el.innerHTML = html; }
   private formBtn!: HTMLButtonElement; private haltBtn!: HTMLButtonElement; private boxBtn!: HTMLButtonElement;
 
   constructor(units: Unit[], cb: HudCallbacks) {
@@ -312,6 +321,7 @@ export class Hud {
       <div class="info" hidden aria-live="polite"></div>
       <div class="prompt" hidden><span></span><button type="button" id="b-cancel">取消</button></div>
       <div class="advice" hidden></div>
+      <div class="intel" hidden></div>
       <div class="setup" hidden></div>
       <div class="feed" aria-live="polite"></div>
       <div class="hold" hidden></div>

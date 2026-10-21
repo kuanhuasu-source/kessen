@@ -42,6 +42,7 @@ const AI_VARIANTS: Record<string, Partial<typeof GAME_RULES>> = {
   legacy: { aiSteady: false, aiLine: false }, steady: { aiSteady: true, aiLine: false }, line: { aiSteady: true, aiLine: true },
   crane: { aiSteady: true, aiLine: true, aiFormation: 'crane' }, craneT: { aiSteady: true, aiLine: true, aiFormation: 'craneT' },
   two: { streams: 'two', aiHoldYl: 250 }, east: { streams: 'east' }, // 溪流地形試用
+  fog2: { fogV2: true }, fog1: { fogV2: false },
 };
 const aiVar = params.get('ai');
 const S = newState(aiVar && AI_VARIANTS[aiVar] ? { ...GAME_RULES, ...AI_VARIANTS[aiVar], name: `game+${aiVar}` } : GAME_RULES, seed, [clan0, clan1]);
@@ -1379,6 +1380,15 @@ function frame(now: number) {
     hud.setInfo(cmdOpen ? cmdHtml() : selNin >= 0 ? ninjaHtml(S.ninjas[selNin]) : infoU && infoU.id !== infoClosed ? infoHtml(infoU) : inspectPoint >= 0 ? pointHtml(inspectPoint) : null);
     if (DAIMYO && !paused) evalAdvice();
     if (S.holdAll[0] > 0) hud.setHold(0, 60 - S.holdAll[0]); else if (S.holdAll[1] > 0) hud.setHold(1, 60 - S.holdAll[1]); else hud.setHold(-1, 0);
+    // 情報讀數與未探索遮罩（情報 v2）
+    if (S.R.fogV2 && S.R.fogOn && !(WATCH && visMode === 'all')) {
+      const vs = viewSide(); const en = S.units.filter(u => u.side !== vs && u.state !== 'gone' && !u.reinf);
+      const lv = en.map(u => S.vis[vs][u.id]);
+      const segs = lv.sort((a, b) => b - a).map(l => `<i class="${l ? 'l' + l : ''}"></i>`).join('');
+      const nSec = S.secrets.marsh.length + S.secrets.ambush.length + 1;
+      hud.setIntel(`<b>情報</b><span class="seg">${segs}</span><span>察覺 ${lv.filter(l => l >= 1).length}・識別 ${lv.filter(l => l >= 2).length}・洞悉 ${lv.filter(l => l >= 3).length}／${en.length}</span><span>秘密 ${S.known[vs].size}／${nSec}</span>`);
+      terrain.shroud(S.explored[vs]);
+    } else { hud.setIntel(null); terrain.shroud(null); }
     const us = selUnits().filter(u => u.skill);
     hud.setSkillReady(us.length > 0, us.some(u => skillState(u).ok));
     for (const u of S.units) if (u.side === 0) hud.setCardReady(u.id, skillState(u).ok);

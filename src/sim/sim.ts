@@ -31,7 +31,7 @@ export type Unit = {
   filesWanted: number; finalF: number;
 };
 
-export type Ninja = { id: number; side: Side; x: number; y: number; alive: boolean; detUntil: number;
+export type Ninja = { wp?: number; id: number; side: Side; x: number; y: number; alive: boolean; detUntil: number;
   immuneUntil: number; nearT: number; role: string; tx: number; ty: number; fleeUntil: number; manual?: boolean };
 
 export type Point = { id: string; x: number; y: number; owner: -1 | Side; prog: number; progSide: -1 | Side;
@@ -66,6 +66,10 @@ export type State = {
   vis: [Uint8Array, Uint8Array]; noisy: [Map<number, { x: number; y: number; t: number }>, Map<number, { x: number; y: number; t: number }>];
   secrets: { marsh: { x: number; y: number }[]; trailX: number; ambush: { x: number; y: number }[] };
   known: [Set<string>, Set<string>];
+  // 情報 v2：觀察累積、記憶（最後看到的等級與位置）、已探索格（40×28 格，每格 25 m）
+  obs: [Map<number, { t2: number; t3: number }>, Map<number, { t2: number; t3: number }>];
+  mem: [Map<number, { lvl: number; t: number; x: number; y: number }>, Map<number, { lvl: number; t: number; x: number; y: number }>];
+  explored: [Uint8Array, Uint8Array];
   smokes: { side: Side; x: number; y: number; until: number }[];
   monomi: { side: Side; x: number; y: number; until: number }[];
   phantoms: [{ x: number; y: number; until: number }[], { x: number; y: number; t?: number; until: number }[]];
@@ -193,6 +197,7 @@ export function newState(R: Rules, seed: number, clan: [string, string]): State 
     vis: [new Uint8Array(64), new Uint8Array(64)], noisy: [new Map(), new Map()],
     secrets: { marsh: pick(MAP.marshCand, 2), trailX: MAP.trailCand[Math.floor(rng() * 2)], ambush: pick(MAP.ambushCand, 2) },
     known: [new Set(), new Set()], smokes: [], monomi: [], phantoms: [[], []], pairs: new Map(),
+    obs: [new Map(), new Map()], mem: [new Map(), new Map()], explored: [new Uint8Array(40 * 28), new Uint8Array(40 * 28)],
     kurumaAct: 0, kurumaHit: new Set(),
     rec: {
       uNeg: [{}, {}], uPos: [{}, {}], aNeg: [{}, {}], aPos: [{}, {}], prevented: {}, routs: [], armyDrops: [],
@@ -204,6 +209,13 @@ export function newState(R: Rules, seed: number, clan: [string, string]): State 
   const secretIds = ['m0', 'm1', 'trail', 'a0', 'a1'];
   for (const s of [0, 1] as Side[]) {
     const intel = !R.ninjaOn || !R.ninjaSides[s] ? 'low' : clan[s] === 'nokizaru' ? R.nokizaruIntel : CLANS[clan[s]].intel;
+    if (R.fogV2) { // v2：只知道己方半場的秘密（情報高：全部；中：一半），敵方半場要靠偵察
+      const own = (p: { x: number; y: number }) => s === 0 ? p.y < 350 : p.y > 350;
+      const ids: string[] = []; S.secrets.marsh.forEach((m, i) => { if (own(m)) ids.push('m' + i); }); S.secrets.ambush.forEach((a, i) => { if (own(a)) ids.push('a' + i); });
+      const n = intel === 'high' ? ids.length : intel === 'mid' ? Math.ceil(ids.length / 2) : 0;
+      for (const id of pick(ids, n)) S.known[s].add(id);
+      continue;
+    }
     const n = intel === 'high' ? 5 : intel === 'mid' ? (rng() < 0.5 ? 2 : 3) : 0;
     for (const id of pick(secretIds, n)) S.known[s].add(id);
   }
@@ -610,7 +622,7 @@ function moveUnits(S: State) {
     if (!n.alive) continue;
     const dx = n.tx - n.x, dy = n.ty - n.y, L = Math.hypot(dx, dy);
     if (L < 1) continue;
-    const s = Math.min(L, 6 * dt * (inMarsh(S, n.x, n.y) ? 0.5 : 1));
+    const s = Math.min(L, (S.R.fogV2 ? S.R.v2NinSpeed : 6) * dt * (inMarsh(S, n.x, n.y) ? 0.5 : 1));
     n.x = clamp(n.x + dx / L * s, 2, 998); n.y = clamp(n.y + dy / L * s, 2, 698);
   }
 }
@@ -622,44 +634,68 @@ function updateVision(S: State) {
     const vis = S.vis[side];
     const obs: { x: number; y: number; V: number; nin: boolean }[] = [];
     const koga = S.clan[side] === 'koga';
+    const v2 = R.fogV2;
     for (const u of S.units) if (u.side === side && u.state !== 'gone') {
-      let V = 200; if (height(u.x, u.y) >= 8) V *= 1.5; if (inForest(u.x, u.y)) V *= 0.5;
+      let V = v2 ? R.v2UnitSee : 200; if (height(u.x, u.y) >= 8) V *= 1.5; if (inForest(u.x, u.y)) V *= 0.5;
       obs.push({ x: u.x, y: u.y, V, nin: false });
     }
     if (R.ninjaOn) for (const n of S.ninjas) if (n.side === side && n.alive) {
-      let V = 250 * (koga ? S.R.kogaVision : 1); if (height(n.x, n.y) >= 8) V *= 1.5; if (inForest(n.x, n.y)) V *= 0.5;
+      let V = (v2 ? R.v2NinSee : 250) * (koga ? S.R.kogaVision : 1); if (height(n.x, n.y) >= 8) V *= 1.5; if (inForest(n.x, n.y)) V *= 0.5;
       obs.push({ x: n.x, y: n.y, V, nin: true });
     }
+    // v2 察覺距離是識別距離的倍數（部隊 1.6、忍者 1.7）；v1 固定 1.5
+    const spotMul = v2 ? (o: { nin: boolean }) => (o.nin ? R.v2NinSpot / R.v2NinSee : R.v2UnitSpot / R.v2UnitSee) : () => 1.5;
+    // 已探索格：任一觀察者的察覺範圍掃過的格子
+    if (v2) { const ex = S.explored[side]; for (let cy = 0; cy < 28; cy++) for (let cx = 0; cx < 40; cx++) { const i = cy * 40 + cx; if (ex[i]) continue; const px = cx * 25 + 12.5, py = cy * 25 + 12.5; for (const o of obs) if (Math.hypot(o.x - px, o.y - py) <= o.V * spotMul(o)) { ex[i] = 1; break; } } }
     for (const E of S.units) {
       if (E.side === side) continue;
       if (E.state === 'gone') { vis[E.id] = 0; continue; }
       if (!R.fogOn) { vis[E.id] = 3; continue; }
-      let lvl = 0;
+      let lvl = 0, see = false, insight = false;
       const smoked = S.smokes.some(s => s.side === E.side && s.until > t && Math.hypot(E.x - s.x, E.y - s.y) <= 60);
       const special = inAmbush(S, E.x, E.y) ? 40 : inForest(E.x, E.y) ? 60 : 1e9;
       for (const o of obs) {
         const det = Math.min(o.V, special);
         const d = Math.hypot(E.x - o.x, E.y - o.y);
-        if (o.nin && d <= R.insightR) { lvl = 3; break; }
-        if (d <= det) lvl = Math.max(lvl, 2); else if (d <= det * 1.5) lvl = Math.max(lvl, 1);
+        if (o.nin && d <= R.insightR) { insight = true; if (!v2) { lvl = 3; break; } }
+        if (d <= det) { see = true; lvl = Math.max(lvl, v2 ? 1 : 2); } else if (d <= det * spotMul(o)) lvl = Math.max(lvl, 1);
+      }
+      const spotted = lvl >= 1;
+      if (v2) {
+        // 識別與洞悉要累積觀察時間；沒看到時慢慢遺忘
+        let o = S.obs[side].get(E.id); if (!o) { o = { t2: 0, t3: 0 }; S.obs[side].set(E.id, o); }
+        o.t2 = see ? Math.min(o.t2 + S.dt, 60) : Math.max(0, o.t2 - S.dt); o.t3 = insight ? Math.min(o.t3 + S.dt, 60) : Math.max(0, o.t3 - S.dt);
+        if (see && o.t2 >= R.v2IdentT) lvl = 2;
+        if (insight && o.t3 >= R.v2InsightT) lvl = 3;
       }
       for (const m of S.monomi) if (m.side === side && m.until > t && Math.hypot(E.x - m.x, E.y - m.y) <= 150) lvl = 3;
       if (has(S, E, 'shadow' + side)) lvl = 3;
       if (smoked) lvl = Math.min(lvl, 1);
       if (E.contacts.some(c => S.units[c].side === side)) lvl = Math.max(lvl, 2);
       if (lvl < 1 && E.contacts.length) for (const o of obs) if (Math.hypot(E.x - o.x, E.y - o.y) <= 300) { lvl = 1; break; }
-      if (lvl === 1) {
+      if (v2) {
+        // 記憶：最後看到的等級與位置；識別 40 秒後退為察覺、察覺 120 秒後遺忘（位置停在最後看到的地方）
+        const m = S.mem[side].get(E.id);
+        if (lvl >= 1) S.mem[side].set(E.id, { lvl: Math.max(lvl, 1), t, x: E.x, y: E.y });
+        else if (m) {
+          const age = t - m.t; let eff = m.lvl >= 2 ? (age > R.v2Decay2 ? 1 : 2) : 1;
+          if (age > R.v2Decay1) eff = 0;
+          if (eff > lvl) { lvl = eff; const nz = S.noisy[side].get(E.id); if (!nz || nz.t < m.t) S.noisy[side].set(E.id, { x: m.x + (S.rng() - 0.5) * 40, y: m.y + (S.rng() - 0.5) * 40, t: m.t }); }
+        }
+        if (lvl === 1 && spotted) { const nz = S.noisy[side].get(E.id); if (!nz || t - nz.t > 5) S.noisy[side].set(E.id, { x: E.x + (S.rng() - 0.5) * 60, y: E.y + (S.rng() - 0.5) * 60, t }); }
+      } else if (lvl === 1) {
         const nz = S.noisy[side].get(E.id);
         if (!nz || t - nz.t > 5) S.noisy[side].set(E.id, { x: E.x + (S.rng() - 0.5) * 60, y: E.y + (S.rng() - 0.5) * 60, t });
       }
       vis[E.id] = lvl;
     }
     // 地形秘密
+    const sr = v2 ? R.v2SecretR : 50;
     const ids: [string, { x: number; y: number }, number][] = [];
-    S.secrets.marsh.forEach((m, i) => ids.push(['m' + i, m, MAP.marshR + 50]));
-    S.secrets.ambush.forEach((m, i) => ids.push(['a' + i, m, MAP.ambushR + 50]));
+    S.secrets.marsh.forEach((m, i) => ids.push(['m' + i, m, MAP.marshR + sr]));
+    S.secrets.ambush.forEach((m, i) => ids.push(['a' + i, m, MAP.ambushR + sr]));
     for (const [id, p, r] of ids) if (!S.known[side].has(id) && obs.some(o => Math.hypot(o.x - p.x, o.y - p.y) <= r)) { S.known[side].add(id); fx(S, { k: 'found', a: side, s: id }); }
-    if (!S.known[side].has('trail') && obs.some(o => inForest(o.x, o.y) && Math.abs(o.x - S.secrets.trailX) <= 50)) { S.known[side].add('trail'); fx(S, { k: 'found', a: side, s: 'trail' }); }
+    if (!S.known[side].has('trail') && obs.some(o => inForest(o.x, o.y) && Math.abs(o.x - S.secrets.trailX) <= (v2 ? 20 : 50))) { S.known[side].add('trail'); fx(S, { k: 'found', a: side, s: 'trail' }); }
   }
   // 忍者被發現
   if (R.ninjaOn) for (const n of S.ninjas) {

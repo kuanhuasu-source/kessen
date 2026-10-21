@@ -23,6 +23,8 @@ export type Terrain = {
   setOwner: (i: number, owner: -1 | 0 | 1, progress: number, progSide: -1 | 0 | 1) => void;
   // 顯示已探明的地形秘密：沼澤、森林小徑、伏兵地
   reveal: (kind: 'marsh' | 'trail' | 'ambush', x: number, y: number) => void;
+  // 未探索遮罩（情報 v2）：explored 是 40×28 格（每格 25 m）的已探索旗標；null 表示關閉
+  shroud: (explored: Uint8Array | null) => void;
 };
 
 // 依地形起伏貼地的圓盤（中心 x,y，半徑 r）
@@ -229,5 +231,24 @@ export function buildTerrain(scene: THREE.Scene, streams: string = 'none'): Terr
       mesh.renderOrder = 1; scene.add(mesh);
     }
   };
-  return { ground, setOwner, reveal };
+  // ---- 未探索遮罩 ----
+  const scv = document.createElement('canvas'); scv.width = 40; scv.height = 28;
+  const sg = scv.getContext('2d')!;
+  const stex = new THREE.CanvasTexture(scv); stex.magFilter = THREE.LinearFilter; stex.minFilter = THREE.LinearFilter;
+  const sgeo = new THREE.PlaneGeometry(MAP.W, MAP.H, 50, 35); sgeo.rotateX(-Math.PI / 2);
+  { const p = sgeo.attributes.position as THREE.BufferAttribute; for (let i = 0; i < p.count; i++) { const x = p.getX(i) + 500, y = 350 - p.getZ(i); p.setY(i, height(x, y) + 0.7); } }
+  const shroudMesh = new THREE.Mesh(sgeo, new THREE.MeshBasicMaterial({ map: stex, transparent: true, depthWrite: false }));
+  shroudMesh.renderOrder = 1; shroudMesh.visible = false; scene.add(shroudMesh);
+  let lastKey = '';
+  const shroud = (explored: Uint8Array | null) => {
+    if (!explored) { shroudMesh.visible = false; lastKey = ''; return; }
+    shroudMesh.visible = true;
+    let key = ''; for (let i = 0; i < explored.length; i += 8) key += explored[i] + explored[i + 1] * 2 + explored[i + 2] * 4 + explored[i + 3] * 8 + explored[i + 4] * 16 + explored[i + 5] * 32 + explored[i + 6] * 64 + explored[i + 7] * 128 + ',';
+    if (key === lastKey) return; lastKey = key;
+    sg.clearRect(0, 0, 40, 28);
+    sg.fillStyle = 'rgba(16,20,12,0.62)';
+    for (let cy = 0; cy < 28; cy++) for (let cx = 0; cx < 40; cx++) if (!explored[cy * 40 + cx]) sg.fillRect(cx, 27 - cy, 1, 1);
+    stex.needsUpdate = true;
+  };
+  return { ground, setOwner, reveal, shroud };
 }

@@ -83,7 +83,7 @@ export function setup(S: State) {
   const intel = (s: Side) => !S.R.ninjaOn || !S.R.ninjaSides[s] ? 'low' : S.clan[s] === 'nokizaru' ? S.R.nokizaruIntel : CLANS[S.clan[s]].intel;
   for (const s of [0, 1] as Side[]) {
     const e = (1 - s) as Side;
-    if (S.R.counterDeploy && S.R.fogOn && intel(s) === 'high' && intel(e) !== 'high') {
+    if (S.R.counterDeploy && S.R.fogOn && !S.R.fogV2 && intel(s) === 'high' && intel(e) !== 'high') { // v2：開戰看不到敵方佈陣，不做針對性佈陣
       ai[s].cavWing = ai[e].cavWing === 'W' ? 'E' : 'W';
       order[s] = ai[e].cavWing === 'W' ? ['spear2', 'samurai1', 'samurai2', 'spear1'] : ['spear1', 'samurai1', 'samurai2', 'spear2'];
     }
@@ -837,7 +837,23 @@ function ninjaAI(S: State, s: Side, A: SideAI, jutsu = true) {
     if (n.side !== s || !n.alive || n.manual) continue;
     if (n.detUntil > t) { n.tx = n.x; n.ty = Yl(s, 30); continue; }
     let tx = n.x, ty = n.y;
-    switch (n.role) {
+    if (S.R.fogV2) {
+      // 情報 v2：只能用己方看得到的敵軍；偵察兵走掃描航線把敵方半場掃過一遍
+      const seen = enemies.filter(u => vis(S, s, u) >= 1).map(u => seenPos(S, s, u));
+      const cen = seen.length ? { x: seen.reduce((a, p) => a + p.x, 0) / seen.length, y: seen.reduce((a, p) => a + p.y, 0) / seen.length } : null;
+      if (n.role === 'scoutW' || n.role === 'scoutE') {
+        const W: [number, number][] = [[130, 400], [130, 560], [300, 560], [300, 430], [440, 470], [440, 640], [240, 640], [130, 500]];
+        const path = n.role === 'scoutW' ? W : W.map(([x, y]) => [1000 - x, y] as [number, number]);
+        const i = (n.wp ?? 0) % path.length; const [px, py] = path[i]; tx = px; ty = Yl(s, py);
+        if (Math.hypot(n.x - tx, n.y - ty) < 20) n.wp = i + 1;
+      } else if (n.role === 'rear') {
+        if (vis(S, s, eg) >= 1) { const p = seenPos(S, s, eg); tx = p.x; ty = p.y + (s === 0 ? 60 : -60); } else { tx = 500 + (n.id % 2 ? 80 : -80); ty = Yl(s, 600); }
+      } else { // shadow：跟著看得到的敵軍中心；沒看到任何敵軍就往敵方半場推進
+        if (clash) { tx = clash.x + (n.id % 2 ? 50 : -50); ty = clash.y; }
+        else if (cen) { tx = cen.x + (n.id % 2 ? 50 : -50); ty = cen.y; }
+        else { tx = 500 + (n.id % 2 ? 120 : -120); ty = Yl(s, 480); }
+      }
+    } else switch (n.role) {
       case 'scoutW': tx = 200; ty = Yl(s, t < 90 ? 420 : 470); break;
       case 'scoutE': tx = 800; ty = Yl(s, t < 90 ? 420 : 470); break;
       case 'rear': tx = eg.x; ty = eg.y + (s === 0 ? 60 : -60); break;
@@ -846,12 +862,13 @@ function ninjaAI(S: State, s: Side, A: SideAI, jutsu = true) {
         tx = c.x + (n.id % 2 ? 50 : -50); ty = c.y - fwd(s) * 0; break;
       }
     }
-    // 與敵軍保持距離
+    // 與敵軍保持距離（v2：只避開看得到的敵軍）
+    const avoid = S.R.fogV2 ? enemies.filter(u => vis(S, s, u) >= 1) : enemies;
     let ne: Unit | null = null, nd = 1e9;
-    for (const u of enemies) { const d = Math.hypot(u.x - tx, u.y - ty); if (d < nd) { nd = d; ne = u; } }
+    for (const u of avoid) { const d = Math.hypot(u.x - tx, u.y - ty); if (d < nd) { nd = d; ne = u; } }
     if (ne && nd < hover) { const ax = tx - ne.x, ay = ty - ne.y, L = Math.hypot(ax, ay) || 1; tx = ne.x + ax / L * hover; ty = ne.y + ay / L * hover; }
     let cur: Unit | null = null, cd = 1e9;
-    for (const u of enemies) { const d = Math.hypot(u.x - n.x, u.y - n.y); if (d < cd) { cd = d; cur = u; } }
+    for (const u of avoid) { const d = Math.hypot(u.x - n.x, u.y - n.y); if (d < cd) { cd = d; cur = u; } }
     if (cur && cd < hover - 2) { const ax = n.x - cur.x, ay = n.y - cur.y, L = Math.hypot(ax, ay) || 1; tx = cur.x + ax / L * (hover + 12); ty = cur.y + ay / L * (hover + 12); }
     n.tx = tx; n.ty = ty;
   }

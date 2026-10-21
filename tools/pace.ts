@@ -13,6 +13,7 @@ const VARIANTS: Record<string, Partial<Rules>> = {
   crane: { aiSteady: true, aiLine: true, aiFormation: 'crane' },
   craneT: { aiSteady: true, aiLine: true, aiFormation: 'craneT' },
   two: { streams: 'two', aiHoldYl: 250 }, east: { streams: 'east' },
+  fog2: { fogV2: true },
   noRally: { maxRouts: 1 },
   noRetreat: { aiRetreat: false },
   rallyCap50: { rallyCap: 50 },
