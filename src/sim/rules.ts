@@ -65,6 +65,7 @@ export const V1 = {
   hitowaStart: 5,        // 人は城：起始士氣加成
   hitowaRegen: 2,        // 人は城：未接戰回復倍率
   nokizaruIntel: 'mid' as 'low' | 'mid' | 'high',
+  kogaVision: 1.3,       // 甲賀眾視野倍率
   cmdKillChance: 0.05,
   cmdKillOnlyRouting: false, // v2：只有在部隊潰逃被追擊時才可能被討取   // 兵力 < 25% 時，每名接戰敵隊每秒的討取機率
   buffCapPct: 0.5,

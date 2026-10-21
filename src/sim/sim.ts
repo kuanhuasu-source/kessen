@@ -609,7 +609,7 @@ function updateVision(S: State) {
       obs.push({ x: u.x, y: u.y, V, nin: false });
     }
     if (R.ninjaOn) for (const n of S.ninjas) if (n.side === side && n.alive) {
-      let V = 250 * (koga ? 1.3 : 1); if (height(n.x, n.y) >= 8) V *= 1.5; if (inForest(n.x, n.y)) V *= 0.5;
+      let V = 250 * (koga ? S.R.kogaVision : 1); if (height(n.x, n.y) >= 8) V *= 1.5; if (inForest(n.x, n.y)) V *= 0.5;
       obs.push({ x: n.x, y: n.y, V, nin: true });
     }
     for (const E of S.units) {

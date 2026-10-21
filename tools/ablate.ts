@@ -4,22 +4,29 @@ import { newState, step, type State } from '../src/sim/sim.ts';
 import { setup } from '../src/sim/ai.ts';
 import { GAME_RULES, SIM_DT } from '../src/sim/game-rules.ts';
 import { makeRules, type Rules } from '../src/sim/rules.ts';
+import { CLANS } from '../src/sim/data.ts';
 
 const V: Record<string, Partial<Rules>> = {
   base: {},
   noSahou: { offJutsu: ['sahou'] }, noKiri: { offJutsu: ['kirigakure'] }, noRumor: { offJutsu: ['rumor'] }, noMonomi: { offJutsu: ['monomi'] },
   noAnsatsu: { offJutsu: ['ansatsu'] }, noHouka: { offJutsu: ['houka'] }, noSennyu: { sennyuOn: false }, noSakuteki: { offJutsu: ['sakuteki'] },
   noCounter: { counterDeploy: false }, noFog: { fogOn: false }, noNinja: { ninjaOn: false },
+  kogaVis115: { kogaVision: 1.15 }, kogaVis100: { kogaVision: 1.0 }, nokiHigh: { nokizaruIntel: 'high' },
+  kogaN4: {}, nokiN5: {}, nokiHighN5: { nokizaruIntel: 'high' }, kogaN4Vis115: { kogaVision: 1.15 },
 };
+// 人數變體直接改 CLANS（模組物件可變）
+const N_OVERRIDE: Record<string, [string, number]> = { kogaN4: ['koga', 4], kogaN4Vis115: ['koga', 4], nokiN5: ['nokizaru', 5], nokiHighN5: ['nokizaru', 5] };
 const [n, c0, c1, ...names] = process.argv.slice(2);
 const N = Number(n || 30);
 for (const name of names.length ? names : Object.keys(V)) {
   const R = makeRules({ ...GAME_RULES, ...V[name], name });
+  const no = N_OVERRIDE[name]; const n0 = no ? CLANS[no[0]].n : 0; if (no) CLANS[no[0]].n = no[1];
   let w = 0, t = 0;
   for (let i = 0; i < N; i++) {
     const S: State = newState(R, 7000 + i, [c0, c1]); S.dt = SIM_DT; setup(S); S.fx = [];
     while (!S.over) { step(S); S.fx!.length = 0; }
     if (S.over!.winner === 0) w++; t += S.over!.t;
   }
-  console.log(`${c0} vs ${c1} ${name.padEnd(10)} 武田勝 ${String(Math.round(w / N * 100)).padStart(3)}%  時長 ${(t / N).toFixed(0)}s`);
+  if (no) CLANS[no[0]].n = n0;
+  console.log(`${c0} vs ${c1} ${name.padEnd(12)} 武田勝 ${String(Math.round(w / N * 100)).padStart(3)}%  時長 ${(t / N).toFixed(0)}s`);
 }
