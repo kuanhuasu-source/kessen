@@ -9,11 +9,28 @@ type SideAI = { posture: 'advance' | 'hold' | 'attack'; attackT: number; aggr: n
   nextTac: number; nextStrat: number; nextNin: number; giseiDone: boolean;
   // 戰線式指揮（aiLine）：錨點（己方座標）、階段、各隊槽位
   ax: number; ayl: number; phase: 'form' | 'approach' | 'volley' | 'advance' | 'melee'; volleyUntil: number;
-  ids: Record<string, number>; slots: Map<number, { x: number; yl: number }> };
+  ids: Record<string, number>; slots: Map<number, { x: number; yl: number }>; reserveId: number };
 
 // 大名模式：玩家在軍議定的方針（S.meta.doctrine[side]）、親自接管的部隊（S.meta.manual）、戰中的大名令（S.meta.cmd[side]）
 export type Doctrine = { attack: 'auto' | 'now' | 'volley' | 'waver' | 'hold'; cav: 'auto' | 'guard' | 'raid' | 'free'; retreatAt: number; formation: 'auto' | 'line' | 'crane' | 'fish' };
 export const DEFAULT_DOCTRINE: Doctrine = { attack: 'auto', cav: 'auto', retreatAt: 0, formation: 'auto' };
+// 配置（S.meta.deployment[side]；S.meta.deploy 是佈陣紀錄字串，別撞名）：戰線順序（由左到右的部隊 key，3 或 4 隊）、預備隊、騎兵翼、各翼方針
+export type Wing = 'hold' | 'steady' | 'press';
+export type Deploy = { line: string[]; reserve: string | null; cavWing: 'W' | 'E'; wings: { L: Wing; C: Wing; R: Wing } };
+export const DEFAULT_DEPLOY: Deploy = { line: ['spear1', 'samurai1', 'samurai2', 'spear2'], reserve: null, cavWing: 'W', wings: { L: 'steady', C: 'steady', R: 'steady' } };
+export function deployOf(S: State, s: Side): Deploy | null { return ((S.meta.deployment as (Deploy | null)[] | undefined)?.[s]) ?? null; }
+// 開戰前套用配置：改戰線順序、預備隊、騎兵翼，並把部隊擺到對應的起始位置（只能在 t = 0 呼叫）
+export function applyDeploy(S: State, s: Side, d: Deploy) {
+  const A = (S.meta.ai as SideAI[])[s];
+  const byKey = (k: string) => S.units.find(u => u.side === s && u.key === k);
+  for (let i = 0; i < 4; i++) delete A.ids['line' + i];
+  const xs = d.line.length === 3 ? [440, 500, 560] : [410, 470, 530, 590];
+  d.line.forEach((k, i) => { const u = byKey(k); if (!u) return; A.ids['line' + i] = u.id; u.role = 'line'; u.x = xs[i]; u.y = Yl(s, 110); u.holdX = u.x; u.holdY = u.y; });
+  if (d.reserve) { const u = byKey(d.reserve); if (u) { A.reserveId = u.id; u.role = 'reserve'; u.x = 500; u.y = Yl(s, 75); } } else A.reserveId = -1;
+  A.cavWing = d.cavWing;
+  const cav = byKey('cav'); if (cav) { cav.x = d.cavWing === 'W' ? 300 : 700; cav.role = d.cavWing === 'E' ? 'cap:supply' : 'cav'; }
+  for (const u of S.units) if (u.side === s) { u.hasDest = false; u.destX = u.x; u.destY = u.y; }
+}
 export type CmdKind = 'charge' | 'regroup' | 'relieve' | 'focus' | 'commit' | 'raid';
 export type Cmd = { kind: CmdKind; until: number; target?: number };
 export const CMD_DUR: Record<CmdKind, number> = { charge: 30, regroup: 20, relieve: 25, focus: 20, commit: 30, raid: 25 };
@@ -35,8 +52,9 @@ export function issueCommand(S: State, s: Side, kind: CmdKind, target?: number):
   } else if (kind === 'relieve') {
     const T = target !== undefined ? S.units[target] : null;
     if (!T || !T.contacts.length) return false;
+    const cost = (u: Unit) => dist(u, T) * (u.type === 'cav' ? 0.6 : 1) * (u.role === 'reserve' ? 0.5 : 1); // 預備隊優先
     const helper = mine.filter(u => u !== T && !u.contacts.length && !u.retreating && (u.type === 'spear' || u.type === 'samurai' || u.type === 'cav'))
-      .sort((a, b) => (dist(a, T) * (a.type === 'cav' ? 0.6 : 1)) - (dist(b, T) * (b.type === 'cav' ? 0.6 : 1)))[0];
+      .sort((a, b) => cost(a) - cost(b))[0];
     if (!helper) return false;
     helper.aiLockK = 'help:' + T.id; helper.aiLockT = t;
   } else if (kind === 'focus' || kind === 'raid') {
@@ -56,7 +74,7 @@ export function setup(S: State) {
   const ai: [SideAI, SideAI] = [0, 1].map(() => ({
     posture: 'advance', attackT: S.R.aiLine ? 30 + rng() * 80 : 45 + rng() * 105, aggr: 0.8 + rng() * 0.4, cavWing: rng() < 0.5 ? 'W' : 'E', // 戰線式：成線推進本身就要 1 分鐘，發起攻勢的時間提早
     nextTac: 0, nextStrat: 0, nextNin: 0, giseiDone: false,
-    ax: 500, ayl: 110, phase: 'form', volleyUntil: 0, ids: {}, slots: new Map(),
+    ax: 500, ayl: 110, phase: 'form', volleyUntil: 0, ids: {}, slots: new Map(), reserveId: -1,
   } as SideAI)) as [SideAI, SideAI];
   S.meta.ai = ai;
   const order: string[][] = [];
@@ -382,6 +400,7 @@ function infantryAI(S: State, u: Unit, A: SideAI) {
     return;
   }
   if (S.R.aiLine && u.role === 'line') { lineInfantry(S, u, A); return; }
+  if (S.R.aiLine && u.role === 'reserve') { reserveAI(S, u, A); return; }
   // 假目標
   const ph = S.phantoms[s] as { x: number; y: number; until: number }[];
   if (u.type === 'spear' && A.posture === 'hold' && ph.length) {
@@ -615,6 +634,16 @@ const FORM_OFFS: Record<'line' | 'crane' | 'fish', number[][]> = {
   crane: [[-115, 30], [-40, 0], [40, 0], [115, 30]],   // 鶴翼：兩翼前伸
   fish: [[-80, -25], [-27, 12], [27, 12], [80, -25]],   // 魚鱗：中央突出
 };
+const FORM_OFFS3: Record<'line' | 'crane' | 'fish', number[][]> = { // 三隊成線（有預備隊時）
+  line: [[-55, 0], [0, 0], [55, 0]], crane: [[-95, 25], [0, 0], [95, 25]], fish: [[-55, -20], [0, 15], [55, -20]],
+};
+const WING_Y: Record<Wing, number> = { hold: -15, steady: 0, press: 20 }; // 各翼方針：猛攻前伸、固守後縮
+function wingOf(A: SideAI, i: number, n: number): 'L' | 'C' | 'R' { return i === 0 ? 'L' : i === n - 1 ? 'R' : 'C'; }
+function wingDoctrine(S: State, s: Side, A: SideAI, u: Unit): Wing {
+  const d = deployOf(S, s); if (!d) return 'steady';
+  const n = d.line.length; const i = [0, 1, 2, 3].find(k => A.ids['line' + k] === u.id);
+  return i === undefined ? 'steady' : d.wings[wingOf(A, i, n)];
+}
 function lineAI(S: State, s: Side, A: SideAI) {
   const t = S.t, e = (1 - s) as Side, R = S.R;
   const mine = S.units.filter(u => u.side === s && active(u) && !u.reinf && !isManual(S, u));
@@ -648,9 +677,16 @@ function lineAI(S: State, s: Side, A: SideAI) {
     if (ens.length) { const cx = ens.slice(0, 4).reduce((a, o) => a + o.x, 0) / Math.min(4, ens.length); A.ax = clamp(A.ax + clamp(cx - A.ax, -2, 2), 380, 620); }
   }
   // 槽位
-  const offs = FORM_OFFS[formationOf(S, s)];
+  const d = deployOf(S, s);
+  const n = A.ids.line3 === undefined ? 3 : 4;
+  const offs = (n === 3 ? FORM_OFFS3 : FORM_OFFS)[formationOf(S, s)];
   A.slots.clear();
-  for (let i = 0; i < 4; i++) { const id = A.ids['line' + i]; if (id !== undefined) A.slots.set(id, { x: A.ax + offs[i][0], yl: A.ayl + offs[i][1] }); }
+  for (let i = 0; i < n; i++) {
+    const id = A.ids['line' + i]; if (id === undefined) continue;
+    const wy = d ? WING_Y[d.wings[wingOf(A, i, n)]] : 0;
+    A.slots.set(id, { x: A.ax + offs[i][0], yl: A.ayl + offs[i][1] + wy });
+  }
+  if (A.reserveId >= 0) A.slots.set(A.reserveId, { x: A.ax, yl: A.ayl - 35 });
   A.slots.set(A.ids.archer1, { x: A.ax - 45, yl: A.ayl - 45 }); A.slots.set(A.ids.archer2, { x: A.ax + 45, yl: A.ayl - 45 });
   A.slots.set(A.ids.gen, { x: A.ax, yl: A.ayl - R.aiGenBack });
   A.slots.set(A.ids.cav, { x: clamp(A.ax + (A.cavWing === 'W' ? -230 : 230), 60, 940), yl: A.ayl - 10 });
@@ -681,12 +717,13 @@ function lineInfantry(S: State, u: Unit, A: SideAI) {
     u.aiLockK = '';
   }
   const charge = !!cmdOf(S, s, 'charge');
+  const wing = wingDoctrine(S, s, A, u);
   // 現有目標還在正前方附近就繼續（止抖）
   const cur = S.units[u.target];
   if (u.aiLockK === 'atk' && cur && active(cur) && cur.state !== 'rout' && !cur.retreating && vis(S, s, cur) >= 1 && dist(u, cur) < (charge ? 200 : 110)) { attackMove(S, u, cur, charge); return; }
   u.aiLockK = '';
-  const ahead = charge ? 220 : A.phase === 'melee' ? 90 : A.posture === 'hold' ? 70 : 60;
-  const lat = charge ? 160 : 75;
+  const ahead = (charge ? 220 : A.phase === 'melee' ? 90 : A.posture === 'hold' ? 70 : 60) + (wing === 'press' ? 40 : wing === 'hold' ? -20 : 0);
+  const lat = charge ? 160 : wing === 'press' ? 100 : 75;
   let best: Unit | null = null, bd = 1e9;
   for (const E of known(S, s)) {
     if (!active(E) || E.state === 'rout' || E.retreating) continue;
@@ -695,7 +732,7 @@ function lineInfantry(S: State, u: Unit, A: SideAI) {
     if (Math.abs(p.x - sx) > lat || dy < -25 || dy > ahead) continue;
     const d = Math.hypot(p.x - u.x, p.y - u.y); if (d < bd) { bd = d; best = E; }
   }
-  if (best) { u.aiLockK = 'atk'; u.target = best.id; u.targetT = S.t; attackMove(S, u, best, charge); return; }
+  if (best) { u.aiLockK = 'atk'; u.target = best.id; u.targetT = S.t; attackMove(S, u, best, charge || wing === 'press'); return; }
   // 擴大戰果：鄰隊在打、自己空手 → 從側背接近鄰隊的對手
   if (A.phase === 'melee') {
     let X: Unit | null = null, xd = S.t > 240 ? 180 : 120; // 打久了就放寬，避免拖到時間到
@@ -706,6 +743,30 @@ function lineInfantry(S: State, u: Unit, A: SideAI) {
     if (X) { u.aiLockK = 'atk'; flankMove(S, u, X); return; }
   }
   moveTo(u, sx, sy, false);
+}
+// 預備隊（二番備）：站在戰線中央後方；友軍動搖（士氣 < 55）或大名令馳援時出動打其對手，事後回到預備位置
+function reserveAI(S: State, u: Unit, A: SideAI) {
+  const s = u.side, t = S.t;
+  const sl = A.slots.get(u.id);
+  if (u.aiLockK.startsWith('help:')) {
+    const F = S.units[+u.aiLockK.slice(5)];
+    const X = F && F.contacts.length ? S.units[F.primary >= 0 && F.contacts.includes(F.primary) ? F.primary : F.contacts[0]] : null;
+    if (X && active(X) && t - u.aiLockT < CMD_DUR.relieve) { flankMove(S, u, X); return; }
+    u.aiLockK = '';
+  }
+  const cur = S.units[u.target];
+  if (u.aiLockK === 'atk' && cur && active(cur) && cur.state !== 'rout' && dist(u, cur) < 110) { attackMove(S, u, cur); return; }
+  u.aiLockK = '';
+  if (A.phase === 'melee' || cmdOf(S, s, 'charge')) {
+    let F: Unit | null = null, fm = 55;
+    for (const v of S.units) if (v.side === s && v !== u && active(v) && v.contacts.length && !isManual(S, v)) { const m = effM(S, v); if (m < fm) { fm = m; F = v; } }
+    if (F) { u.aiLockK = 'help:' + F.id; u.aiLockT = t; const X = S.units[F.primary >= 0 && F.contacts.includes(F.primary) ? F.primary : F.contacts[0]]; if (X) { flankMove(S, u, X); return; } }
+    if (cmdOf(S, s, 'charge')) { const E = known(S, s).filter(x => active(x) && x.state !== 'rout' && dist(u, x) < 200).sort((a, b) => dist(a, u) - dist(b, u))[0]; if (E) { u.aiLockK = 'atk'; attackMove(S, u, E, true); return; } }
+  }
+  // 敵軍逼近到 50 m 內就迎擊
+  const E = known(S, s).filter(x => active(x) && x.state !== 'rout' && dist(u, x) < 50).sort((a, b) => dist(a, u) - dist(b, u))[0];
+  if (E) { u.aiLockK = 'atk'; attackMove(S, u, E); return; }
+  if (sl) moveTo(u, sl.x, Yl(s, sl.yl), false);
 }
 // 從較近的那一側繞到目標側後方再接戰
 function flankMove(S: State, u: Unit, X: Unit) {

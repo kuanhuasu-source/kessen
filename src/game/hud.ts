@@ -117,6 +117,16 @@ body { font-family: var(--ui); -webkit-user-select: none; user-select: none; -we
 .setup .war .pick > span { width: 70px; font-size: 13px; }
 .setup .war .chip { min-height: 30px; padding: 0 10px; font-size: 12.5px; }
 .setup .war .m { color: var(--paper-dim); font-size: 11px; margin: 2px 0 0; }
+/* 軍議：配置與將領 */
+.setup .dep { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+.setup .dep .dbox { min-width: 86px; min-height: 48px; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: rgba(239,230,210,0.05) !important; text-align: left; display: flex; flex-direction: column; gap: 1px; }
+.setup .dep .dbox[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; background: rgba(201,162,39,0.14) !important; }
+.setup .dep .dbox.empty { border-style: dashed; color: var(--paper-dim); justify-content: center; }
+.setup .dep .dbox .p { font-size: 10.5px; color: var(--paper-dim); }
+.setup .dep .dbox .n { font-family: var(--display); font-size: 14px; display: flex; align-items: center; gap: 5px; }
+.setup .dep .dbox .n .pp { width: 20px; height: 20px; }
+.setup .dep .dbox .s { font-size: 10.5px; color: var(--gold); }
+.setup .modes.sm button { min-height: 30px; font-size: 13px; }
 @media (max-width: 700px), (max-height: 430px) { .advice { max-width: 62vw; font-size: 11.5px; top: calc(var(--edge-t) + 58px); } .setup .war .chip { min-height: 28px; padding: 0 8px; font-size: 11.5px; } }
 #hud.watch #b-form, #hud.watch #b-halt, #hud.watch #b-retreat, #hud.watch #b-box, #hud.watch #b-skill, #hud.watch .cards { display: none !important; }
 #hud.watch .info { bottom: var(--edge-b); }
@@ -493,19 +503,28 @@ export class Hud {
     el.querySelector<HTMLButtonElement>('.ghost')!.onclick = () => onHelp();
   }
   setupOpen() { return !this.root.querySelector<HTMLElement>('.setup')!.hidden; }
+  setWarExtra(html: string) { const el = this.root.querySelector<HTMLElement>('.war .extra'); if (el) el.innerHTML = html; }
+  // 換將後重畫旗牌（肖像、名字）
+  refreshCard(u: Unit) {
+    const b = this.cards.get(u.id); if (!b) return;
+    b.setAttribute('aria-label', `${TYPE_NAME[u.type]}・${u.cmd || '援軍'}`); b.title = `${TYPE_NAME[u.type]}・${u.cmd || '援軍'}`;
+    b.querySelector('.kan')!.outerHTML = kanBox('kan', KANJI[u.type], u.side === 0 ? 'var(--takeda)' : 'var(--uesugi)', portraitOf(u.cmd));
+    b.querySelector('.c')!.textContent = u.cmd || '援軍';
+  }
   // 出陣畫面（含觀戰模式）
   showSetup2(o: {
     mode: 'play' | 'watch'; clans0: { id: string; html: string; short: string }[]; clan0: string; clans1: { id: string; short: string }[]; clan1: string;
     onMode: (m: 'play' | 'watch') => void; onPick0: (id: string) => void; onPick1: (id: string) => void; onGo: () => void; onHelp: () => void; onNew: () => void;
     bg?: string; // 背景插畫
-    war?: { rows: { key: string; label: string; opts: { id: string; label: string }[]; cur: string; note?: string }[]; onPick: (key: string, id: string) => void }; // 軍議（大名模式）
+    war?: { rows: { key: string; label: string; opts: { id: string; label: string }[]; cur: string; note?: string }[]; onPick: (key: string, id: string) => void;
+      extra?: string; onExtra?: (act: string) => void }; // 軍議（大名模式）；extra 是配置與將領區塊（data-x 按鈕）
   }) {
     const el = this.root.querySelector<HTMLElement>('.setup')!;
     const play = o.mode === 'play';
     el.innerHTML = `<div class="sheet" role="dialog" aria-label="出陣準備"><h2>川中島・出陣</h2>
       <div class="modes"><button type="button" data-m="play" aria-pressed="${play}">親自指揮武田軍</button><button type="button" data-m="watch" aria-pressed="${!play}">觀戰：AI 對 AI</button></div>
       ${play ? `<div class="clans">${o.clans0.map(c => `<button type="button" class="clan" data-c0="${c.id}" aria-pressed="${c.id === o.clan0}">${c.html}</button>`).join('')}</div>
-        ${o.war ? `<div class="war"><h3>軍議</h3>${o.war.rows.map(r => `<div class="pick"><span>${r.label}</span>${r.opts.map(x => `<button type="button" class="chip" data-w="${r.key}" data-v="${x.id}" aria-pressed="${x.id === r.cur}">${x.label}</button>`).join('')}${r.note ? `<p class="m">${r.note}</p>` : ''}</div>`).join('')}</div>` : ''}`
+        ${o.war ? `<div class="war"><h3>軍議</h3>${o.war.rows.map(r => `<div class="pick"><span>${r.label}</span>${r.opts.map(x => `<button type="button" class="chip" data-w="${r.key}" data-v="${x.id}" aria-pressed="${x.id === r.cur}">${x.label}</button>`).join('')}${r.note ? `<p class="m">${r.note}</p>` : ''}</div>`).join('')}<div class="extra">${o.war.extra ?? ''}</div></div>` : ''}`
         : `<div class="pick"><span style="color:#e3a39c">武田忍者眾</span>${o.clans0.map(c => `<button type="button" class="chip" data-c0="${c.id}" aria-pressed="${c.id === o.clan0}">${c.short}</button>`).join('')}</div>
            <div class="pick"><span style="color:#a9bde0">上杉忍者眾</span>${o.clans1.map(c => `<button type="button" class="chip" data-c1="${c.id}" aria-pressed="${c.id === o.clan1}">${c.short}</button>`).join('')}</div>
            <p class="lead" style="display:block">雙方都由 AI 指揮。導播鏡頭會跟著戰況走，拖曳或縮放就改手動，10 秒後交回導播；點任一部隊可查看並跟隨。右側「視」切換全知或單方視野。</p>`}
@@ -515,6 +534,7 @@ export class Hud {
     el.querySelectorAll<HTMLButtonElement>('[data-m]').forEach(b => b.onclick = () => { if (b.dataset.m !== o.mode) o.onMode(b.dataset.m as 'play' | 'watch'); });
     el.querySelectorAll<HTMLButtonElement>('[data-c0]').forEach(b => b.onclick = () => o.onPick0(b.dataset.c0!));
     el.querySelectorAll<HTMLButtonElement>('[data-c1]').forEach(b => b.onclick = () => o.onPick1(b.dataset.c1!));
+    el.querySelector<HTMLElement>('.war .extra')?.addEventListener('click', e => { const b = (e.target as HTMLElement).closest<HTMLElement>('[data-x]'); if (b && o.war?.onExtra) o.war.onExtra(b.dataset.x!); });
     el.querySelectorAll<HTMLButtonElement>('[data-w]').forEach(b => b.onclick = () => {
       el.querySelectorAll<HTMLButtonElement>(`[data-w="${b.dataset.w}"]`).forEach(x => x.setAttribute('aria-pressed', String(x === b)));
       o.war!.onPick(b.dataset.w!, b.dataset.v!);

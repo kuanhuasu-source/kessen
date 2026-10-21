@@ -32,7 +32,7 @@
 | 節奏調整 | 完成 | 重整後士氣上限 50、取消 AI 有序撤退、主將前移並親征、弓兵 200 m、騎兵奔馳 |
 | M6 | 完成 | 勝負與結算、據點呈現、撤退指令、Gemini 2D 美術 |
 | AI 動作優化 | 完成 | 止抖（aiSteady）＋戰線式指揮（aiLine） |
-| 大名模式（第一階段） | 完成 | 軍議方針、AI 帶兵、軍師建議卡、大名令、接管單隊；第二階段：將領指派、各翼方針、配置、傳令延遲 |
+| 大名模式 | 完成 | 第一階段：軍議方針、AI 帶兵、軍師建議卡、大名令、接管單隊。第二階段：配置（戰線順序、預備隊、騎兵翼、各翼方針）與將領互換。傳令延遲未做（使用者決定） |
 | M7 | 未開始 | 手機效能（真機 fps 尚未回報）、平衡、跨瀏覽器 |
 
 ## 4. 架構與檔案地圖
@@ -42,7 +42,7 @@ TypeScript + Vite + Three.js，單一 HTML 輸出（約 1.66 MB，其中美術�
 | 檔案 | 內容 |
 | --- | --- |
 | `src/sim/sim.ts` | 戰鬥與士氣模擬核心；`S.fx` 畫面事件 |
-| `src/sim/ai.ts` | AI（戰略／戰術／武將技／忍者）；`S.meta.aiSides` 指定 AI 指揮哪一方。`lineAI`／`lineInfantry` 是戰線式指揮（錨點、槽位、階段），`aiSteady` 是各處的決策鎖。大名模式介面：`S.meta.doctrine[side]`（方針）、`S.meta.manual`（接管的部隊 id）、`issueCommand(S, side, kind, target)`（大名令）、`S.meta.playerSide`（忍術由玩家施放） |
+| `src/sim/ai.ts` | AI（戰略／戰術／武將技／忍者）；`S.meta.aiSides` 指定 AI 指揮哪一方。`lineAI`／`lineInfantry` 是戰線式指揮（錨點、槽位、階段），`aiSteady` 是各處的決策鎖。大名模式介面：`S.meta.doctrine[side]`（方針）、`S.meta.manual`（接管的部隊 id）、`issueCommand(S, side, kind, target)`（大名令）、`S.meta.playerSide`（忍術由玩家施放）、`S.meta.deployment[side]` ＋ `applyDeploy`（配置：戰線順序、預備隊 `role: 'reserve'`、騎兵翼、各翼方針），`reserveAI` 是預備隊行為 |
 | `src/sim/rules.ts`、`configs.ts`、`game-rules.ts` | 規則參數；遊戲採用 `GAME_RULES` |
 | `src/sim/data.ts` | 兵種數值、武將名單、忍者眾、地圖 |
 | `src/game/main.ts` | 主迴圈、輸入、指令、資訊面板、事件處理、觀戰導播、結算；大名模式的軍議（`DOCTRINE_ROWS`）、大名令（`doCmd`／`cmdHtml`）、軍師建議（`evalAdvice`）、接管（`takeOver`／`handBack`） |
@@ -95,7 +95,7 @@ node tools/shot.mjs "/tmp/phone.html#mode=watch&seed=42" out.png 844 390 2 ./scr
 - 勝利：總崩潰、全滅、控制三據點 60 秒、10 分鐘到時軍勢高者勝。
 - AI：不做有序撤退；主將站戰線後 40 m 並追擊附近動搖或潰走敵軍。戰線式指揮（aiLine）：對峙線在己方 295 m，攻勢發起時間 30～110 秒÷侵略性；錨點 3.3 m/s 推進；接戰後空手部隊在 120 m（240 秒後 180 m）內側擊鄰隊對手。AI 對 AI 60 場：時長 298 秒、首戰 102 秒、交戰期 197 秒、總崩潰結束 87%、時間到 8%、據點 5%、武田勝 55%（修正對峙線卡在半路的 bug 後；修正前 334 秒／首戰 126 秒／武田 63%）
 - 測試：網址 `#ai=legacy|steady|line|crane` 切換 AI 變體；`node tools/ai-diag.ts 20 line` 看抖動指標。`#cmd=manual` 全手動模式。`window.__kessen.doCmd('charge')`、`evalAdvice()`、`manualSet` 給腳本用。
-- 大名模式的預設方針：射完箭再攻、騎兵接戰後繞後、撤退線 35、橫陣；`playerOrders`（orders.ts）只處理接管的部隊。
+- 大名模式的預設方針：射完箭再攻、騎兵接戰後繞後、撤退線 35、橫陣；`playerOrders`（orders.ts）只處理接管的部隊。將領互換在 `applyWarCouncil`（main.ts）於出陣時套用：改 `cmd/skill/passive`、箭矢 ±5、`S.meta.tenkyu` 跟著典廄走、`hud.refreshCard`。localStorage 鍵：`kessen.doctrine`、`kessen.deploy`、`kessen.roster`。
 
 ## 8. 待辦與已知問題
 
@@ -110,6 +110,7 @@ node tools/shot.mjs "/tmp/phone.html#mode=watch&seed=42" out.png 844 390 2 ./scr
 ## 9. 踩過的坑
 
 - `.info .k` 是面板標頭漢字方塊的 class，新增 class 別用 `k`（本次新增的是 `kj`、`pic`、`pp`、`ic`、`km`）。
+- `.box` 是框選矩形的 class（`display: none`），別拿來當別的元件用（配置格子改叫 `.dbox`）。
 - `#hud button` 的顏色規則會蓋過 `.rail button[aria-pressed]`，要寫 `#hud .rail …`。
 - CSS `background:` 簡寫會把同元素較低優先權規則的 `background-size`／`background-position` 清掉（忍者旗牌肖像就是這樣消失的），要用 `background-color`。
 - 覆蓋畫面（出陣、結算、說明）要設 z-index，否則會被 fps 讀數蓋住。

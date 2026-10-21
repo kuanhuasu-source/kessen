@@ -2,7 +2,8 @@
 import * as THREE from 'three';
 import { newState, step, effM, updDims, height, active, dist, cat, general, passiveOn, inForest, inPaddy, inMarsh, onTrail, mulberry32, useSkill, useStrategy, battleCry, useJutsu, skillBlocked, canSee, type Unit, type Formation, type Ninja } from '../sim/sim.ts';
 import { MAP, UT } from '../sim/data.ts';
-import { setup, issueCommand, cmdOf, isManual, DEFAULT_DOCTRINE, type Doctrine, type CmdKind } from '../sim/ai.ts';
+import { setup, issueCommand, cmdOf, applyDeploy, DEFAULT_DOCTRINE, DEFAULT_DEPLOY, type Doctrine, type CmdKind, type Deploy, type Wing } from '../sim/ai.ts';
+import { ROSTER_T } from '../sim/data.ts';
 import { GAME_RULES, SIM_DT } from '../sim/game-rules.ts';
 import { buildTerrain } from './terrain.ts';
 import { UnitView, TYPE_NAME, KANJI, type CorpseSink } from './units.ts';
@@ -51,6 +52,79 @@ let doctrine0: Doctrine = { attack: 'volley', cav: 'raid', retreatAt: 35, format
 try { const j = localStorage.getItem(DOCTRINE_KEY); if (j) doctrine0 = { ...doctrine0, ...JSON.parse(j) }; } catch { /* 無法讀取時用預設 */ }
 S.meta.doctrine = [DAIMYO ? doctrine0 : { ...DEFAULT_DOCTRINE }, { ...DEFAULT_DOCTRINE }];
 function saveDoctrine() { try { localStorage.setItem(DOCTRINE_KEY, JSON.stringify(doctrine0)); } catch { /* 略過 */ } }
+// 配置與將領（第二階段）：戰線順序、預備隊、騎兵翼、各翼方針；將領可互換（武將技與被動跟著走）
+let deploy0: Deploy = JSON.parse(JSON.stringify(DEFAULT_DEPLOY));
+let roster0: Record<string, string> = Object.fromEntries(ROSTER_T.filter(r => r.key !== 'gen').map(r => [r.key, r.cmd])); // 部隊 key → 將領名
+try {
+  const d = localStorage.getItem('kessen.deploy'); if (d) { const j = JSON.parse(d); if (Array.isArray(j.line) && j.line.length >= 3) deploy0 = { ...deploy0, ...j, wings: { ...deploy0.wings, ...(j.wings ?? {}) } }; }
+  const r = localStorage.getItem('kessen.roster'); if (r) { const j = JSON.parse(r); const names = new Set(ROSTER_T.map(x => x.cmd)); if (Object.values(j).every(v => names.has(v as string)) && new Set(Object.values(j)).size === 7) roster0 = { ...roster0, ...j }; }
+} catch { /* 無法讀取時用預設 */ }
+function saveDeploy() { try { localStorage.setItem('kessen.deploy', JSON.stringify(deploy0)); localStorage.setItem('kessen.roster', JSON.stringify(roster0)); } catch { /* 略過 */ } }
+const WING_LABEL: Record<Wing, string> = { hold: '固守', steady: '穩進', press: '猛攻' };
+const POS_LABEL = ['左翼', '中央左', '中央右', '右翼'];
+let depMode: 'pos' | 'cmd' = 'pos'; let depSel: string | null = null; // 配置區塊：模式與已選的格子
+function unitByKey(k: string) { return S.units.find(u => u.side === 0 && u.key === k)!; }
+function depBox(id: string, label: string, key: string | null): string {
+  if (!key) return `<button type="button" class="dbox empty" data-x="box:${id}" aria-pressed="${depSel === id}"><span class="p">${label}</span><span class="n">（無）</span></button>`;
+  const u = unitByKey(key); const r = ROSTER_T.find(x => x.cmd === roster0[key])!;
+  return `<button type="button" class="dbox" data-x="box:${id}" aria-pressed="${depSel === id}"><span class="p">${label}・${TYPE_NAME[u.type]}</span><span class="n">${img(portraitOf(r.cmd), 'pp')}${r.cmd}</span><span class="s">${SKILL[r.skill]?.name ?? ''}</span></button>`;
+}
+function depHtml(): string {
+  const n = deploy0.line.length; const labels = n === 3 ? ['左翼', '中央', '右翼'] : POS_LABEL;
+  const line = deploy0.line.map((k, i) => depBox('line' + i, labels[i], k)).join('');
+  const res = depBox('reserve', '預備', deploy0.reserve);
+  const rest = ['archer1', 'archer2', 'cav'].map(k => depBox(k, k === 'cav' ? `騎兵（${deploy0.cavWing === 'W' ? '左' : '右'}翼）` : k === 'archer1' ? '弓・左' : '弓・右', k)).join('');
+  const wings = (['L', 'C', 'R'] as const).map(w => `<div class="pick"><span>${w === 'L' ? '左翼方針' : w === 'C' ? '中央方針' : '右翼方針'}</span>${(['hold', 'steady', 'press'] as Wing[]).map(v => `<button type="button" class="chip" data-x="wing:${w}:${v}" aria-pressed="${deploy0.wings[w] === v}">${WING_LABEL[v]}</button>`).join('')}</div>`).join('');
+  return `<div class="pick"><span>配置</span><div class="modes sm" style="margin:0;flex:1"><button type="button" data-x="mode:pos" aria-pressed="${depMode === 'pos'}">調位置</button><button type="button" data-x="mode:cmd" aria-pressed="${depMode === 'cmd'}">換將領</button></div></div>
+    <p class="m">${depMode === 'pos' ? '點兩個格子交換位置；放一隊到「預備」就成三隊戰線，預備隊在中央後方，友軍動搖時出動。' : '點兩個格子交換將領，武將技與被動跟著將領走（急射只對弓兵有用，赤備衝鋒對騎兵最好）。'}</p>
+    <div class="dep">${line}${res}</div><div class="dep">${rest}<button type="button" class="chip" data-x="cav:${deploy0.cavWing === 'W' ? 'E' : 'W'}">騎兵改${deploy0.cavWing === 'W' ? '右' : '左'}翼</button></div>
+    ${wings}
+    <p class="m">猛攻：該翼前伸 20 m、主動接戰範圍較大並跑步衝入；固守：後縮 15 m、只打逼近的敵軍。</p>`;
+}
+function depKeyOf(id: string): string | null { return id.startsWith('line') ? deploy0.line[+id.slice(4)] ?? null : id === 'reserve' ? deploy0.reserve : id; }
+function depSet(id: string, key: string | null) { if (id.startsWith('line')) { if (key) deploy0.line[+id.slice(4)] = key; } else if (id === 'reserve') deploy0.reserve = key; }
+function depAct(act: string) {
+  const [k, a, b] = act.split(':');
+  if (k === 'mode') { depMode = a as 'pos' | 'cmd'; depSel = null; }
+  else if (k === 'cav') { deploy0.cavWing = a as 'W' | 'E'; }
+  else if (k === 'wing') { deploy0.wings[a as 'L' | 'C' | 'R'] = b as Wing; }
+  else if (k === 'box') {
+    const lineBox = (id: string) => id.startsWith('line') || id === 'reserve';
+    if (depMode === 'pos' && !lineBox(a)) { hud.toast('弓兵與騎兵的位置固定（騎兵可換翼）'); return; }
+    if (!depSel) { depSel = a; }
+    else if (depSel === a) depSel = null;
+    else {
+      const ka = depKeyOf(depSel), kb = depKeyOf(a);
+      if (depMode === 'pos') {
+        if (depSel === 'reserve' || a === 'reserve') {
+          const lineId = depSel === 'reserve' ? a : depSel; const lineKey = depKeyOf(lineId)!; const resKey = deploy0.reserve;
+          if (resKey) { depSet(lineId, resKey); deploy0.reserve = lineKey; } // 預備與戰線互換
+          else { if (deploy0.line.length <= 3) { hud.toast('戰線至少要三隊'); depSel = null; hud.setWarExtra(depHtml()); return; } deploy0.line.splice(+lineId.slice(4), 1); deploy0.reserve = lineKey; }
+        } else { depSet(depSel, kb); depSet(a, ka); }
+      } else if (ka && kb) { const t = roster0[ka]; roster0[ka] = roster0[kb]; roster0[kb] = t; }
+      depSel = null;
+    }
+  } else if (k === 'res2line') { /* 保留 */ }
+  // 預備格為空且戰線只有三隊時，把預備格留白；戰線恢復四隊時用 reserve 點回
+  saveDeploy(); hud.setWarExtra(depHtml());
+}
+// 開戰時套用將領與配置（t = 0）
+function applyWarCouncil() {
+  if (!DAIMYO) return;
+  const byName = (n: string) => ROSTER_T.find(r => r.cmd === n)!;
+  for (const [key, name] of Object.entries(roster0)) {
+    const u = unitByKey(key); const r = byName(name); if (!u || !r) continue;
+    const hadAmmo = u.passive === 'ammo5';
+    u.cmd = r.cmd; u.skill = r.skill; u.passive = r.passive;
+    if (u.type === 'archer') { if (hadAmmo && r.passive !== 'ammo5') { u.ammo -= 5; u.ammoMax -= 5; } else if (!hadAmmo && r.passive === 'ammo5') { u.ammo += 5; u.ammoMax += 5; } }
+    hud.refreshCard(u);
+  }
+  S.meta.tenkyu = S.units.find(u => u.side === 0 && u.passive === 'tenkyu'); // 典廄光環跟著武田信繁走
+  // 預備隊空著時戰線保持四隊
+  S.meta.deployment = [deploy0, null];
+  applyDeploy(S, 0, deploy0);
+  for (const v of views) v.snap();
+}
 const DOCTRINE_ROWS: { key: keyof Doctrine; label: string; opts: { id: string; label: string }[]; note?: string }[] = [
   { key: 'formation', label: '陣形', opts: [{ id: 'line', label: '橫陣' }, { id: 'crane', label: '鶴翼' }, { id: 'fish', label: '魚鱗' }], note: '橫陣四隊並列；鶴翼兩翼前伸包抄；魚鱗中央突出' },
   { key: 'attack', label: '攻勢時機', opts: [{ id: 'now', label: '開戰即攻' }, { id: 'volley', label: '射完箭再攻' }, { id: 'waver', label: '等敵軍動搖' }, { id: 'hold', label: '固守' }] },
@@ -125,7 +199,7 @@ function reloadWith(over: Record<string, string | null>) {
   for (const [k, v] of Object.entries(over)) { if (v === null) p.delete(k); else p.set(k, v); }
   location.hash = p.toString(); location.reload();
 }
-function begin() { started = true; paused = false; hud.toast(WATCH ? '開始觀戰' : '出陣！'); }
+function begin() { applyWarCouncil(); started = true; paused = false; hud.toast(WATCH ? '開始觀戰' : '出陣！'); }
 hud.speeds = SPEEDS;
 hud.setWatch(WATCH, () => { camAuto = !camAuto; manualUntil = 0; hud.toast(camAuto ? '導播鏡頭' : '手動鏡頭'); },
   () => { visMode = visMode === 'all' ? 0 : visMode === 0 ? 1 : 'all'; hud.toast(visMode === 'all' ? '視野：全知' : `視野：${SIDE_NAME[visMode]}軍`); });
@@ -139,6 +213,7 @@ if (params.get('go') === '1') {
       ...(DAIMYO ? DOCTRINE_ROWS.map(r => ({ key: r.key as string, label: r.label, opts: r.opts, cur: String(doctrine0[r.key]), note: r.note })) : []),
     ],
     onPick: (key, id) => { if (key === 'cmd') { if ((id === 'manual') === DAIMYO) reloadWith({ cmd: id === 'manual' ? 'manual' : null }); } else setDoctrine(key, id); },
+    extra: DAIMYO ? depHtml() : '', onExtra: depAct,
   },
   clans0: PLAYER_CLANS.map(id => {
     const c = CLAN_INFO[id];
