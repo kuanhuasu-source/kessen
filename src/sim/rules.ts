@@ -52,6 +52,8 @@ export const V1 = {
   aiGenBack: 70,         // AI：主將站在戰線後方的距離（m）
   aiGenCommit: false,    // AI：主將主動追擊 120 m 內動搖／潰走的敵軍（附近沒有敵長槍時）
   aiSteady: false,       // AI：止抖（目標鎖定 8 秒、主將與弓兵決策有遲滯、騎兵退衝至少隔 25 秒、長槍陣型遲滯）
+  aiLine: false,         // AI：戰線式指揮（整條線一起推進、弓兵先射、步兵各打正前方、騎兵等接戰後繞翼、空手的部隊側擊鄰隊的對手）
+  aiFormation: 'line',   // 戰線形狀：line 一字橫陣；crane 鶴翼（兩翼前伸）；craneT／craneU 只有武田／上杉用鶴翼
   archerRange: 150,      // 弓兵射程（m）；命中率在 50 m 以內最高，到射程邊緣降到 15%
   // ---- 鬨聲 ----
   cryOn: true, cryOwn: 10, cryEnemy: -5, cryR: 40, cryCd: 90,

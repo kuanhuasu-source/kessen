@@ -11,7 +11,7 @@ type Per = { tgtSw: number; rev: number; destJump: number; alone: number; move: 
 function one(seed: number, verbose: boolean) {
   const pre = mulberry32(seed * 7919 + 13);
   const clan: [string, string] = [CLAN_CHOICES[0][Math.floor(pre() * 3)], CLAN_CHOICES[1][Math.floor(pre() * 3)]];
-  const S: State = newState(makeRules({ ...GAME_RULES, ...(process.argv[3] === 'steady' ? { aiSteady: true } : {}), name: 'diag' }), seed, clan);
+  const S: State = newState(makeRules({ ...GAME_RULES, ...({ steady: { aiSteady: true }, line: { aiSteady: true, aiLine: true }, crane: { aiSteady: true, aiLine: true, aiFormation: 'crane' } } as Record<string, object>)[process.argv[3] ?? ''] ?? {}, name: 'diag' }), seed, clan);
   S.dt = SIM_DT; setup(S); S.fx = [];
   const per = new Map<number, Per>();
   const lastTgt = new Map<number, number>(), lastDest = new Map<number, [number, number]>(), lastDir = new Map<number, [number, number, number]>();

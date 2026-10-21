@@ -30,7 +30,8 @@
 | M1～M5 | 完成 | 戰場、鏡頭、雙方 16 隊 624 人、攻擊與射擊、士氣與連鎖潰逃可視化、上杉 AI、戰場迷霧、忍者與忍術、武將技 |
 | 觀戰模式 | 完成 | AI 對 AI、導播鏡頭、視野切換、戰報、結算、速度 5× |
 | 節奏調整 | 完成 | 重整後士氣上限 50、取消 AI 有序撤退、主將前移並親征、弓兵 200 m、騎兵奔馳 |
-| M6 | 完成 | 勝負與結算、據點呈現、撤退指令、Gemini 2D 美術（本次） |
+| M6 | 完成 | 勝負與結算、據點呈現、撤退指令、Gemini 2D 美術 |
+| AI 動作優化 | 完成 | 止抖（aiSteady）＋戰線式指揮（aiLine）；鶴翼可量測未啟用 |
 | M7 | 未開始 | 手機效能（真機 fps 尚未回報）、平衡、跨瀏覽器 |
 
 ## 4. 架構與檔案地圖
@@ -40,7 +41,7 @@ TypeScript + Vite + Three.js，單一 HTML 輸出（約 1.66 MB，其中美術�
 | 檔案 | 內容 |
 | --- | --- |
 | `src/sim/sim.ts` | 戰鬥與士氣模擬核心；`S.fx` 畫面事件 |
-| `src/sim/ai.ts` | AI（戰略／戰術／武將技／忍者）；`S.meta.aiSides` 指定 AI 指揮哪一方 |
+| `src/sim/ai.ts` | AI（戰略／戰術／武將技／忍者）；`S.meta.aiSides` 指定 AI 指揮哪一方。`lineAI`／`lineInfantry` 是戰線式指揮（錨點、槽位、階段），`aiSteady` 是各處的決策鎖 |
 | `src/sim/rules.ts`、`configs.ts`、`game-rules.ts` | 規則參數；遊戲採用 `GAME_RULES` |
 | `src/sim/data.ts` | 兵種數值、武將名單、忍者眾、地圖 |
 | `src/game/main.ts` | 主迴圈、輸入、指令、資訊面板、事件處理、觀戰導播、結算 |
@@ -53,7 +54,8 @@ TypeScript + Vite + Three.js，單一 HTML 輸出（約 1.66 MB，其中美術�
 | `art/manifest.json` | 59 張提示詞（風格、尺寸、檔名） |
 | `tools/gen-art.mjs` | Gemini 生成（預設模型 gemini-3-pro-image-preview） |
 | `tools/pack-art.mjs` | 原圖 → WebP（肖像 256、插畫 1280、圖示 96、家紋 128 去背、紋理 512）；會自動裁掉生成圖的紙邊 |
-| `tools/pace.ts` | AI 對 AI 批次量測節奏 |
+| `tools/pace.ts` | AI 對 AI 批次量測節奏（設定 base／steady／line／crane／craneT） |
+| `tools/ai-diag.ts` | AI 行為診斷：目標切換、回頭、落單、戰線散開 |
 | `tools/shot.mjs` | 無頭瀏覽器截圖（playwright-core ＋ 工作區預裝的 Chromium） |
 
 ## 5. 建置、測試、發布
@@ -90,7 +92,8 @@ node tools/shot.mjs "/tmp/phone.html#mode=watch&seed=42" out.png 844 390 2 ./scr
 - 士氣：高昂 ≥ 80、動搖 < 50、潰逃 < 25；潰逃後 15 秒未受攻擊且士氣 ≥ 35 重整（主將 60 m 內減半），重整後士氣上限 50，第 2 次潰逃即潰滅。
 - 軍勢：低於 25 總崩潰；高於 80 全軍緩升。
 - 勝利：總崩潰、全滅、控制三據點 60 秒、10 分鐘到時軍勢高者勝。
-- AI：不做有序撤退；主將站戰線後 40 m 並追擊附近動搖或潰走敵軍。
+- AI：不做有序撤退；主將站戰線後 40 m 並追擊附近動搖或潰走敵軍。戰線式指揮（aiLine）：對峙線在己方 295 m，攻勢發起時間 30～110 秒÷侵略性；錨點 3.3 m/s 推進；接戰後空手部隊在 120 m（240 秒後 180 m）內側擊鄰隊對手。AI 對 AI 60 場：時長 334 秒、首戰 126 秒、交戰期 208 秒、總崩潰結束 77%、時間到 13%、據點 10%、武田勝 63%（止抖前 58%，偏高，列入 M7 平衡）
+- 測試：網址 `#ai=legacy|steady|line|crane` 切換 AI 變體；`node tools/ai-diag.ts 20 line` 看抖動指標。
 
 ## 8. 待辦與已知問題
 
@@ -99,6 +102,8 @@ node tools/shot.mjs "/tmp/phone.html#mode=watch&seed=42" out.png 844 390 2 ./scr
 - 介面：設計文件的按鍵配置（R 撤退、Z/X 技能）與遊戲實作不同（遊戲：R 武將技、T 撤退、C 鬨聲、V 軍略），之後統一。
 - 兵種圖示（設計文件列 10 張）未列入美術清單，目前以漢字角標代替。
 - 少數肖像構圖偏小（nin_koga 是遠景群像），可視需要重生成。
+- 戰線式 AI 的首戰時間約 2 分鐘（舊 AI 65 秒）；若試玩覺得開場慢，調 `attackT`（ai.ts setup）或對峙線 295。
+- 鶴翼陣形已實作（`aiFormation`），量測對武田不利，未啟用。
 
 ## 9. 踩過的坑
 

@@ -9,6 +9,9 @@ import { makeRules, type Rules } from '../src/sim/rules.ts';
 const VARIANTS: Record<string, Partial<Rules>> = {
   base: {},
   steady: { aiSteady: true },
+  line: { aiSteady: true, aiLine: true },
+  crane: { aiSteady: true, aiLine: true, aiFormation: 'crane' },
+  craneT: { aiSteady: true, aiLine: true, aiFormation: 'craneT' },
   noRally: { maxRouts: 1 },
   noRetreat: { aiRetreat: false },
   rallyCap50: { rallyCap: 50 },

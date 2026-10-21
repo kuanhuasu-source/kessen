@@ -35,13 +35,15 @@ npm run build:single # 單一 HTML（dist/kessen-m1.html）
 - M6：指揮模式也有勝負判定與結算（勝利／敗北、再戰一場、重新挑戰、檢視戰場）；據點地圖標籤、點據點看效果／佔領進度／援軍倒數、全據點勝利倒數、奪取與失去提示、放火冒煙；村落援軍加入旗牌
 - M6：玩家「撤退」指令（右側「退」或 T）：脫離接戰退到主將附近，撤退中不還手、不連累友軍士氣、不扣軍勢；退到定點才結束
 - 美術（M6）：`art/manifest.json`（59 張的提示詞）→ `tools/gen-art.mjs`（Gemini 生成到 `art/out/`，不進版控）→ `tools/pack-art.mjs`（縮成 WebP 到 `art/web/`，進版控）→ `src/game/art.ts`（建置時內嵌；沒有圖檔就退回漢字與色塊）。已用上：肖像（旗牌、資訊面板、出陣忍者眾、結算）、技能與忍術圖示（面板按鈕）、家紋（軍勢列、結算、旗號淡印）、標題與一騎討插畫（出陣、結算背景）
+- AI 動作優化（2026-10-21）：止抖（目標鎖定與決策遲滯）＋戰線式指揮（整條線推進、弓兵在線後、步兵各打正前方、騎兵接戰後繞翼、空手部隊側擊鄰隊對手）。網址 `#ai=legacy|steady|line|crane` 可切換比較；`tools/ai-diag.ts` 量抖動
 - 節奏調整（2026-10-21，AI 對 AI 各 60 場，見 `tools/pace.ts`）：重整後士氣上限 50；取消 AI 動搖時有序撤退；AI 主將站戰線後 40 m 並追擊附近動搖／潰走敵軍；弓兵射程 200 m；騎兵奔馳動畫與揚塵。交戰期 330 → 298 秒，總崩潰結束 62% → 87%
 - 修正：軍勢門檻改讀規則（v2 總崩潰 25；v2 已取消「軍勢低於 50 全軍緩降」，相關提示移除）
 - 速度 0.5× / 1× / 2× / 3×（右側按鈕或 `-` `=`）
 - 測試介面：`window.__kessen`（下指令、`advance(秒)` 快轉），給無頭瀏覽器腳本用
 
 ## 工具
-- `node tools/pace.ts <局數> [設定名…]`：AI 對 AI 批次量測節奏（時長、潰走、重整、AI 撤退、主將與騎兵接戰、移動速度、箭矢命中）
+- `node tools/pace.ts <局數> [設定名…]`：AI 對 AI 批次量測節奏（時長、潰走、重整、AI 撤退、主將與騎兵接戰、移動速度、箭矢命中）；設定含 `base`（legacy AI）、`steady`、`line`、`crane`、`craneT`
+- `node tools/ai-diag.ts <局數> [steady|line|crane]`：AI 行為診斷（目標切換、目的地大跳、回頭、落單、待機、戰線散開）
 - `node tools/gen-art.mjs [--only id,id] [--group 名稱] [--force]`：Gemini 生成美術。自己電腦：`.env` 寫 `GEMINI_API_KEY=...`；雲端工作區（代理注入金鑰）：`NODE_USE_ENV_PROXY=1 GEMINI_API_KEY=proxy node tools/gen-art.mjs`
 - `node tools/pack-art.mjs`：把 `art/out` 縮成遊戲用 WebP（`art/web`），幾秒完成；之後 `npm run build:single`
 - `node tools/shot.mjs <網址或檔案#參數> <png> [寬] [高] [縮放] [腳本.mjs]`：無頭瀏覽器截圖（用工作區預裝的 Chromium）

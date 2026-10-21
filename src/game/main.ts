@@ -30,7 +30,13 @@ const PLAYER_CLANS = ['mitsumono', 'iga', 'koga'], FOE_CLANS = ['nokizaru', 'iga
 const seed = Number(params.get('seed')) || ((Math.random() * 1e9) | 0);
 const clan0 = PLAYER_CLANS.includes(params.get('clan') ?? '') ? params.get('clan')! : 'mitsumono';
 const clan1 = FOE_CLANS.includes(params.get('foe') ?? '') ? params.get('foe')! : FOE_CLANS[Math.floor(mulberry32(seed ^ 0x5bd1)() * 3)];
-const S = newState(GAME_RULES, seed, [clan0, clan1]);
+// 測試用：網址 #ai=steady|line|crane 可切換 AI 變體（與 tools/pace.ts 的設定同名）
+const AI_VARIANTS: Record<string, Partial<typeof GAME_RULES>> = {
+  legacy: { aiSteady: false, aiLine: false }, steady: { aiSteady: true, aiLine: false }, line: { aiSteady: true, aiLine: true },
+  crane: { aiSteady: true, aiLine: true, aiFormation: 'crane' }, craneT: { aiSteady: true, aiLine: true, aiFormation: 'craneT' },
+};
+const aiVar = params.get('ai');
+const S = newState(aiVar && AI_VARIANTS[aiVar] ? { ...GAME_RULES, ...AI_VARIANTS[aiVar], name: `game+${aiVar}` } : GAME_RULES, seed, [clan0, clan1]);
 S.dt = SIM_DT;
 setup(S);          // 依設計文件佈陣：雙方各 8 隊、忍者
 // 觀戰模式（#mode=watch）：雙方都由 AI 指揮

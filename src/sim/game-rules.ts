@@ -11,6 +11,8 @@ export const GAME_RULES = makeRules({
   aiRetreat: false,      // 取消 AI 動搖時的有序撤退（每場平均 6 次來回）
   aiGenBack: 40, aiGenCommit: true, // 主將站在戰線後 40 m（光環 60 m 能蓋到前線），並追擊附近動搖或潰走的敵軍
   aiSteady: true,        // 止抖：目標鎖 8 秒、決策遲滯（目標切換 −80%、主將回頭 −60%，節奏不變）
+  aiLine: true,          // 戰線式指揮：整條線推進、弓兵在線後、步兵各打正前方、騎兵等接戰後繞翼（AI 對 AI 60 場：時長 334 秒、首戰 126 秒、交戰期 208 秒、總崩潰結束 77%、時間到 13%、據點 10%、武田勝 63%（止抖前 58%，偏高，列入 M7 平衡））
+  aiFormation: 'line',   // 一字橫陣（鶴翼量測：crane 武田勝 63%、據點結束 18%；craneT 武田勝 42%，先不用）
   archerRange: 200,      // 弓兵射程 150 → 200 m（＝識別距離）
   name: 'game',
 });
