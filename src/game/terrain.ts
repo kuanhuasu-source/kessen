@@ -1,0 +1,229 @@
+// 戰場：地形高度、地表顏色、森林、稻田、三個據點
+import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { MAP } from '../sim/data.ts';
+import { height, inForest } from '../sim/sim.ts';
+import { toWorld, rng } from './coords.ts';
+
+export const FACTION = { 0: new THREE.Color('#b8322a'), 1: new THREE.Color('#2f4f86'), neutral: new THREE.Color('#e9e2cf') };
+
+function colored(geo: THREE.BufferGeometry, color: THREE.ColorRepresentation) {
+  const g = geo.index ? geo.toNonIndexed() : geo;
+  const c = new THREE.Color(color); const n = g.attributes.position.count; const arr = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { arr[i * 3] = c.r; arr[i * 3 + 1] = c.g; arr[i * 3 + 2] = c.b; }
+  g.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+  g.deleteAttribute('uv');
+  return g;
+}
+const lambert = (opts: THREE.MeshLambertMaterialParameters = {}) => new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, ...opts });
+
+export type Terrain = {
+  ground: THREE.Mesh;
+  setOwner: (i: number, owner: -1 | 0 | 1, progress: number, progSide: -1 | 0 | 1) => void;
+  // 顯示已探明的地形秘密：沼澤、森林小徑、伏兵地
+  reveal: (kind: 'marsh' | 'trail' | 'ambush', x: number, y: number) => void;
+};
+
+// 依地形起伏貼地的圓盤（中心 x,y，半徑 r）
+function drape(x: number, y: number, r: number, lift: number, map: THREE.Texture, opacity = 1) {
+  const g = new THREE.CircleGeometry(r, 40, 0, Math.PI * 2); g.rotateX(-Math.PI / 2);
+  const p = g.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < p.count; i++) { const sx = x + p.getX(i), sy = y - p.getZ(i); p.setX(i, sx - 500); p.setZ(i, 350 - sy); p.setY(i, height(sx, sy) + lift); }
+  return new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map, transparent: true, opacity, depthWrite: false }));
+}
+function marshTexture() {
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 256;
+  const g = cv.getContext('2d')!; const R = rng(7);
+  const grd = g.createRadialGradient(128, 128, 20, 128, 128, 128);
+  grd.addColorStop(0, 'rgba(58,62,44,0.95)'); grd.addColorStop(0.75, 'rgba(70,74,50,0.85)'); grd.addColorStop(1, 'rgba(70,74,50,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 26; i++) { // 水窪
+    const a = R() * 6.28, d = R() * 80; g.fillStyle = `rgba(96,118,120,${0.35 + R() * 0.3})`;
+    g.beginPath(); g.ellipse(128 + Math.cos(a) * d, 128 + Math.sin(a) * d, 6 + R() * 16, 3 + R() * 8, R() * 3, 0, 6.28); g.fill();
+  }
+  g.strokeStyle = 'rgba(150,150,90,0.8)'; g.lineWidth = 1.5; // 蘆葦
+  for (let i = 0; i < 160; i++) { const a = R() * 6.28, d = R() * 100, x = 128 + Math.cos(a) * d, y = 128 + Math.sin(a) * d; g.beginPath(); g.moveTo(x, y); g.lineTo(x + R() * 4 - 2, y - 5 - R() * 5); g.stroke(); }
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function ringTexture(color: string) {
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 256;
+  const g = cv.getContext('2d')!;
+  g.fillStyle = 'rgba(20,24,14,0.28)'; g.beginPath(); g.arc(128, 128, 124, 0, 6.28); g.fill();
+  g.strokeStyle = color; g.lineWidth = 5; g.setLineDash([14, 10]); g.beginPath(); g.arc(128, 128, 120, 0, 6.28); g.stroke();
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
+export function buildTerrain(scene: THREE.Scene): Terrain {
+  const R = rng(20261021);
+  // ---- 地面 ----
+  const geo = new THREE.PlaneGeometry(MAP.W, MAP.H, 250, 175);
+  geo.rotateX(-Math.PI / 2);
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  const col = new Float32Array(pos.count * 3);
+  const grassA = new THREE.Color('#7f8f4e'), grassB = new THREE.Color('#93a35b'), forestFloor = new THREE.Color('#4d5a30');
+  const hillTop = new THREE.Color('#a7a46a'), dirt = new THREE.Color('#9b8a5e'), edge = new THREE.Color('#5d6638');
+  const c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i) + 500, y = 350 - pos.getZ(i);
+    const h = height(x, y);
+    pos.setY(i, h + (R() - 0.5) * 0.35);
+    c.copy(grassA).lerp(grassB, R() * 0.8);
+    if (h > 0) c.lerp(hillTop, Math.min(1, h / 15) * 0.7);
+    if (inForest(x, y)) c.copy(forestFloor).lerp(grassA, R() * 0.25);
+    // 南北兩條踩出來的小路，通往寺廟
+    if (Math.abs(x - 500 - Math.sin(y / 60) * 12) < 3.5 && (y < 300 || y > 400)) c.lerp(dirt, 0.75);
+    const ed = Math.min(x, 1000 - x, y, 700 - y);
+    if (ed < 30) c.lerp(edge, (30 - ed) / 30 * 0.6);
+    col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  geo.computeVertexNormals();
+  const ground = new THREE.Mesh(geo, lambert());
+  ground.name = 'ground';
+  scene.add(ground);
+
+  // 地圖外圍：延伸的原野，避免看到地圖邊緣外的空白
+  const outer = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: '#5f6a3a' }));
+  outer.position.y = -0.6; scene.add(outer);
+
+  // ---- 稻田：貼地的格狀水田 ----
+  const p = MAP.paddy, pw = p.x1 - p.x0, ph = p.y1 - p.y0;
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 512;
+  const g2 = cv.getContext('2d')!;
+  g2.fillStyle = '#8a7a52'; g2.fillRect(0, 0, 512, 512);
+  const cells = 6;
+  for (let i = 0; i < cells; i++) for (let j = 0; j < cells; j++) {
+    const s = 512 / cells;
+    g2.fillStyle = (i + j) % 2 ? '#6f8f80' : '#7a9a84';
+    g2.fillRect(i * s + 4, j * s + 4, s - 8, s - 8);
+    g2.fillStyle = 'rgba(160,200,90,0.35)';
+    for (let k = 0; k < 6; k++) g2.fillRect(i * s + 8, j * s + 10 + k * (s - 20) / 6, s - 16, 2);
+  }
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  const pg = new THREE.PlaneGeometry(pw, ph, 36, 40); pg.rotateX(-Math.PI / 2);
+  const pp = pg.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < pp.count; i++) { const x = pp.getX(i) + p.x0 + pw / 2, y = p.y0 + ph / 2 - pp.getZ(i); pp.setX(i, x - 500); pp.setZ(i, 350 - y); pp.setY(i, height(x, y) + 0.25); }
+  pg.computeVertexNormals();
+  scene.add(new THREE.Mesh(pg, new THREE.MeshLambertMaterial({ map: tex })));
+
+  // ---- 森林 ----
+  const trunk = colored(new THREE.CylinderGeometry(0.25, 0.35, 3, 5).translate(0, 1.5, 0), '#5a4330');
+  const crownA = colored(new THREE.ConeGeometry(2.6, 5, 6).translate(0, 4.5, 0), '#2f4a26');
+  const crownB = colored(new THREE.ConeGeometry(1.9, 4, 6).translate(0, 7, 0), '#3a5a2c');
+  const treeGeo = mergeGeometries([trunk, crownA, crownB])!;
+  const trees: THREE.Matrix4[] = [];
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3();
+  const f = MAP.forest;
+  for (let i = 0; i < 1400 && trees.length < 750; i++) {
+    const x = f.x0 + R() * (f.x1 - f.x0), y = f.y0 + R() * (f.y1 - f.y0);
+    if (R() < 0.15) continue;
+    const k = 0.8 + R() * 0.7;
+    trees.push(m.clone().compose(toWorld(x, y), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), R() * 6.28), s.set(k, k * (0.9 + R() * 0.3), k)));
+  }
+  // 原野上零星的樹
+  for (let i = 0; i < 90; i++) {
+    const x = R() * 1000, y = R() * 700;
+    if (inForest(x, y) || MAP.points.some(pt => Math.hypot(pt.x - x, pt.y - y) < 70) || (y > 200 && y < 500 && x > 600 && x < 860) || (Math.abs(x - 500) < 140 && (y < 180 || y > 520))) continue;
+    const k = 0.7 + R() * 0.6;
+    trees.push(m.clone().compose(toWorld(x, y), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), R() * 6.28), s.set(k, k, k)));
+  }
+  const forest = new THREE.InstancedMesh(treeGeo, lambert(), trees.length);
+  trees.forEach((mm, i) => forest.setMatrixAt(i, mm));
+  scene.add(forest);
+  const treeX = trees.map(mm => new THREE.Vector3().setFromMatrixPosition(mm).x + 500);
+
+  // ---- 據點 ----
+  const roofDark = '#4b3b2e', wall = '#d9cdb0', wood = '#6b4b32', red = '#b03a2e', thatch = '#a88d55';
+  const house = (w: number, d: number, h: number, roof: string) => mergeGeometries([
+    colored(new THREE.BoxGeometry(w, h, d).translate(0, h / 2, 0), wall),
+    colored(new THREE.ConeGeometry(Math.hypot(w, d) / 2 + 0.6, h * 0.9, 4).rotateY(Math.PI / 4).scale(1, 1, d / w).translate(0, h + h * 0.45, 0), roof),
+  ])!;
+  const place = (geo: THREE.BufferGeometry, x: number, y: number, rot = 0) => {
+    const mesh = new THREE.Mesh(geo, lambert()); mesh.position.copy(toWorld(x, y)); mesh.rotation.y = rot; scene.add(mesh); return mesh;
+  };
+  // 寺廟（山頂）
+  place(colored(new THREE.BoxGeometry(22, 1.2, 16).translate(0, 0.6, 0), '#a59a86'), 500, 352);
+  place(house(14, 10, 5, roofDark), 500, 355);
+  const torii = mergeGeometries([
+    colored(new THREE.CylinderGeometry(0.35, 0.35, 6, 6).translate(-3, 3, 0), red),
+    colored(new THREE.CylinderGeometry(0.35, 0.35, 6, 6).translate(3, 3, 0), red),
+    colored(new THREE.BoxGeometry(8.5, 0.6, 0.8).translate(0, 6.2, 0), '#2a2420'),
+    colored(new THREE.BoxGeometry(7, 0.4, 0.5).translate(0, 5.1, 0), red),
+  ])!;
+  place(torii, 500, 336);
+  // 村落
+  for (const [dx, dy, r, w] of [[-14, -10, 0.2, 8], [6, -14, -0.3, 7], [16, 4, 0.5, 9], [-6, 10, 0.1, 7], [-20, 8, -0.2, 6], [10, 18, 0.3, 6]] as const)
+    place(house(w, w * 0.7, 3, thatch), 320 + dx, 350 + dy, r);
+  // 補給點
+  for (let i = 0; i < 9; i++) place(colored(new THREE.BoxGeometry(1.6, 1.2, 1.6).translate(0, 0.6, 0), wood), 884 + (i % 3) * 2.2, 340 + Math.floor(i / 3) * 2.2, 0.2);
+  for (const [dx, dy] of [[-12, 8], [12, 10], [0, 18]] as const)
+    place(colored(new THREE.ConeGeometry(4, 4, 4).translate(0, 2, 0), '#d8d0bb'), 890 + dx, 350 + dy, 0.6);
+
+  // 佔領範圍與旗幟
+  const rings: THREE.Mesh[] = [], flags: THREE.Mesh[] = [], prog: THREE.Mesh[] = [], labels: THREE.Sprite[] = [];
+  const LABEL = [['村落', '援軍'], ['寺廟', '士氣 +10'], ['補給點', '箭矢']];
+  const labelTex = (i: number, owner: number) => {
+    const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64;
+    const g = cv.getContext('2d')!;
+    g.fillStyle = owner === 0 ? 'rgba(150,40,34,0.85)' : owner === 1 ? 'rgba(38,64,110,0.85)' : 'rgba(20,18,16,0.6)';
+    g.beginPath(); g.roundRect(4, 8, 248, 48, 12); g.fill();
+    g.fillStyle = '#f6efe0'; g.font = '700 30px "LXGW WenKai TC", "Noto Serif TC", serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(`${LABEL[i][0]}・${LABEL[i][1]}`, 128, 33);
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+  };
+  const labelOwner: number[] = [];
+  MAP.points.forEach(pt => {
+    const ring = new THREE.Mesh(new THREE.RingGeometry(MAP.pointR - 1.2, MAP.pointR, 64).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: FACTION.neutral, transparent: true, opacity: 0.55, depthWrite: false }));
+    ring.position.copy(toWorld(pt.x, pt.y)).add(new THREE.Vector3(0, 0.6, 0));
+    ring.renderOrder = 2; scene.add(ring); rings.push(ring);
+    const pr = new THREE.Mesh(new THREE.RingGeometry(MAP.pointR - 3.5, MAP.pointR - 1.6, 64, 1, 0, 0.001).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: FACTION.neutral, transparent: true, opacity: 0.8, depthWrite: false }));
+    pr.position.copy(ring.position); pr.renderOrder = 2; scene.add(pr); prog.push(pr);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 12, 5), new THREE.MeshLambertMaterial({ color: '#3b2f25' }));
+    pole.position.copy(toWorld(pt.x + 18, pt.y + 18)).add(new THREE.Vector3(0, 6, 0)); scene.add(pole);
+    const flag = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 5.5), new THREE.MeshLambertMaterial({ color: FACTION.neutral, side: THREE.DoubleSide }));
+    flag.position.copy(pole.position).add(new THREE.Vector3(1.3, 3, 0)); scene.add(flag); flags.push(flag);
+    const i = labels.length;
+    const lab = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex(i, -1), depthTest: false, transparent: true, sizeAttenuation: false }));
+    lab.center.set(0.5, 0); lab.renderOrder = 9; lab.scale.set(0.15, 0.0375, 1);
+    lab.position.copy(pole.position).add(new THREE.Vector3(0, 7, 0)); scene.add(lab); labels.push(lab); labelOwner.push(-1);
+  });
+  const setOwner = (i: number, owner: -1 | 0 | 1, progress: number, progSide: -1 | 0 | 1) => {
+    const colr = owner < 0 ? FACTION.neutral : FACTION[owner];
+    if (labelOwner[i] !== owner) { labelOwner[i] = owner; const m = labels[i].material as THREE.SpriteMaterial; m.map?.dispose(); m.map = labelTex(i, owner); m.needsUpdate = true; }
+    (rings[i].material as THREE.MeshBasicMaterial).color.copy(colr);
+    (flags[i].material as THREE.MeshLambertMaterial).color.copy(colr);
+    const p = prog[i];
+    p.visible = progSide >= 0 && progress > 0;
+    if (p.visible) {
+      p.geometry.dispose();
+      p.geometry = new THREE.RingGeometry(MAP.pointR - 3.5, MAP.pointR - 1.6, 64, 1, Math.PI / 2, Math.min(1, progress) * Math.PI * 2).rotateX(-Math.PI / 2);
+      (p.material as THREE.MeshBasicMaterial).color.copy(FACTION[progSide as 0 | 1]);
+    }
+  };
+
+  // ---- 光與霧 ----
+  scene.background = new THREE.Color('#c8d2d4');
+  scene.fog = new THREE.Fog('#c8d2d4', 650, 1700);
+  scene.add(new THREE.HemisphereLight('#e6eef2', '#4a4232', 1.25));
+  const sun = new THREE.DirectionalLight('#fff0d4', 1.9);
+  sun.position.set(-300, 520, 260); scene.add(sun);
+  const reveal = (kind: 'marsh' | 'trail' | 'ambush', x: number, y: number) => {
+    if (kind === 'marsh') { const d = drape(x, y, MAP.marshR + 4, 0.45, marshTexture()); d.renderOrder = 1; scene.add(d); }
+    else if (kind === 'ambush') { const d = drape(x, y, MAP.ambushR, 0.3, ringTexture('#d9c27a'), 0.9); d.renderOrder = 1; scene.add(d); }
+    else {
+      // 森林小徑：清掉路上的樹，鋪一條土路
+      const zero = new THREE.Matrix4().makeScale(0, 0, 0);
+      treeX.forEach((tx, i) => { if (Math.abs(tx - x) <= 8 && i < trees.length) { const p = new THREE.Vector3().setFromMatrixPosition(trees[i]); const sy = 350 - p.z; if (inForest(tx, sy)) forest.setMatrixAt(i, zero); } });
+      forest.instanceMatrix.needsUpdate = true;
+      const f = MAP.forest, n = 60;
+      const g = new THREE.PlaneGeometry(10, f.y1 - f.y0 + 20, 1, n); g.rotateX(-Math.PI / 2);
+      const p = g.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < p.count; i++) { const sx = x + p.getX(i), sy = (f.y0 + f.y1) / 2 - p.getZ(i); p.setX(i, sx - 500); p.setZ(i, 350 - sy); p.setY(i, height(sx, sy) + 0.3); }
+      const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: '#8a7550', transparent: true, opacity: 0.85, depthWrite: false }));
+      mesh.renderOrder = 1; scene.add(mesh);
+    }
+  };
+  return { ground, setOwner, reveal };
+}

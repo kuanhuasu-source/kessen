@@ -1,0 +1,24 @@
+{
+  "name": "kessen",
+  "version": "1.0.0",
+  "description": "決戰 — 網頁即時戰略遊戲（MVP）",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:single": "node build.mjs",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@types/three": "^0.186.0",
+    "playwright-core": "^1.64.1",
+    "sharp": "^0.35.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vite-plugin-singlefile": "^2.3.4"
+  },
+  "private": true,
+  "type": "module"
+}
