@@ -15,6 +15,7 @@ const VARIANTS: Record<string, Partial<Rules>> = {
   two: { streams: 'two', aiHoldYl: 250 }, east: { streams: 'east' },
   fog2: { fogV2: true },
   fix: { frontageCap: true, unitSeparation: true },
+  ship: { streams: 'two', aiHoldYl: 250, arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true }, shipFlat: { streams: 'two', aiHoldYl: 250, arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true, reliefNoise: 0 }, shipOneHill: { streams: 'two', aiHoldYl: 250, arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true, reliefHills: false }, shipNoStream: { arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true },
   noRally: { maxRouts: 1 },
   noRetreat: { aiRetreat: false },
   rallyCap50: { rallyCap: 50 },

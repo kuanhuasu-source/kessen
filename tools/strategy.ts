@@ -7,7 +7,8 @@ import { GAME_RULES, SIM_DT } from '../src/sim/game-rules.ts';
 import { makeRules, type Rules } from '../src/sim/rules.ts';
 
 const RV: Record<string, Partial<Rules>> = { base: {}, fix: { frontageCap: true, unitSeparation: true }, cap: { frontageCap: true }, sep: { unitSeparation: true },
-  splash: { arrowSplash: 0.5 }, crowd: { crowdSlow: 0.25 }, react: { aiFlankReact: true }, all3: { arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true } };
+  splash: { arrowSplash: 0.5 }, crowd: { crowdSlow: 0.25 }, react: { aiFlankReact: true }, all3: { arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true },
+  ship: { streams: 'two', aiHoldYl: 250, arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true } };
 const STRATS: Record<string, { d: Partial<Doctrine>; dep?: Partial<Deploy> }> = {
   line:     { d: { formation: 'line', attack: 'volley', cav: 'raid' } },
   blob:     { d: { formation: 'blob', attack: 'now', cav: 'guard' } },

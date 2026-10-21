@@ -108,10 +108,11 @@ export const clamp = (v: number, a: number, b: number) => v < a ? a : v > b ? b 
 export const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
 export function angDiff(a: number, b: number) { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; }
 // 地形高度：幾座圓丘（寺廟小丘、東南與西北的高地、兩個小土丘）加上起伏不到 2 m 的緩坡
+const RELIEF = { noise: 1, hills: true }; // 由 newState 依規則設定（height() 到處被呼叫，不帶 S）
 export function height(x: number, y: number) {
   let h = 0;
-  for (const k of MAP.hills) { const d = Math.hypot(x - k.x, y - k.y); if (d < k.r) { const u = 1 - d / k.r; h += k.h * u * u * (3 - 2 * u); } }
-  h += 1.1 * Math.sin(x / 97) * Math.cos(y / 83) + 0.7 * Math.sin((x + y) / 61) + 1.8;
+  for (const k of MAP.hills) { if (!RELIEF.hills && k !== MAP.hills[0]) continue; const d = Math.hypot(x - k.x, y - k.y); if (d < k.r) { const u = 1 - d / k.r; h += k.h * u * u * (3 - 2 * u); } }
+  h += (1.1 * Math.sin(x / 97) * Math.cos(y / 83) + 0.7 * Math.sin((x + y) / 61) + 1.8) * RELIEF.noise;
   return Math.max(0, h);
 }
 export function inForest(x: number, y: number) { const f = MAP.forest; return x >= f.x0 && x <= f.x1 && y >= f.y0 && y <= f.y1; }
@@ -195,6 +196,7 @@ export function makeUnit(S: State, side: Side, r: RosterEntry | null, type: UTyp
 export function newState(R: Rules, seed: number, clan: [string, string]): State {
   const rng = mulberry32(seed);
   setPassives(R.passivesOn, R.offPassives);
+  RELIEF.noise = R.reliefNoise; RELIEF.hills = R.reliefHills;
   const pick = <T>(arr: T[], n: number) => { const a = arr.slice(); const out: T[] = []; while (out.length < n && a.length) out.push(a.splice(Math.floor(rng() * a.length), 1)[0]); return out; };
   const S: State = {
     t: 0, dt: 0.25, R, rng, units: [], ninjas: [], army: [100, 100], armyRecent: [[], []],

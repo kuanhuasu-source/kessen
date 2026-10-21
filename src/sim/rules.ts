@@ -67,6 +67,8 @@ export const V1 = {
   nokizaruIntel: 'mid' as 'low' | 'mid' | 'high',
   kogaVision: 1.3,       // 甲賀眾視野倍率
   streams: 'none' as 'none' | 'two' | 'east', // 戰場溪流（data.ts STREAMS）
+  reliefNoise: 1,        // 地形緩坡起伏倍率（0 = 平地）
+  reliefHills: true,     // 是否有寺廟小丘以外的高地
   arrowSplash: 0,        // 箭雨濺射：目標 15 m 內的其他敵隊也吃到這個比例的命中（密集隊形吃箭）
   crowdSlow: 0,          // 擁擠減速：20 m 內有 2 隊以上友軍時速度打的折扣
   aiFlankReact: false,   // AI：友軍兩隊以上接戰時，空手部隊到 200 m 外側擊（對付集中突破）
