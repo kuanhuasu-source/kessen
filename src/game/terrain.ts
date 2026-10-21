@@ -4,6 +4,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { MAP } from '../sim/data.ts';
 import { height, inForest } from '../sim/sim.ts';
 import { toWorld, rng } from './coords.ts';
+import { GROUND, groundH, riverAt, paintGround, groundTexture } from './ground.ts';
 
 export const FACTION = { 0: new THREE.Color('#b8322a'), 1: new THREE.Color('#2f4f86'), neutral: new THREE.Color('#e9e2cf') };
 
@@ -53,58 +54,35 @@ function ringTexture(color: string) {
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
-export function buildTerrain(scene: THREE.Scene): Terrain {
+export function buildTerrain(scene: THREE.Scene, streams: string = 'none'): Terrain {
   const R = rng(20261021);
-  // ---- 地面 ----
-  const geo = new THREE.PlaneGeometry(MAP.W, MAP.H, 250, 175);
+  // ---- 地面：含外圍原野與兩條河的一整片平面，貼合成貼圖（ground.ts） ----
+  const GW = GROUND.x1 - GROUND.x0, GH = GROUND.y1 - GROUND.y0;
+  const geo = new THREE.PlaneGeometry(GW, GH, 320, 260);
   geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position as THREE.BufferAttribute;
-  const col = new Float32Array(pos.count * 3);
-  const grassA = new THREE.Color('#7f8f4e'), grassB = new THREE.Color('#93a35b'), forestFloor = new THREE.Color('#4d5a30');
-  const hillTop = new THREE.Color('#a7a46a'), dirt = new THREE.Color('#9b8a5e'), edge = new THREE.Color('#5d6638');
-  const c = new THREE.Color();
+  const uv = geo.attributes.uv as THREE.BufferAttribute;
   for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i) + 500, y = 350 - pos.getZ(i);
-    const h = height(x, y);
-    pos.setY(i, h + (R() - 0.5) * 0.35);
-    c.copy(grassA).lerp(grassB, R() * 0.8);
-    if (h > 0) c.lerp(hillTop, Math.min(1, h / 15) * 0.7);
-    if (inForest(x, y)) c.copy(forestFloor).lerp(grassA, R() * 0.25);
-    // 南北兩條踩出來的小路，通往寺廟
-    if (Math.abs(x - 500 - Math.sin(y / 60) * 12) < 3.5 && (y < 300 || y > 400)) c.lerp(dirt, 0.75);
-    const ed = Math.min(x, 1000 - x, y, 700 - y);
-    if (ed < 30) c.lerp(edge, (30 - ed) / 30 * 0.6);
-    col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+    // 平面中心在世界原點 = 模擬 (500,350)；延伸區不對稱，所以用 uv 對應合成貼圖
+    const x = pos.getX(i) + (GROUND.x0 + GROUND.x1) / 2, y = (GROUND.y0 + GROUND.y1) / 2 - pos.getZ(i);
+    pos.setX(i, x - 500); pos.setZ(i, 350 - y);
+    pos.setY(i, groundH(x, y, height(x, y), streams) + (R() - 0.5) * 0.3);
+    uv.setXY(i, (x - GROUND.x0) / GW, (y - GROUND.y0) / GH);
   }
-  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
   geo.computeVertexNormals();
-  const ground = new THREE.Mesh(geo, lambert());
+  const groundMat = new THREE.MeshLambertMaterial({ color: '#7f8f4e' });
+  const ground = new THREE.Mesh(geo, groundMat);
   ground.name = 'ground';
   scene.add(ground);
-
-  // 地圖外圍：延伸的原野，避免看到地圖邊緣外的空白
-  const outer = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: '#5f6a3a' }));
-  outer.position.y = -0.6; scene.add(outer);
-
-  // ---- 稻田：貼地的格狀水田 ----
-  const p = MAP.paddy, pw = p.x1 - p.x0, ph = p.y1 - p.y0;
-  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 512;
-  const g2 = cv.getContext('2d')!;
-  g2.fillStyle = '#8a7a52'; g2.fillRect(0, 0, 512, 512);
-  const cells = 6;
-  for (let i = 0; i < cells; i++) for (let j = 0; j < cells; j++) {
-    const s = 512 / cells;
-    g2.fillStyle = (i + j) % 2 ? '#6f8f80' : '#7a9a84';
-    g2.fillRect(i * s + 4, j * s + 4, s - 8, s - 8);
-    g2.fillStyle = 'rgba(160,200,90,0.35)';
-    for (let k = 0; k < 6; k++) g2.fillRect(i * s + 8, j * s + 10 + k * (s - 20) / 6, s - 16, 2);
+  paintGround(streams).then(cv => { groundMat.map = groundTexture(cv); groundMat.color.set('#ffffff'); groundMat.needsUpdate = true; });
+  // 遠山：地平線上幾座淡藍的山影
+  { const mats = new THREE.MeshBasicMaterial({ color: '#8a9aa6', fog: true });
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2 + R() * 0.3, d = 1500 + R() * 300, w = 500 + R() * 500, h = 90 + R() * 120;
+      const mnt = new THREE.Mesh(new THREE.ConeGeometry(w / 2, h, 5).translate(0, h / 2 - 8, 0), mats);
+      mnt.position.set(Math.cos(a) * d, 0, Math.sin(a) * d); mnt.scale.set(1, 1, 0.35); mnt.lookAt(0, 0, 0); scene.add(mnt);
+    }
   }
-  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-  const pg = new THREE.PlaneGeometry(pw, ph, 36, 40); pg.rotateX(-Math.PI / 2);
-  const pp = pg.attributes.position as THREE.BufferAttribute;
-  for (let i = 0; i < pp.count; i++) { const x = pp.getX(i) + p.x0 + pw / 2, y = p.y0 + ph / 2 - pp.getZ(i); pp.setX(i, x - 500); pp.setZ(i, 350 - y); pp.setY(i, height(x, y) + 0.25); }
-  pg.computeVertexNormals();
-  scene.add(new THREE.Mesh(pg, new THREE.MeshLambertMaterial({ map: tex })));
 
   // ---- 森林 ----
   const trunk = colored(new THREE.CylinderGeometry(0.25, 0.35, 3, 5).translate(0, 1.5, 0), '#5a4330');
@@ -126,6 +104,32 @@ export function buildTerrain(scene: THREE.Scene): Terrain {
     if (inForest(x, y) || MAP.points.some(pt => Math.hypot(pt.x - x, pt.y - y) < 70) || (y > 200 && y < 500 && x > 600 && x < 860) || (Math.abs(x - 500) < 140 && (y < 180 || y > 520))) continue;
     const k = 0.7 + R() * 0.6;
     trees.push(m.clone().compose(toWorld(x, y), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), R() * 6.28), s.set(k, k, k)));
+  }
+  // 外圍原野：河岸的樹帶、零星樹叢（畫面用，不影響模擬）
+  for (let i = 0; i < 900 && trees.length < 1500; i++) {
+    const x = GROUND.x0 + R() * (GROUND.x1 - GROUND.x0), y = GROUND.y0 + R() * (GROUND.y1 - GROUND.y0);
+    if (x > -20 && x < 1020 && y > -20 && y < 720) continue;
+    const r = riverAt(x, y); const bank = r.d > r.w / 2 + 6 && r.d < r.w / 2 + 40;
+    if (r.d <= r.w / 2 + 6) continue;
+    if (!bank && R() < 0.75) continue;
+    const k = 0.8 + R() * 0.8;
+    const w = toWorld(x, y); w.y = groundH(x, y, height(x, y));
+    trees.push(m.clone().compose(w, q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), R() * 6.28), s.set(k, k * (0.9 + R() * 0.3), k)));
+  }
+  // 灌木與石頭
+  { const bushGeo = colored(new THREE.IcosahedronGeometry(1.1, 0).scale(1, 0.65, 1).translate(0, 0.6, 0), '#4f6a35');
+    const rockGeo = colored(new THREE.DodecahedronGeometry(0.9, 0).scale(1.3, 0.7, 1).translate(0, 0.4, 0), '#8c8778');
+    const bushes: THREE.Matrix4[] = [], rocks: THREE.Matrix4[] = [];
+    for (let i = 0; i < 700; i++) {
+      const x = GROUND.x0 + 40 + R() * (GROUND.x1 - GROUND.x0 - 80), y = GROUND.y0 + 40 + R() * (GROUND.y1 - GROUND.y0 - 80);
+      if (riverAt(x, y).d < riverAt(x, y).w / 2 + 8) continue;
+      if ((x > MAP.paddy.x0 - 5 && x < MAP.paddy.x1 + 5 && y > MAP.paddy.y0 - 5 && y < MAP.paddy.y1 + 5) || MAP.points.some(pt => Math.hypot(pt.x - x, pt.y - y) < 48)) continue;
+      if (Math.abs(x - 500) < 12 && y > -300 && y < 1000) continue; // 南北大路
+      const k = 0.6 + R() * 1.1; const w = toWorld(x, y); w.y = groundH(x, y, height(x, y));
+      (R() < 0.8 ? bushes : rocks).push(m.clone().compose(w, q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), R() * 6.28), s.set(k, k, k)));
+    }
+    const bm = new THREE.InstancedMesh(bushGeo, lambert(), bushes.length); bushes.forEach((mm, i) => bm.setMatrixAt(i, mm)); scene.add(bm);
+    const rm = new THREE.InstancedMesh(rockGeo, lambert(), rocks.length); rocks.forEach((mm, i) => rm.setMatrixAt(i, mm)); scene.add(rm);
   }
   const forest = new THREE.InstancedMesh(treeGeo, lambert(), trees.length);
   trees.forEach((mm, i) => forest.setMatrixAt(i, mm));
@@ -205,7 +209,7 @@ export function buildTerrain(scene: THREE.Scene): Terrain {
 
   // ---- 光與霧 ----
   scene.background = new THREE.Color('#c8d2d4');
-  scene.fog = new THREE.Fog('#c8d2d4', 650, 1700);
+  scene.fog = new THREE.Fog('#c8d2d4', 700, 2100);
   scene.add(new THREE.HemisphereLight('#e6eef2', '#4a4232', 1.25));
   const sun = new THREE.DirectionalLight('#fff0d4', 1.9);
   sun.position.set(-300, 520, 260); scene.add(sun);

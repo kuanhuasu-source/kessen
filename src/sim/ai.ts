@@ -653,7 +653,8 @@ function lineAI(S: State, s: Side, A: SideAI) {
   const ens = S.units.filter(E => E.side === e && onField(E) && active(E) && vis(S, s, E) >= 1 && pType(S, s, E) !== 'archer')
     .map(E => { const p = seenPos(S, s, E); return { yl: Yl(s, p.y), x: p.x }; }).filter(o => Math.abs(o.x - A.ax) < 320).sort((a, b) => a.yl - b.yl);
   const frontYl = ens.length ? ens[Math.min(1, ens.length - 1)].yl : 999;
-  let targetYl = A.posture === 'advance' ? 295 : A.posture === 'hold' ? Math.max(A.ayl, 295) : 700; // hold：推進到對峙線就停，不再前進（之前寫成 min 會卡在半路）
+  const HL = R.aiHoldYl;
+  let targetYl = A.posture === 'advance' ? HL : A.posture === 'hold' ? Math.max(A.ayl, HL) : 700; // hold：推進到對峙線就停，不再前進（之前寫成 min 會卡在半路）
   if (engaged.length) {
     A.phase = 'melee';
     const m = engaged.reduce((a, u) => a + Yl(s, u.y), 0) / engaged.length;

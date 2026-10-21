@@ -1,6 +1,6 @@
 // 《決戰》M5：敵軍 AI、戰場迷霧、忍者情報與忍術、武將技／鬨聲／軍略。M4：士氣與軍勢可視化、連鎖潰逃、側背扇區、地形。M3：攻擊指令、近戰、射擊、衝鋒與傷亡畫面。戰鬥核心沿用士氣模擬器（src/sim）。
 import * as THREE from 'three';
-import { newState, step, effM, updDims, height, active, dist, cat, general, passiveOn, inForest, inPaddy, inMarsh, onTrail, mulberry32, useSkill, useStrategy, battleCry, useJutsu, skillBlocked, canSee, type Unit, type Formation, type Ninja } from '../sim/sim.ts';
+import { newState, step, effM, updDims, height, active, dist, cat, general, passiveOn, inForest, inPaddy, inMarsh, inWater, onTrail, mulberry32, useSkill, useStrategy, battleCry, useJutsu, skillBlocked, canSee, type Unit, type Formation, type Ninja } from '../sim/sim.ts';
 import { MAP, UT } from '../sim/data.ts';
 import { setup, issueCommand, cmdOf, applyDeploy, DEFAULT_DOCTRINE, DEFAULT_DEPLOY, type Doctrine, type CmdKind, type Deploy, type Wing } from '../sim/ai.ts';
 import { ROSTER_T } from '../sim/data.ts';
@@ -29,7 +29,6 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: window.devicePixel
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 const scene = new THREE.Scene();
 const rig = new CameraRig(window.innerWidth / window.innerHeight);
-const terrain = buildTerrain(scene);
 
 // ---------------- 模擬 ----------------
 // 網址 #clan=iga&foe=koga&seed=123 可指定忍者眾與亂數種子（出陣畫面選擇後會寫入網址並重新載入）
@@ -42,9 +41,11 @@ const clan1 = FOE_CLANS.includes(params.get('foe') ?? '') ? params.get('foe')! :
 const AI_VARIANTS: Record<string, Partial<typeof GAME_RULES>> = {
   legacy: { aiSteady: false, aiLine: false }, steady: { aiSteady: true, aiLine: false }, line: { aiSteady: true, aiLine: true },
   crane: { aiSteady: true, aiLine: true, aiFormation: 'crane' }, craneT: { aiSteady: true, aiLine: true, aiFormation: 'craneT' },
+  two: { streams: 'two', aiHoldYl: 250 }, east: { streams: 'east' }, // 溪流地形試用
 };
 const aiVar = params.get('ai');
 const S = newState(aiVar && AI_VARIANTS[aiVar] ? { ...GAME_RULES, ...AI_VARIANTS[aiVar], name: `game+${aiVar}` } : GAME_RULES, seed, [clan0, clan1]);
+const terrain = buildTerrain(scene, S.R.streams); // 要在 S 建立之後（溪流預設來自規則）
 S.dt = SIM_DT;
 setup(S);          // 依設計文件佈陣：雙方各 8 隊、忍者
 // 觀戰模式（#mode=watch）：雙方都由 AI 指揮
@@ -138,6 +139,8 @@ const DOCTRINE_ROWS: { key: keyof Doctrine; label: string; opts: { id: string; l
   { key: 'cav', label: '騎兵', opts: [{ id: 'guard', label: '護翼' }, { id: 'raid', label: '接戰後繞後' }, { id: 'free', label: '自由遊擊' }] },
   { key: 'retreatAt', label: '撤退線', opts: [{ id: '0', label: '不撤' }, { id: '35', label: '士氣 35' }, { id: '45', label: '士氣 45' }], note: '士氣低於此值的部隊自動脫離接戰退到主將旁' },
 ];
+// 忍者眾難度（依 AI 對 AI 100 局矩陣：甲賀 57%、三ツ者 51%、伊賀 49% 的我方勝率）
+const CLAN_DIFF: Record<string, string> = { koga: '較易', mitsumono: '普通', iga: '普通' };
 const doctrineLabel = (key: keyof Doctrine) => DOCTRINE_ROWS.find(r => r.key === key)!.opts.find(o => o.id === String(doctrine0[key]))?.label ?? '';
 function setDoctrine(key: string, id: string) {
   if (key === 'retreatAt') doctrine0.retreatAt = +id; else (doctrine0 as unknown as Record<string, string>)[key] = id;
@@ -225,7 +228,7 @@ if (params.get('go') === '1') {
   clans0: PLAYER_CLANS.map(id => {
     const c = CLAN_INFO[id];
     return { id, short: `${img(ninjaPortrait(id), 'pp')}${c.name}<small>${c.jutsu.map(j => JUTSU[j].name).join('・')}</small>`,
-      html: `<b>${img(ninjaPortrait(id), 'pp')}${c.name}</b><span class="m">${c.n} 人・情報${c.intel}・隱密${c.stealth}</span><span class="j">${c.jutsu.map(j => `<em>${JUTSU[j].name}</em>：${JUTSU[j].desc}`).join('<br>')}</span><span class="m">${c.note}</span>` };
+      html: `<b>${img(ninjaPortrait(id), 'pp')}${c.name}</b><span class="m">${c.n} 人・情報${c.intel}・隱密${c.stealth}・難度 ${CLAN_DIFF[id] ?? '普通'}</span><span class="j">${c.jutsu.map(j => `<em>${JUTSU[j].name}</em>：${JUTSU[j].desc}`).join('<br>')}</span><span class="m">${c.note}</span>` };
   }), clan0,
   clans1: FOE_CLANS.map(id => ({ id, short: `${img(ninjaPortrait(id), 'pp')}${CLAN_INFO[id].name}<small>${(id === 'nokizaru' ? ['sennyu', 'sakuteki'] : CLAN_INFO[id].jutsu).map(j => JUTSU[j].name).join('・')}</small>` })), clan1,
   onMode: m => reloadWith({ mode: m === 'watch' ? 'watch' : null }),
@@ -836,6 +839,9 @@ function keyboardCamera(dt: number) {
 const known = (id: string) => S.known[0].has(id);
 const knownMarsh = (x: number, y: number) => S.secrets.marsh.some((m, i) => known('m' + i) && Math.hypot(x - m.x, y - m.y) <= MAP.marshR);
 function terrainShort(x: number, y: number, cav: boolean) {
+  const wt = inWater(S, x, y);
+  if (wt === 1) return '涉水：移動 −50%、無法衝鋒、受箭 +30%、岸上敵軍接觸時士氣 −10';
+  if (wt === 2) return '渡口：移動 −20%';
   if (knownMarsh(x, y)) return '沼澤：移動 −60%、無法衝鋒';
   if (inPaddy(x, y)) return '稻田：移動 −30%、衝鋒減半';
   if (inForest(x, y)) return known('trail') && onTrail(S, x, y) ? '森林小徑：騎兵不減速' : cav ? '森林：騎兵移動 −40%' : '森林：受箭減半';
@@ -852,7 +858,7 @@ function terrainNotes(u: Unit): string[] {
 }
 const MORALE_SRC: Record<string, string> = {
   losses: '傷亡', flank: '側擊', rear: '背襲', chargeHit: '騎兵衝鋒', volley: '箭雨', friendRout: '友軍潰走', cmdDeath: '武將討死',
-  kuruma: '車懸', akazonae: '赤備', kesshiEnd: '決死結束', rumor: '流言', toseki: '投石', enemyCry: '敵方鬨聲', _drain: '持續消耗',
+  kuruma: '車懸', akazonae: '赤備', kesshiEnd: '決死結束', rumor: '流言', toseki: '投石', enemyCry: '敵方鬨聲', _drain: '持續消耗', water: '半渡而擊',
 };
 const ARMY_SRC: Record<string, string> = {
   unitRout: '部隊潰走', unitShatter: '部隊潰滅', bannerFall: '馬印倒下', enemyRout: '敵軍潰走', genDeath: '大將討死', viceDeath: '武將討死',
@@ -1086,6 +1092,7 @@ function watchFeed(e: { k: string; a: number; b?: number; n?: number; s?: string
     case 'cmd': F(A!.side, `${A!.cmd} 討死`, true); hot.push({ x: A!.x, y: A!.y, t: S.t, w: 80 }); break;
     case 'adv': F(A!.side, `軍師 ${A!.advisor} 討死`, true); break;
     case 'skill': if (SKILL[e.s!]) F(A!.side, `${A!.cmd}「${SKILL[e.s!].name}」`); hot.push({ x: A!.x, y: A!.y, t: S.t, w: 25 }); break;
+    case 'water': if (T && (mine(T) || intelOf(T) >= 2)) F(T.side, `${nameOf(T)}半渡而擊 −10`); break;
     case 'strat': if (STRATEGY[e.s!]) F(A!.side, `${A!.advisor}獻策「${STRATEGY[e.s!].name}」`, true); break;
     case 'charge': if (e.n && T) { F(A!.side, `${nameOf(A!)}衝入 ${nameOf(T)}`); hot.push({ x: T.x, y: T.y, t: S.t, w: 50 }); } break;
     case 'rear': if (T) { F(A!.side, `${nameOf(A!)}背襲 ${nameOf(T)}`); hot.push({ x: T.x, y: T.y, t: S.t, w: 40 }); } break;

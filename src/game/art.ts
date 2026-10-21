@@ -1,6 +1,6 @@
 // 2D 美術：Gemini 生成的原圖（art/out，不進版控）經 tools/pack-art.mjs 縮成 WebP（art/web，進版控），
 // 建置時由 Vite 內嵌進單一 HTML。沒有圖檔時每個函式回傳 undefined，介面退回漢字與色塊。
-const files = import.meta.glob('../../art/web/{portraits,illus,icons,kamon}/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const files = import.meta.glob('../../art/web/{portraits,illus,icons,kamon,textures}/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const map = new Map<string, string>();
 for (const [p, url] of Object.entries(files)) {
   const m = p.match(/art\/web\/([a-z]+)\/([\w-]+)\.webp$/);
@@ -21,6 +21,7 @@ export const skillIcon = (id: string) => art(`icons/skill_${id}`); // 武將技�
 export const jutsuIcon = (id: string) => art(`icons/jutsu_${id}`);
 export const kamon = (side: number) => art(`kamon/${side === 0 ? 'takeda' : 'uesugi'}`);
 export const illus = (id: 'title' | 'loading') => art(`illus/${id}`);
+export const texture = (id: 'grass' | 'forest' | 'paddy' | 'dirt') => art(`textures/${id}`);
 
 // 介面小圖的 <img>；沒有圖就回傳空字串
 export const img = (url: string | undefined, cls: string, alt = '') => url ? `<img class="${cls}" src="${url}" alt="${alt}" draggable="false">` : '';

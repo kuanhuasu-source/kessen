@@ -66,6 +66,11 @@ export const V1 = {
   hitowaRegen: 2,        // 人は城：未接戰回復倍率
   nokizaruIntel: 'mid' as 'low' | 'mid' | 'high',
   kogaVision: 1.3,       // 甲賀眾視野倍率
+  streams: 'none' as 'none' | 'two' | 'east', // 戰場溪流（data.ts STREAMS）
+  waterSpeed: 0.5, fordSpeed: 0.8, // 涉水／渡口的移動倍率
+  waterArrow: 1.3,       // 水中受箭命中倍率
+  waterHit: -10,         // 半渡而擊：攻擊水中（非渡口）的部隊，接觸時額外士氣打擊
+  aiHoldYl: 295,         // AI 戰線式指揮的對峙線（己方座標）
   cmdKillChance: 0.05,
   cmdKillOnlyRouting: false, // v2：只有在部隊潰逃被追擊時才可能被討取   // 兵力 < 25% 時，每名接戰敵隊每秒的討取機率
   buffCapPct: 0.5,

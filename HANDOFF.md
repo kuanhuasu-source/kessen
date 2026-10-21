@@ -48,7 +48,8 @@ TypeScript + Vite + Three.js，單一 HTML 輸出（約 1.66 MB，其中美術�
 | `src/game/main.ts` | 主迴圈、輸入、指令、資訊面板、事件處理、觀戰導播、結算；大名模式的軍議（`DOCTRINE_ROWS`）、大名令（`doCmd`／`cmdHtml`）、軍師建議（`evalAdvice`）、接管（`takeOver`／`handBack`） |
 | `src/game/orders.ts` | 玩家指令層（攻擊追擊、弓兵自由射擊、撤退令） |
 | `src/game/units.ts` | 士兵 InstancedMesh、陣型槽位、接戰動作、陣亡、旗號（含家紋淡印） |
-| `src/game/effects.ts`、`ninja.ts`、`terrain.ts` | 特效、忍者顯示、地形與據點 |
+| `src/game/effects.ts`、`ninja.ts`、`terrain.ts` | 特效、忍者顯示、地形與據點（延伸原野、河、遠山、灌木石頭） |
+| `src/game/ground.ts` | 地表合成貼圖（草地／林地／稻田／土路紋理、山丘、道路、河、溪流與渡口）；`GROUND` 是延伸範圍，`groundH` 是河床下陷（只影響畫面） |
 | `src/game/hud.ts` | 全部介面 |
 | `src/game/art.ts` | 2D 美術查表：`portraitOf(武將名)`、`ninjaPortrait(忍者眾)`、`skillIcon`、`jutsuIcon`、`kamon(side)`、`illus('title'|'loading')`；沒有圖檔時回傳 undefined，介面退回漢字與色塊 |
 | `src/game/skills.ts` | 武將技／被動／軍略／忍術／忍者眾的名稱與說明 |
@@ -91,6 +92,7 @@ node tools/shot.mjs "/tmp/phone.html#mode=watch&seed=42" out.png 844 390 2 ./scr
 ## 7. 規則現況（遊戲採用）
 
 - 近戰每 4 秒判定、命中 4 點；箭矢 2 點，射程 200 m（50 m 內 35%，到射程邊緣 15%）。
+- 地形：森林（受箭減半、騎兵 −40%、視野減半、察覺距離 60 m）、稻田（移動 −30%、衝鋒減半）、沼澤秘密（移動 −60%、無法衝鋒）、小丘（視野 +50%、居高 +15%）、水域（規則 `streams`，預設關：涉水 −50%、無法衝鋒、受箭 +30%、半渡而擊 −10；渡口 −20%）。
 - 士氣：高昂 ≥ 80、動搖 < 50、潰逃 < 25；潰逃後 15 秒未受攻擊且士氣 ≥ 35 重整（主將 60 m 內減半），重整後士氣上限 50，第 2 次潰逃即潰滅。
 - 軍勢：低於 25 總崩潰；高於 80 全軍緩升。
 - 勝利：總崩潰、全滅、控制三據點 60 秒、10 分鐘到時軍勢高者勝。
@@ -107,6 +109,7 @@ node tools/shot.mjs "/tmp/phone.html#mode=watch&seed=42" out.png 844 390 2 ./scr
 - 少數肖像構圖偏小（nin_koga 是遠景群像），可視需要重生成。
 - 戰線式 AI 首戰約 100 秒（舊 AI 65 秒）；若試玩覺得開場慢，調 `attackT`（ai.ts setup）或對峙線 295。守勢的錨點目標要用 `Math.max(ayl, 295)`，寫成 min 會卡在半路（已修）。
 - 鶴翼陣形已實作（`aiFormation`），量測對武田不利，未啟用。
+- 溪流地形已實作未啟用（`streams: 'two' | 'east'`）；啟用時 AI 應改走渡口（lineAI 目前直線涉水）。
 
 ## 9. 踩過的坑
 

@@ -1,5 +1,5 @@
 // 《決戰》士氣模擬器 — 核心模擬（部隊層級，固定時間步長）
-import { UT, MAP, CLANS, STEALTH_R, ROSTER_T, ROSTER_U, type Side, type UType, type RosterEntry } from './data.ts';
+import { UT, MAP, CLANS, STEALTH_R, ROSTER_T, ROSTER_U, STREAMS, type Side, type UType, type RosterEntry } from './data.ts';
 import type { Rules } from './rules.ts';
 
 export type Formation = 'line' | 'dense' | 'loose';
@@ -78,7 +78,7 @@ export type State = {
 };
 
 // ---------------- 工具 ----------------
-export type FxEv = { k: 'volley' | 'charge' | 'blocked' | 'flank' | 'rear' | 'rout' | 'shatter' | 'rally' | 'cmd' | 'adv' | 'chain' | 'cheer' | 'army' | 'surround' | 'found' | 'skill' | 'strat' | 'cry' | 'jutsu' | 'ninjaDead'; a: number; b?: number; n?: number; s?: string };
+export type FxEv = { k: 'volley' | 'charge' | 'blocked' | 'flank' | 'rear' | 'water' | 'rout' | 'shatter' | 'rally' | 'cmd' | 'adv' | 'chain' | 'cheer' | 'army' | 'surround' | 'found' | 'skill' | 'strat' | 'cry' | 'jutsu' | 'ninjaDead'; a: number; b?: number; n?: number; s?: string };
 const fx = (S: State, e: FxEv) => { S.fx?.push(e); };
 
 export function mulberry32(a: number) {
@@ -108,6 +108,21 @@ export function inForest(x: number, y: number) { const f = MAP.forest; return x 
 export function inPaddy(x: number, y: number) { const p = MAP.paddy; return x >= p.x0 && x <= p.x1 && y >= p.y0 && y <= p.y1; }
 export function inMarsh(S: State, x: number, y: number) { for (const m of S.secrets.marsh) if (Math.hypot(x - m.x, y - m.y) <= MAP.marshR) return true; return false; }
 export function onTrail(S: State, x: number, y: number) { return inForest(x, y) && Math.abs(x - S.secrets.trailX) <= 7; }
+// 水域：0 不在水中、1 涉水、2 渡口（淺灘）
+export function inWater(S: State, x: number, y: number): 0 | 1 | 2 {
+  const ss = STREAMS[S.R.streams]; if (!ss || !ss.length) return 0;
+  for (const st of ss) {
+    let best = 1e9;
+    for (let i = 0; i < st.pts.length - 1; i++) {
+      const [ax, ay] = st.pts[i], [bx, by] = st.pts[i + 1];
+      const vx = bx - ax, vy = by - ay, L2 = vx * vx + vy * vy || 1;
+      const k = clamp(((x - ax) * vx + (y - ay) * vy) / L2, 0, 1);
+      const d = Math.hypot(ax + vx * k - x, ay + vy * k - y); if (d < best) best = d;
+    }
+    if (best <= st.w / 2) return st.fords.some(f => Math.hypot(f.x - x, f.y - y) <= f.r) ? 2 : 1;
+  }
+  return 0;
+}
 export function inAmbush(S: State, x: number, y: number) { for (const a of S.secrets.ambush) if (Math.hypot(x - a.x, y - a.y) <= MAP.ambushR) return true; return false; }
 // X 相對於 Y 的方位：0 正面（±60°）、1 側面、2 背面（≥120°）
 export function cat(X: { x: number; y: number }, Y: Unit) {
@@ -446,6 +461,7 @@ export function damage(S: State, tg: Unit, dmg: number, src: Unit) {
 function chargeOK(S: State, A: Unit, T: Unit, cA: number) {
   if (A.state === 'waver') return false;
   if (inMarsh(S, A.x, A.y)) return false;
+  if (inWater(S, A.x, A.y) === 1) return false; // 涉水中無法衝鋒
   if (isCav(A) && T.type === 'spear' && cA === 0) return false; // 騎兵正面衝長槍無效
   if (has(S, T, 'koshu') && cA === 0) return false;              // 固守
   return true;
@@ -517,6 +533,7 @@ function volley(S: State, A: Unit, T: Unit) {
   const RG = S.R.archerRange;
   let p = d <= 50 ? 0.35 : d <= RG ? 0.35 - (d - 50) / (RG - 50) * 0.2 : 0.15 * Math.max(0.3, 1 - (d - RG) / 60);
   if (inForest(T.x, T.y)) p *= 0.5;
+  if (inWater(S, T.x, T.y) === 1) p *= S.R.waterArrow; // 水中行動遲緩，容易中箭
   if (T.form === 'loose') p *= 0.6; else if (T.form === 'dense') p *= 1.3;
   if (S.smokes.some(s => s.until > S.t && Math.hypot(T.x - s.x, T.y - s.y) <= 60)) p *= 0.5;
   const hits = poisson(S.rng, A.men * p);
@@ -532,6 +549,7 @@ function speedOf(S: State, u: Unit, running: boolean) {
   let v = UT[u.type].speed * (running ? 1 : 0.6);
   if (inMarsh(S, u.x, u.y)) v *= 0.4;
   else if (inPaddy(u.x, u.y)) v *= 0.7;
+  const wt = inWater(S, u.x, u.y); if (wt === 1) v *= S.R.waterSpeed; else if (wt === 2) v *= S.R.fordSpeed;
   if (isCav(u) && inForest(u.x, u.y) && !onTrail(S, u.x, u.y)) v *= 0.6;
   if (has(S, u, 'speed20')) v *= 1.2;
   if (has(S, u, 'speed30')) v *= 1.3;
@@ -701,6 +719,7 @@ export function step(S: State) {
       S.pairs.set(key, { onset: t, last: t });
       if (!active(T)) continue;
       const cA = cat(A, T);
+      if (inWater(S, T.x, T.y) === 1 && inWater(S, A.x, A.y) !== 1) { mHit(S, T, R.waterHit, 'water'); fx(S, { k: 'water', a: A.id, b: T.id, n: R.waterHit }); } // 半渡而擊：岸上打水中
       if (cA > 0 && !(cA === 1 && has(S, T, 'noFlankMorale'))) {
         let m = cA === 1 ? R.flank : R.rear;
         if (has(S, A, 'kitsutsuki')) m *= R.kitsutsukiMoraleMult;

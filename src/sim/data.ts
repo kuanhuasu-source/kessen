@@ -69,6 +69,18 @@ export const CLAN_CHOICES: Record<Side, string[]> = { 0: ['mitsumono', 'iga', 'k
 export const STEALTH_R = { high: 20, mid: 40, low: 60 };
 
 // 地圖：1000 m（x，東西）× 700 m（y，南北）。武田在南（y 小），上杉在北（y 大）。
+// 溪流（可由規則 streams 選用）：中心線折線、寬度、渡口（圓）。two：兩軍各有一條在自己對峙線前方，攻方要涉水；east：東側一條南北向，補給點在渡口
+export type Stream = { pts: [number, number][]; w: number; fords: { x: number; y: number; r: number }[] };
+export const STREAMS: Record<string, Stream[]> = {
+  none: [],
+  two: [
+    { pts: [[0, 284], [120, 296], [250, 286], [380, 298], [500, 290], [620, 282], [760, 296], [880, 286], [1000, 292]], w: 14, fords: [{ x: 500, y: 290, r: 16 }, { x: 290, y: 289, r: 12 }, { x: 760, y: 296, r: 12 }] },
+    { pts: [[0, 416], [120, 404], [250, 414], [380, 402], [500, 410], [620, 418], [760, 404], [880, 414], [1000, 408]], w: 14, fords: [{ x: 500, y: 410, r: 16 }, { x: 290, y: 411, r: 12 }, { x: 760, y: 404, r: 12 }] },
+  ],
+  east: [
+    { pts: [[912, 0], [898, 120], [910, 240], [896, 350], [908, 460], [894, 580], [906, 700]], w: 16, fords: [{ x: 896, y: 350, r: 18 }, { x: 898, y: 120, r: 12 }, { x: 894, y: 580, r: 12 }] },
+  ],
+};
 export const MAP = {
   W: 1000, H: 700,
   hill: { x: 500, y: 350, r: 160, h: 15 },
