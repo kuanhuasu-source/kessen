@@ -2,6 +2,7 @@
 // 一張貼圖貼在一個平面上（手機只多一個 draw call）。模擬用的地形範圍不變：森林、稻田仍是 data.ts 的矩形。
 import * as THREE from 'three';
 import { MAP, STREAMS } from '../sim/data.ts';
+import { height } from '../sim/sim.ts';
 import { texture } from './art.ts';
 import { rng } from './coords.ts';
 
@@ -56,12 +57,21 @@ export async function paintGround(streams = 'none'): Promise<HTMLCanvasElement> 
     grd.addColorStop(0, `rgba(${col},${0.10 + R() * 0.12})`); grd.addColorStop(1, `rgba(${col},0)`);
     g.fillStyle = grd; g.fillRect(X(x) - r * k, Y(y) - r * k, 2 * r * k, 2 * r * k);
   }
-  // 山丘：頂部偏黃，稜線淡淡幾圈
-  { const h = MAP.hill; const grd = g.createRadialGradient(X(h.x), Y(h.y), 0, X(h.x), Y(h.y), h.r * k);
-    grd.addColorStop(0, 'rgba(190,180,110,0.45)'); grd.addColorStop(0.6, 'rgba(170,165,95,0.22)'); grd.addColorStop(1, 'rgba(170,165,95,0)');
-    g.fillStyle = grd; g.fillRect(X(h.x - h.r), Y(h.y + h.r), 2 * h.r * k, 2 * h.r * k);
-    g.strokeStyle = 'rgba(90,85,50,0.18)'; g.lineWidth = 1.2;
-    for (let i = 1; i <= 3; i++) { g.beginPath(); g.ellipse(X(h.x), Y(h.y), h.r * k * i / 4, h.r * k * i / 4 * 0.92, 0.2, 0, 6.28); g.stroke(); }
+  // 高地：依實際高度上色（越高越黃褐、稜線陰影），並畫 4 m 一條的等高線
+  { const step = 4; const base = height(500, 50);
+    for (let y = GROUND.y0; y < GROUND.y1; y += step) for (let x = GROUND.x0; x < GROUND.x1; x += step) {
+      const h = height(x, y) - base; if (h < 2.5) continue;
+      const a = Math.min(0.5, (h - 2.5) / 18 * 0.5);
+      const slope = height(x + 6, y) - h - base; // 東面受光、西面陰影
+      g.fillStyle = `rgba(${slope < -0.6 ? '200,190,120' : slope > 0.6 ? '110,105,60' : '175,165,95'},${a})`;
+      g.fillRect(X(x), Y(y + step), step * k + 0.5, step * k + 0.5);
+    }
+    g.fillStyle = 'rgba(80,70,40,0.35)';
+    for (let y = GROUND.y0; y < GROUND.y1; y += 2) for (let x = GROUND.x0; x < GROUND.x1; x += 2) {
+      const h = height(x, y) - base; if (h < 3) continue;
+      const lv = Math.floor(h / 4);
+      if (Math.floor((height(x + 2, y) - base) / 4) !== lv || Math.floor((height(x, y + 2) - base) / 4) !== lv) g.fillRect(X(x), Y(y + 2), 2 * k, 2 * k);
+    }
   }
   // ---- 森林地面（不規則邊緣） ----
   { const f = MAP.forest; const wob = (t: number, seed: number) => Math.sin(t * 0.9 + seed) * 7 + Math.sin(t * 2.3 + seed * 2) * 4;

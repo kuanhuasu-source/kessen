@@ -6,7 +6,8 @@ import { setup, DEFAULT_DOCTRINE, type Doctrine, type Deploy, DEFAULT_DEPLOY } f
 import { GAME_RULES, SIM_DT } from '../src/sim/game-rules.ts';
 import { makeRules, type Rules } from '../src/sim/rules.ts';
 
-const RV: Record<string, Partial<Rules>> = { base: {}, fix: { frontageCap: true, unitSeparation: true } as Partial<Rules>, cap: { frontageCap: true } as Partial<Rules>, sep: { unitSeparation: true } as Partial<Rules> };
+const RV: Record<string, Partial<Rules>> = { base: {}, fix: { frontageCap: true, unitSeparation: true }, cap: { frontageCap: true }, sep: { unitSeparation: true },
+  splash: { arrowSplash: 0.5 }, crowd: { crowdSlow: 0.25 }, react: { aiFlankReact: true }, all3: { arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true } };
 const STRATS: Record<string, { d: Partial<Doctrine>; dep?: Partial<Deploy> }> = {
   line:     { d: { formation: 'line', attack: 'volley', cav: 'raid' } },
   blob:     { d: { formation: 'blob', attack: 'now', cav: 'guard' } },
@@ -21,9 +22,11 @@ const STRATS: Record<string, { d: Partial<Doctrine>; dep?: Partial<Deploy> }> = 
   reserve:  { d: { formation: 'line', attack: 'volley', cav: 'raid' }, dep: { line: ['spear1', 'samurai1', 'spear2'], reserve: 'samurai2' } },
 };
 const N = Number(process.argv[2] || 40), rv = process.argv[3] || 'base';
+const only = process.argv[4]?.split(',');
 const R = makeRules({ ...GAME_RULES, ...(RV[rv] ?? {}), name: rv });
 console.log(`規則 ${rv}，每種 ${N} 局（武田用該策略，上杉為預設 AI）`);
 for (const [name, st] of Object.entries(STRATS)) {
+  if (only && !only.includes(name)) continue;
   let w = 0, t = 0, routs = 0, men = 0;
   for (let i = 0; i < N; i++) {
     const S: State = newState(R, 11000 + i, [CLAN_CHOICES[0][i % 3], CLAN_CHOICES[1][(i + 1) % 3]]); S.dt = SIM_DT; setup(S); S.fx = [];

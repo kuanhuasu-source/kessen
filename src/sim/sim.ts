@@ -107,7 +107,13 @@ export function poisson(rng: () => number, lam: number): number {
 export const clamp = (v: number, a: number, b: number) => v < a ? a : v > b ? b : v;
 export const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
 export function angDiff(a: number, b: number) { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; }
-export function height(x: number, y: number) { const h = MAP.hill; const d = Math.hypot(x - h.x, y - h.y); return Math.max(0, h.h * (1 - d / h.r)); }
+// 地形高度：幾座圓丘（寺廟小丘、東南與西北的高地、兩個小土丘）加上起伏不到 2 m 的緩坡
+export function height(x: number, y: number) {
+  let h = 0;
+  for (const k of MAP.hills) { const d = Math.hypot(x - k.x, y - k.y); if (d < k.r) { const u = 1 - d / k.r; h += k.h * u * u * (3 - 2 * u); } }
+  h += 1.1 * Math.sin(x / 97) * Math.cos(y / 83) + 0.7 * Math.sin((x + y) / 61) + 1.8;
+  return Math.max(0, h);
+}
 export function inForest(x: number, y: number) { const f = MAP.forest; return x >= f.x0 && x <= f.x1 && y >= f.y0 && y <= f.y1; }
 export function inPaddy(x: number, y: number) { const p = MAP.paddy; return x >= p.x0 && x <= p.x1 && y >= p.y0 && y <= p.y1; }
 export function inMarsh(S: State, x: number, y: number) { for (const m of S.secrets.marsh) if (Math.hypot(x - m.x, y - m.y) <= MAP.marshR) return true; return false; }
@@ -553,6 +559,10 @@ function volley(S: State, A: Unit, T: Unit) {
   damage(S, T, hits * S.R.arrowDmg, A);
   mHit(S, T, S.R.volley, 'volley');
   T.lastArrowT = S.t;
+  if (S.R.arrowSplash > 0) for (const X of S.units) { // 濺射：擠在目標旁邊的敵隊一起中箭
+    if (X === T || X.side !== T.side || !active(X) || Math.hypot(X.x - T.x, X.y - T.y) > 15) continue;
+    const h2 = poisson(S.rng, A.men * p * S.R.arrowSplash); if (h2 > 0) { damage(S, X, h2 * S.R.arrowDmg, A); mHit(S, X, S.R.volley * 0.5, 'volley'); X.lastArrowT = S.t; }
+  }
   A.ammo--; A.reload = has(S, A, 'rapid') ? 3 : 6;
 }
 
@@ -563,6 +573,7 @@ function speedOf(S: State, u: Unit, running: boolean) {
   else if (inPaddy(u.x, u.y)) v *= 0.7;
   const wt = inWater(S, u.x, u.y); if (wt === 1) v *= S.R.waterSpeed; else if (wt === 2) v *= S.R.fordSpeed;
   if (isCav(u) && inForest(u.x, u.y) && !onTrail(S, u.x, u.y)) v *= 0.6;
+  if (S.R.crowdSlow > 0) { let c = 0; for (const o of S.units) if (o !== u && o.side === u.side && active(o) && Math.abs(o.x - u.x) < 20 && Math.abs(o.y - u.y) < 20 && dist(o, u) < 20) c++; if (c >= 2) v *= 1 - S.R.crowdSlow; }
   if (has(S, u, 'speed20')) v *= 1.2;
   if (has(S, u, 'speed30')) v *= 1.3;
   if (has(S, u, 'slow30')) v *= 0.7;

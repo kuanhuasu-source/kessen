@@ -1,5 +1,5 @@
 // 《決戰》士氣模擬器 — 雙方共用的 AI（普通難度：反應延遲約 1 秒，受戰爭迷霧限制）
-import { UT, MAP, CLANS, STEALTH_R, ROSTER_T, ROSTER_U, type Side, type UType } from './data.ts';
+import { UT, MAP, CLANS, STEALTH_R, ROSTER_T, ROSTER_U, STREAMS, type Side, type UType } from './data.ts';
 import {
   type State, type Unit, type Ninja, makeUnit, dist, cat, clamp, active, fighting, has, isCav, effM, general,
   useSkill, useStrategy, battleCry, useJutsu, inForest, inPaddy, updDims, onField,
@@ -682,6 +682,16 @@ function lineAI(S: State, s: Side, A: SideAI) {
     // 橫向慢慢對準敵線中心
     if (ens.length) { const cx = ens.slice(0, 4).reduce((a, o) => a + o.x, 0) / Math.min(4, ens.length); A.ax = clamp(A.ax + clamp(cx - A.ax, -2, 2), 380, 620); }
   }
+  // 溪流：前方 110 m 內有溪就對準最近的渡口，過溪時隊形收攏
+  let squeeze = 1;
+  if (R.streams !== 'none') for (const st of STREAMS[R.streams] ?? []) {
+    const syl = Yl(s, st.pts[Math.floor(st.pts.length / 2)][1]);
+    if (syl > A.ayl - 25 && syl < A.ayl + 110 && !engaged.length) {
+      const f = [...st.fords].sort((a, b) => Math.abs(a.x - A.ax) - Math.abs(b.x - A.ax))[0];
+      if (f) A.ax = clamp(A.ax + clamp(f.x - A.ax, -3, 3), 60, 940);
+      if (Math.abs(syl - A.ayl) < 40) squeeze = 0.35;
+    }
+  }
   // 槽位
   const d = deployOf(S, s);
   const n = A.ids.line3 === undefined ? 3 : 4;
@@ -690,7 +700,7 @@ function lineAI(S: State, s: Side, A: SideAI) {
   for (let i = 0; i < n; i++) {
     const id = A.ids['line' + i]; if (id === undefined) continue;
     const wy = d ? WING_Y[d.wings[wingOf(A, i, n)]] : 0;
-    A.slots.set(id, { x: A.ax + offs[i][0], yl: A.ayl + offs[i][1] + wy });
+    A.slots.set(id, { x: A.ax + offs[i][0] * squeeze, yl: A.ayl + offs[i][1] + wy });
   }
   if (A.reserveId >= 0) A.slots.set(A.reserveId, { x: A.ax, yl: A.ayl - 35 });
   if (formationOf(S, s) === 'stack') { for (const k of ['archer1', 'archer2', 'gen', 'cav']) A.slots.set(A.ids[k], { x: A.ax, yl: A.ayl }); }
@@ -748,7 +758,8 @@ function lineInfantry(S: State, u: Unit, A: SideAI) {
   if (best) { u.aiLockK = 'atk'; u.target = best.id; u.targetT = S.t; attackMove(S, u, best, charge || wing === 'press'); return; }
   // 擴大戰果：鄰隊在打、自己空手 → 從側背接近鄰隊的對手
   if (A.phase === 'melee') {
-    let X: Unit | null = null, xd = S.t > 240 ? 180 : 120; // 打久了就放寬，避免拖到時間到
+    const engagedN = S.units.filter(v => v.side === s && active(v) && v.contacts.length).length;
+    let X: Unit | null = null, xd = S.t > 240 ? 180 : (S.R.aiFlankReact && engagedN >= 2 ? 200 : 120); // 打久了或敵軍集中突破時放寬
     for (const E of known(S, s)) {
       if (!active(E) || E.state === 'rout' || !E.contacts.some(c => S.units[c].side === s)) continue;
       const d = dist(u, E); if (d < xd) { xd = d; X = E; }

@@ -84,6 +84,8 @@ export const STREAMS: Record<string, Stream[]> = {
 export const MAP = {
   W: 1000, H: 700,
   hill: { x: 500, y: 350, r: 160, h: 15 },
+  // 地形高度（sim.ts height()）：寺廟小丘、東南高地（武田側）、西北高地（上杉側）對稱，另有兩個小土丘
+  hills: [{ x: 500, y: 350, r: 160, h: 15 }, { x: 840, y: 95, r: 125, h: 20 }, { x: 160, y: 605, r: 125, h: 20 }, { x: 120, y: 120, r: 90, h: 7 }, { x: 880, y: 580, r: 90, h: 7 }],
   forest: { x0: 0, x1: 260, y0: 230, y1: 470 },
   paddy: { x0: 650, x1: 830, y0: 250, y1: 450 },
   points: [
