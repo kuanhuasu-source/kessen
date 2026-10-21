@@ -10,6 +10,7 @@ export const GAME_RULES = makeRules({
   rallyCap: 50,          // 重整後士氣最高回到 50（再潰走即潰滅）
   aiRetreat: false,      // 取消 AI 動搖時的有序撤退（每場平均 6 次來回）
   aiGenBack: 40, aiGenCommit: true, // 主將站在戰線後 40 m（光環 60 m 能蓋到前線），並追擊附近動搖或潰走的敵軍
+  aiSteady: true,        // 止抖：目標鎖 8 秒、決策遲滯（目標切換 −80%、主將回頭 −60%，節奏不變）
   archerRange: 200,      // 弓兵射程 150 → 200 m（＝識別距離）
   name: 'game',
 });
