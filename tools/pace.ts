@@ -8,6 +8,7 @@ import { makeRules, type Rules } from '../src/sim/rules.ts';
 
 const VARIANTS: Record<string, Partial<Rules>> = {
   base: {},
+  steady: { aiSteady: true },
   noRally: { maxRouts: 1 },
   noRetreat: { aiRetreat: false },
   rallyCap50: { rallyCap: 50 },

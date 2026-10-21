@@ -26,6 +26,7 @@ export type Unit = {
   // AI 狀態
   role: string; target: number; targetT: number; holdX: number; holdY: number; ambush: boolean;
   cavPhase: string; cavPhaseT: number; huntNinja: number; fakeType: UType | null; fakeUntil: number;
+  aiLockK: string; aiLockT: number; // AI 決策鎖（止抖）
   // 玩家指令：陣列寬度（列數）與抵達後的朝向
   filesWanted: number; finalF: number;
 };
@@ -154,6 +155,7 @@ export function makeUnit(S: State, side: Side, r: RosterEntry | null, type: UTyp
     recent: [], effHist: [], maxDrop5: 0, maxDrop5Srcs: '', maxShock5: 0,
     role: '', target: -1, targetT: -99, holdX: x, holdY: y, ambush: false,
     cavPhase: 'idle', cavPhaseT: 0, huntNinja: -1, fakeType: null, fakeUntil: -1,
+    aiLockK: '', aiLockT: -99,
     filesWanted: 0, finalF: NaN,
   };
   if (u.passive === 'ammo5' && S.R.passivesOn) { u.ammo += 5; u.ammoMax += 5; }

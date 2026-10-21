@@ -148,6 +148,16 @@ function targetScore(S: State, u: Unit, E: Unit): number {
   if (isCav(u) && pt === 'spear' && !E.contacts.length) sc -= 2;
   const maxD = isCav(u) ? 450 : 260;
   if (d > maxD) sc -= 5;
+  if (S.R.aiSteady && !isCav(u)) {
+    sc -= Math.abs(p.x - u.x) / 200; // 步兵優先打正前方，少斜穿戰線
+    // 路線上有友軍擋著（會穿過自己人）就扣分
+    for (const v of S.units) {
+      if (v.side !== s || v === u || !active(v)) continue;
+      const vx = p.x - u.x, vy = p.y - u.y, L2 = vx * vx + vy * vy || 1;
+      const k = ((v.x - u.x) * vx + (v.y - u.y) * vy) / L2;
+      if (k > 0.15 && k < 0.85 && Math.hypot(u.x + vx * k - v.x, u.y + vy * k - v.y) < 22) { sc -= 1.2; break; }
+    }
+  }
   return sc;
 }
 
@@ -158,8 +168,13 @@ function pickTarget(S: State, u: Unit): Unit | null {
   if (!cand.length) return null;
   let best: Unit | null = null, bs = -1e9;
   for (const E of cand) { const sc = targetScore(S, u, E); if (sc > bs) { bs = sc; best = E; } }
-  if (cur && onField(cur) && vis(S, u.side, cur) >= 1 && t - u.targetT < 3 && cur.state !== 'gone') {
-    if (targetScore(S, u, cur) >= bs - 0.5) return cur;
+  if (cur && onField(cur) && vis(S, u.side, cur) >= 1 && cur.state !== 'gone') {
+    if (S.R.aiSteady) {
+      // 止抖：目標鎖 8 秒；之後也要明顯更好（+1.5）才換，目標潰走或撤退才立刻換
+      const alive = cur.state !== 'rout' && cur.state !== 'shattered' && !cur.retreating;
+      const cs = targetScore(S, u, cur);
+      if (alive && cs > -4 && (t - u.targetT < 8 || cs >= bs - 1.5)) return cur;
+    } else if (t - u.targetT < 3 && targetScore(S, u, cur) >= bs - 0.5) return cur;
   }
   if (bs < -4) return null;
   if (best && best.id !== u.target) { u.target = best.id; u.targetT = t; }
@@ -224,7 +239,7 @@ function tactical(S: State, s: Side, A: SideAI) {
     }
     // 陣型
     if (u.type === 'spear') {
-      const cv = nearestEnemyCav(S, u, 120);
+      const cv = nearestEnemyCav(S, u, S.R.aiSteady && u.form === 'dense' ? 170 : 120);
       if (cv && !has(S, u, 'noFlankMorale')) { if (u.form !== 'dense') { u.form = 'dense'; updDims(u); } }
       else if (u.form !== 'line' && !has(S, u, 'noFlankMorale')) { u.form = 'line'; updDims(u); }
     } else if (u.type === 'archer') {
@@ -320,7 +335,12 @@ function infantryAI(S: State, u: Unit, A: SideAI) {
   if (A.posture === 'advance') { const h = holdPos(S, u); moveTo(u, h.x, h.y); return; }
   const E = pickTarget(S, u);
   if (A.posture === 'hold') {
-    if (E && dist(u, E) < 90 && E.state !== 'rout' && !E.retreating) { attackMove(S, u, E); return; }
+    if (S.R.aiSteady && u.aiLockK === 'atk') {
+      const T = S.units[u.target];
+      if (T && active(T) && T.state !== 'rout' && !T.retreating && dist(u, T) < 150 && vis(S, s, T) >= 1) { attackMove(S, u, T); return; }
+      u.aiLockK = '';
+    }
+    if (E && dist(u, E) < 90 && E.state !== 'rout' && !E.retreating) { u.aiLockK = 'atk'; attackMove(S, u, E); return; }
     const h = holdPos(S, u); moveTo(u, h.x, h.y); return;
   }
   if (E) attackMove(S, u, E);
@@ -351,23 +371,28 @@ function archerAI(S: State, u: Unit, A: SideAI) {
   }
   u.fireTarget = best ? best.id : -1;
   // 敵騎兵逼近 → 後撤靠近長槍或大將
+  const steady = S.R.aiSteady;
   const cv = nearestEnemyCav(S, u, 120);
-  if (cv && !cv.contacts.length) {
+  if ((cv && !cv.contacts.length) || (steady && u.aiLockK === 'cv' && t - u.aiLockT < 6)) {
+    if (steady) { if (u.aiLockK !== 'cv' || t - u.aiLockT >= 6) { u.aiLockK = 'cv'; u.aiLockT = t; } else return; } // 已在後撤途中就不改路
     const prot = S.units.filter(v => v.side === s && active(v) && (v.type === 'spear' || v.type === 'general') && v !== u)
       .sort((a, b) => dist(a, u) - dist(b, u))[0];
     if (prot) { moveTo(u, prot.x, prot.y - fwd(s) * 25, true); return; }
     moveTo(u, u.x, u.y - fwd(s) * 60, true); return;
   }
+  if (steady && u.aiLockK === 'cv') u.aiLockK = '';
   if (A.posture === 'advance' || A.posture === 'hold') {
     moveTo(u, u.key === 'archer1' ? 455 : 545, Yl(s, 245)); return;
   }
-  // 攻勢：跟在主戰線後方，保持 100～130 m 射距
+  // 攻勢：跟在主戰線後方，保持射距（止抖：80～160 m 不動、每 3 秒才重新決定）
+  if (steady && u.hasDest && t - u.aiLockT < 3) return;
   const tg = best ?? pickTarget(S, u);
   if (tg) {
     const p = seenPos(S, s, tg);
     const d = Math.hypot(p.x - u.x, p.y - u.y);
-    if (d > 130) moveTo(u, u.x + (p.x - u.x) * (d - 115) / d, u.y + (p.y - u.y) * (d - 115) / d);
-    else if (d < 80) moveTo(u, u.x - (p.x - u.x) * 0.3, u.y - (p.y - u.y) * 0.3);
+    const far = steady ? 160 : 130, want = steady ? 125 : 115;
+    if (d > far) { moveTo(u, u.x + (p.x - u.x) * (d - want) / d, u.y + (p.y - u.y) * (d - want) / d); u.aiLockT = t; }
+    else if (d < 80) { moveTo(u, u.x - (p.x - u.x) * 0.3, u.y - (p.y - u.y) * 0.3); u.aiLockT = t; }
     else u.hasDest = false;
   } else {
     const c = lineCentroid(S, s);
@@ -384,8 +409,8 @@ function cavAI(S: State, u: Unit, A: SideAI) {
     const tg = S.units[u.contacts[0]];
     const stuck = t - u.cavPhaseT > 10 && tg && active(tg) && u.men > 0.3 * u.men0;
     const bad = u.contacts.some(c => S.units[c].type === 'spear' && cat(u, S.units[c]) === 0) && t - u.cavPhaseT > 3;
-    if ((stuck || bad) && u.state !== 'waver') {
-      u.cavPhase = 'withdraw'; u.cavPhaseT = t; u.disUntil = t + 6;
+    if ((stuck || bad) && u.state !== 'waver' && !(S.R.aiSteady && t - u.aiLockT < 25)) {
+      u.cavPhase = 'withdraw'; u.cavPhaseT = t; u.disUntil = t + 6; u.aiLockT = t; u.targetT = t; // 止抖：退衝至少隔 25 秒，退開後仍打同一目標
       const ax = u.x - tg.x, ay = u.y - tg.y, L = Math.hypot(ax, ay) || 1;
       moveTo(u, u.x + ax / L * 80, u.y + ay / L * 80 - fwd(s) * 20, true);
     }
@@ -440,16 +465,30 @@ function cavAttack(S: State, u: Unit, E: Unit) {
 function generalAI(S: State, u: Unit, A: SideAI) {
   const t = S.t, s = u.side, e = (1 - s) as Side;
   if (u.contacts.length) return;
+  const steady = S.R.aiSteady;
+  const lockOn = (k: string) => steady && u.aiLockK.startsWith(k) && t - u.aiLockT < (k === 'c:' ? 10 : k === 'w:' ? 8 : 6);
+  const lock = (k: string) => { u.aiLockK = k; u.aiLockT = t; };
+  // 止抖：已鎖定的親征目標，只要還在動搖／潰走且在 160 m 內就追到底
+  if (lockOn('c:')) {
+    const E = S.units[+u.aiLockK.slice(2)];
+    if (E && active(E) && (E.state === 'waver' || E.state === 'rout') && vis(S, s, E) >= 1 && dist(u, E) < 160) { attackMove(S, u, E); return; }
+    u.aiLockK = '';
+  }
   const cv = nearestEnemyCav(S, u, 150);
-  if (cv && !cv.contacts.length) {
+  if ((cv && !cv.contacts.length) || lockOn('cv')) {
+    if (steady && !lockOn('cv')) lock('cv');
     const sp = S.units.filter(v => v.side === s && active(v) && v.type === 'spear').sort((a, b) => dist(a, u) - dist(b, u))[0];
     if (sp) { moveTo(u, sp.x, sp.y - (S.units[sp.id].side === 0 ? 20 : -20), true); return; }
   }
   const c = lineCentroid(S, s);
   if (!c) { moveTo(u, 500, Yl(s, 60)); return; }
-  // 偏向最弱的接戰友軍
+  // 偏向最弱的接戰友軍（止抖：鎖 8 秒，期間該隊仍在接戰就不換）
   let weak: Unit | null = null, wm = 101;
-  for (const v of S.units) if (v.side === s && active(v) && v.contacts.length && v !== u) { const m = effM(S, v); if (m < wm) { wm = m; weak = v; } }
+  if (lockOn('w:')) { const v = S.units[+u.aiLockK.slice(2)]; if (v && active(v) && v.contacts.length) { weak = v; wm = effM(S, v); } }
+  if (!weak) {
+    for (const v of S.units) if (v.side === s && active(v) && v.contacts.length && v !== u) { const m = effM(S, v); if (m < wm) { wm = m; weak = v; } }
+    if (weak && wm < 70 && steady) lock('w:' + weak.id);
+  }
   const back = S.R.aiGenBack;
   let tx = c.x, ty = c.y - (s === 0 ? back : -back);
   if (weak && wm < 70) { tx = weak.x; ty = weak.y - (s === 0 ? Math.min(45, back) : -Math.min(45, back)); }
@@ -458,8 +497,10 @@ function generalAI(S: State, u: Unit, A: SideAI) {
     const E = known(S, s).filter(x => (x.state === 'waver' || x.state === 'rout') && vis(S, s, x) >= 2 && dist(u, x) < 120)
       .sort((a, b) => dist(a, u) - dist(b, u))[0];
     const spearNear = E && known(S, s).some(X => X !== E && active(X) && pType(S, s, X) === 'spear' && !X.contacts.length && dist(X, E) < 50);
-    if (E && !spearNear) { attackMove(S, u, E); return; }
+    if (E && !spearNear) { if (steady) lock('c:' + E.id); attackMove(S, u, E); return; }
   }
+  // 止抖：目的地只差一點就不改（避免每秒微調造成抖動）
+  if (steady && u.hasDest && Math.hypot(u.destX - tx, u.destY - ty) < 12) return;
   // 勝勢時投入
   const enemyArmy = u.advAlive ? S.army[e] : (S.army[e] > 66 ? 85 : S.army[e] > 33 ? 50 : 25);
   if (A.posture === 'attack' && (enemyArmy < 40 || S.army[s] - enemyArmy > 35)) {

@@ -51,6 +51,7 @@ export const V1 = {
   aiRetreat: true,       // AI：動搖且接戰中、大將不在附近時有序撤退
   aiGenBack: 70,         // AI：主將站在戰線後方的距離（m）
   aiGenCommit: false,    // AI：主將主動追擊 120 m 內動搖／潰走的敵軍（附近沒有敵長槍時）
+  aiSteady: false,       // AI：止抖（目標鎖定 8 秒、主將與弓兵決策有遲滯、騎兵退衝至少隔 25 秒、長槍陣型遲滯）
   archerRange: 150,      // 弓兵射程（m）；命中率在 50 m 以內最高，到射程邊緣降到 15%
   // ---- 鬨聲 ----
   cryOn: true, cryOwn: 10, cryEnemy: -5, cryR: 40, cryCd: 90,
