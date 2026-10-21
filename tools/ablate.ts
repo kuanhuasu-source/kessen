@@ -12,6 +12,7 @@ const V: Record<string, Partial<Rules>> = {
   noAnsatsu: { offJutsu: ['ansatsu'] }, noHouka: { offJutsu: ['houka'] }, noSennyu: { sennyuOn: false }, noSakuteki: { offJutsu: ['sakuteki'] },
   noCounter: { counterDeploy: false }, noFog: { fogOn: false }, noNinja: { ninjaOn: false },
   nnNoSkills: { ninjaOn: false, skillsOn: false }, nnNoStrat: { ninjaOn: false, strategyOn: false }, nnNoPassives: { ninjaOn: false, passivesOn: false }, nnNoAll: { ninjaOn: false, skillsOn: false, strategyOn: false, passivesOn: false },
+  kanpa10: { kanpaDur: 10 }, kanpa15: { kanpaDur: 15 }, kits45: { kitsutsukiDur: 45 }, kanpa10kits45: { kanpaDur: 10, kitsutsukiDur: 45 },
   kogaVis115: { kogaVision: 1.15 }, kogaVis100: { kogaVision: 1.0 }, nokiHigh: { nokizaruIntel: 'high' },
   kogaN4: {}, nokiN5: {}, nokiHighN5: { nokizaruIntel: 'high' }, kogaN4Vis115: { kogaVision: 1.15 },
 };

@@ -83,7 +83,7 @@ export const V1 = {
   tosekiMorale: -5,
   houkaArmy: -3,
   assassinP: 0.25, assassinPIdle: 0.40,
-  kanpaOn: true,
+  kanpaOn: true, kanpaDur: 20, kitsutsukiDur: 30, // 看破封技秒數、啄木鳥持續秒數
   giseiOn: true,
   giseiProtect: false,   // v2：偽旗改為把弓兵偽裝成長槍（保護用），而非把長槍偽裝成弓兵（誘敵）
   offPassives: [] as string[],

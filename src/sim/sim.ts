@@ -373,8 +373,8 @@ export function useStrategy(S: State, side: Side): boolean {
   const R = S.R, t = S.t, g = general(S, side);
   if (!R.strategyOn || !g.advAlive || !g.strategy || !active(g) || t < 60 || skillBlocked(S, side)) return false;
   if ((g as any).stratCd > t) return false;
-  if (g.strategy === 'kitsutsuki') { for (const v of S.units) if (v.side === side && onField(v)) addEff(S, v, 'kitsutsuki', 30); }
-  else if (g.strategy === 'kanpa') { S.kanpaUntil[(1 - side) as Side] = t + 20; }
+  if (g.strategy === 'kitsutsuki') { for (const v of S.units) if (v.side === side && onField(v)) addEff(S, v, 'kitsutsuki', S.R.kitsutsukiDur); }
+  else if (g.strategy === 'kanpa') { S.kanpaUntil[(1 - side) as Side] = t + S.R.kanpaDur; }
   (g as any).stratCd = t + 150;
   fx(S, { k: 'strat', a: g.id, s: g.strategy });
   S.rec.skillUse[g.strategy] = (S.rec.skillUse[g.strategy] || 0) + 1;
