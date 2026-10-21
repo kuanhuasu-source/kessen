@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { newState, step, effM, updDims, height, active, dist, cat, general, passiveOn, inForest, inPaddy, inMarsh, onTrail, mulberry32, useSkill, useStrategy, battleCry, useJutsu, skillBlocked, canSee, type Unit, type Formation, type Ninja } from '../sim/sim.ts';
 import { MAP, UT } from '../sim/data.ts';
-import { setup } from '../sim/ai.ts';
+import { setup, issueCommand, cmdOf, isManual, DEFAULT_DOCTRINE, type Doctrine, type CmdKind } from '../sim/ai.ts';
 import { GAME_RULES, SIM_DT } from '../sim/game-rules.ts';
 import { buildTerrain } from './terrain.ts';
 import { UnitView, TYPE_NAME, KANJI, type CorpseSink } from './units.ts';
@@ -41,11 +41,31 @@ S.dt = SIM_DT;
 setup(S);          // 依設計文件佈陣：雙方各 8 隊、忍者
 // 觀戰模式（#mode=watch）：雙方都由 AI 指揮
 const WATCH = params.get('mode') === 'watch';
-S.meta.aiSides = WATCH ? [0, 1] : [1];  // 指揮模式：AI 只指揮上杉軍；武田軍的「自動」忍者也由 AI 移動
+// 大名模式（預設）：AI 依軍議方針指揮武田軍，玩家用大名令、軍師建議與接管單隊來介入；#cmd=manual 回到全手動
+const DAIMYO = !WATCH && params.get('cmd') !== 'manual';
+S.meta.aiSides = WATCH || DAIMYO ? [0, 1] : [1];  // 全手動：AI 只指揮上杉軍；武田軍的「自動」忍者也由 AI 移動
+S.meta.playerSide = WATCH ? -1 : 0;            // 玩家那一方的忍術永遠由玩家施放
+const manualSet = new Set<number>(); S.meta.manual = manualSet;
+const DOCTRINE_KEY = 'kessen.doctrine';
+let doctrine0: Doctrine = { attack: 'volley', cav: 'raid', retreatAt: 35, formation: 'line' };
+try { const j = localStorage.getItem(DOCTRINE_KEY); if (j) doctrine0 = { ...doctrine0, ...JSON.parse(j) }; } catch { /* 無法讀取時用預設 */ }
+S.meta.doctrine = [DAIMYO ? doctrine0 : { ...DEFAULT_DOCTRINE }, { ...DEFAULT_DOCTRINE }];
+function saveDoctrine() { try { localStorage.setItem(DOCTRINE_KEY, JSON.stringify(doctrine0)); } catch { /* 略過 */ } }
+const DOCTRINE_ROWS: { key: keyof Doctrine; label: string; opts: { id: string; label: string }[]; note?: string }[] = [
+  { key: 'formation', label: '陣形', opts: [{ id: 'line', label: '橫陣' }, { id: 'crane', label: '鶴翼' }, { id: 'fish', label: '魚鱗' }], note: '橫陣四隊並列；鶴翼兩翼前伸包抄；魚鱗中央突出' },
+  { key: 'attack', label: '攻勢時機', opts: [{ id: 'now', label: '開戰即攻' }, { id: 'volley', label: '射完箭再攻' }, { id: 'waver', label: '等敵軍動搖' }, { id: 'hold', label: '固守' }] },
+  { key: 'cav', label: '騎兵', opts: [{ id: 'guard', label: '護翼' }, { id: 'raid', label: '接戰後繞後' }, { id: 'free', label: '自由遊擊' }] },
+  { key: 'retreatAt', label: '撤退線', opts: [{ id: '0', label: '不撤' }, { id: '35', label: '士氣 35' }, { id: '45', label: '士氣 45' }], note: '士氣低於此值的部隊自動脫離接戰退到主將旁' },
+];
+const doctrineLabel = (key: keyof Doctrine) => DOCTRINE_ROWS.find(r => r.key === key)!.opts.find(o => o.id === String(doctrine0[key]))?.label ?? '';
+function setDoctrine(key: string, id: string) {
+  if (key === 'retreatAt') doctrine0.retreatAt = +id; else (doctrine0 as unknown as Record<string, string>)[key] = id;
+  saveDoctrine();
+}
 const enemyAI = S.ai;
 S.ai = WATCH ? enemyAI : (s: typeof S) => { playerOrders(s); enemyAI(s); };
 S.fx = [];
-if (!WATCH) for (const u of S.units) if (u.side === 0) { u.hasDest = false; u.role = ''; u.target = -1; }
+if (!WATCH && params.get('cmd') === 'manual') for (const u of S.units) if (u.side === 0) { u.hasDest = false; u.role = ''; u.target = -1; } // 全手動：清掉 AI 佈陣給的任務；大名模式保留，AI 要靠它帶兵
 const views = S.units.map(u => new UnitView(scene, u));
 const ninViews = S.ninjas.map(n => new NinjaView(scene, n));
 const areas = new AreaFx(scene), smoke = new Dust(scene, 600, '#d9dcd8', 2.2, 0.55), hoof = new Dust(scene, 500, '#b9a888', 0.8, 0.5), ash = new Dust(scene, 300, '#3b332c', 2.4, 0.6), ember = new Dust(scene, 200, '#e0703a', 0.4, 0.9);
@@ -81,7 +101,7 @@ const setSel = (ids: number[], add: boolean) => {
   for (const id of ids) { if (!mine(S.units[id]) || WATCH) continue; if (add && selected.has(id)) selected.delete(id); else selected.add(id); }
   views.forEach(v => (v.selected = selected.has(v.u.id)));
 };
-setSel([S.units.find(u => u.side === 0 && u.key === 'spear1')!.id], false);
+if (!DAIMYO) setSel([S.units.find(u => u.side === 0 && u.key === 'spear1')!.id], false);
 
 const hud = new Hud(S.units.filter(mine), {
   onSelectCard: (id, add) => setSel([id], add),
@@ -95,11 +115,13 @@ const hud = new Hud(S.units.filter(mine), {
   onRetreat: () => orderRetreat(),
 });
 hud.setArmyTicks(S.R.collapseAt, S.R.armyHighThresh);
+hud.setDaimyo(DAIMYO);
 let boxMode = false;
 // 出陣畫面：模式與忍者眾（換了就寫入網址並重新載入，讓佈陣與情報從頭計算）
 function reloadWith(over: Record<string, string | null>) {
   const p = new URLSearchParams(location.hash.slice(1));
   p.set('seed', String(seed)); p.set('clan', clan0); if (WATCH || params.has('foe')) p.set('foe', clan1); if (WATCH) p.set('mode', 'watch');
+  if (!WATCH && !DAIMYO) p.set('cmd', 'manual'); if (aiVar) p.set('ai', aiVar);
   for (const [k, v] of Object.entries(over)) { if (v === null) p.delete(k); else p.set(k, v); }
   location.hash = p.toString(); location.reload();
 }
@@ -111,6 +133,13 @@ if (params.get('go') === '1') {
   params.delete('go'); history.replaceState(null, '', '#' + params.toString()); begin();
 } else hud.showSetup2({
   mode: WATCH ? 'watch' : 'play', bg: illus('title'),
+  war: {
+    rows: [
+      { key: 'cmd', label: '指揮方式', opts: [{ id: 'daimyo', label: '大名（軍議＋介入）' }, { id: 'manual', label: '全手動' }], cur: DAIMYO ? 'daimyo' : 'manual', note: DAIMYO ? '軍師帶兵，你定方針、看情報、適時下大名令或接管單隊' : '每一隊都由你親自操作' },
+      ...(DAIMYO ? DOCTRINE_ROWS.map(r => ({ key: r.key as string, label: r.label, opts: r.opts, cur: String(doctrine0[r.key]), note: r.note })) : []),
+    ],
+    onPick: (key, id) => { if (key === 'cmd') { if ((id === 'manual') === DAIMYO) reloadWith({ cmd: id === 'manual' ? 'manual' : null }); } else setDoctrine(key, id); },
+  },
   clans0: PLAYER_CLANS.map(id => {
     const c = CLAN_INFO[id];
     return { id, short: `${img(ninjaPortrait(id), 'pp')}${c.name}<small>${c.jutsu.map(j => JUTSU[j].name).join('・')}</small>`,
@@ -185,6 +214,14 @@ const tgtRing = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 48).rotateX(-Math.
 tgtRing.renderOrder = 3; tgtRing.visible = false; scene.add(tgtRing);
 
 const selUnits = () => [...selected].map(id => S.units[id]).filter(u => u && u.state !== 'gone');
+// 大名模式：對部隊直接下令就等於接管，AI 不再碰它；資訊面板「交回」還給 AI
+function takeOver(us: Unit[]): string {
+  if (!DAIMYO) return '';
+  const fresh = us.filter(u => u.side === 0 && u.type !== 'general' ? !manualSet.has(u.id) : u.side === 0 && !manualSet.has(u.id));
+  for (const u of fresh) { manualSet.add(u.id); u.aiLockK = ''; }
+  return fresh.length ? `；已接管${fresh.length > 1 ? ` ${fresh.length} 隊` : ''}（面板「交回」還給 AI）` : '';
+}
+function handBack(u: Unit) { manualSet.delete(u.id); u.hasDest = false; u.target = -1; u.aiLockK = ''; retreatOrders.delete(u.id); if (u.retreating && !u.contacts.length) u.retreating = false; }
 function orderMove(p: { x: number; y: number }, run: boolean) {
   if (WATCH) { hud.toast('觀戰模式：雙方都由 AI 指揮，無法下令；回出陣畫面選「親自指揮」'); return; }
   const all = selUnits(); if (!all.length) { hud.toast('先選取部隊（點部隊或左下旗牌）'); return; }
@@ -200,7 +237,7 @@ function orderMove(p: { x: number; y: number }, run: boolean) {
   }
   flash(p.x, p.y);
   const tn = terrainShort(p.x, p.y, us.some(u => UT[u.type].cav));
-  hud.toast((run ? '跑步前進' : '前進') + (tn ? `（${tn}）` : '') + (pinned.length ? `；${pinned.length} 隊接戰中留在原地` : ''));
+  hud.toast((run ? '跑步前進' : '前進') + (tn ? `（${tn}）` : '') + (pinned.length ? `；${pinned.length} 隊接戰中留在原地` : '') + takeOver(us));
 }
 function lineTargets(a: { x: number; y: number }, b: { x: number; y: number }) {
   const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1;
@@ -222,12 +259,13 @@ function lineTargets(a: { x: number; y: number }, b: { x: number; y: number }) {
 const UT_MIN = (u: Unit) => (u.type === 'cav' || u.type === 'general' ? 3 : 5);
 function orderLine(a: { x: number; y: number }, b: { x: number; y: number }, run: boolean) {
   if (WATCH) { hud.toast('觀戰模式：雙方都由 AI 指揮，無法下令；回出陣畫面選「親自指揮」'); return; }
+  const moved: Unit[] = [];
   for (const t of lineTargets(a, b)) {
-    const u = t.u;
+    const u = t.u; moved.push(u);
     u.filesWanted = t.files; updDims(u);
     u.destX = t.x; u.destY = t.y; u.hasDest = true; u.run = run; u.finalF = t.f; u.target = -1; u.retreating = false; retreatOrders.delete(u.id);
   }
-  hud.toast('變換陣線');
+  hud.toast('變換陣線' + takeOver(moved));
 }
 const FORMS: Formation[] = ['line', 'dense', 'loose'];
 const FORM_NAME: Record<Formation, string> = { line: '橫陣', dense: '密集陣', loose: '散開' };
@@ -235,9 +273,9 @@ function cycleFormation() {
   const us = selUnits().filter(u => u.type !== 'cav' && u.type !== 'general'); if (!us.length) { hud.toast('騎兵沒有陣型可換'); return; }
   const next = FORMS[(FORMS.indexOf(us[0].form) + 1) % 3];
   for (const u of us) { u.form = next; updDims(u); }
-  hud.toast(next === 'dense' && us.some(u => u.type === 'spear') ? '密集陣（長槍為槍衾）' : FORM_NAME[next]);
+  hud.toast((next === 'dense' && us.some(u => u.type === 'spear') ? '密集陣（長槍為槍衾）' : FORM_NAME[next]) + takeOver(us));
 }
-function halt() { for (const u of selUnits()) { u.hasDest = false; u.run = false; u.target = -1; if (retreatOrders.delete(u.id)) u.retreating = false; } hud.toast('停止'); }
+function halt() { const us = selUnits(); for (const u of us) { u.hasDest = false; u.run = false; u.target = -1; if (retreatOrders.delete(u.id)) u.retreating = false; } hud.toast('停止' + takeOver(us)); }
 // 有序撤退：脫離接戰、退到主將附近（或後方 80 m）。撤退中不還手，但不會連累友軍士氣、也不扣軍勢
 function orderRetreat() {
   const us = selUnits().filter(u => active(u)); if (!us.length) return;
@@ -247,14 +285,14 @@ function orderRetreat() {
     if (g !== u && g.cmdAlive && active(g) && g.y < u.y - 20) { u.destX = g.x + (u.x - g.x) * 0.3; u.destY = g.y + 15; }
     else { u.destX = u.x; u.destY = Math.max(15, u.y - 80); }
   }
-  hud.toast(us.some(u => u.contacts.length) ? '有序撤退：脫離接戰（撤退中不還手）' : '後撤');
+  hud.toast((us.some(u => u.contacts.length) ? '有序撤退：脫離接戰（撤退中不還手）' : '後撤') + takeOver(us));
 }
 function orderAttack(T: Unit, run: boolean) {
   const us = selUnits(); if (!us.length) return;
   for (const u of us) { u.target = T.id; u.retreating = false; retreatOrders.delete(u.id); attackRun.set(u.id, run); if (u.type === 'archer') u.fireTarget = T.id; }
   flash(T.x, T.y, true, Math.max(T.width, T.depth) / 2 + 4);
   const allArch = us.every(u => u.type === 'archer');
-  hud.toast(allArch ? `射擊 ${nameOf(T)}` : run ? `全軍突擊 ${nameOf(T)}` : `攻擊 ${nameOf(T)}`);
+  hud.toast((allArch ? `射擊 ${nameOf(T)}` : run ? `突擊 ${nameOf(T)}` : `攻擊 ${nameOf(T)}`) + takeOver(us));
 }
 function enemyInfo(T: Unit) { inspect = T.id; selNin = -1; }
 
@@ -301,6 +339,99 @@ function stratState(): string {
 }
 function tryStrat() { const w = stratState(); if (w) { hud.toast(`${STRATEGY[general(S, 0).strategy!].name}：${w}`); return; } useStrategy(S, 0); }
 
+// ---------------- 大名令與軍師建議（大名模式） ----------------
+const CMD_CD: Record<CmdKind, number> = { charge: 90, regroup: 60, relieve: 30, focus: 30, commit: 90, raid: 45 };
+const CMD_INFO: Record<CmdKind, { name: string; desc: string }> = {
+  charge: { name: '全軍突擊', desc: '30 秒內全線跑步壓上、騎兵自由獵殺' },
+  regroup: { name: '全軍整頓', desc: '戰線後退 60 m，動搖的部隊脫離接戰，20 秒守勢' },
+  relieve: { name: '馳援', desc: '派最近的空手部隊，從側背打最弱友軍的對手' },
+  focus: { name: '集中弓火', desc: '點選一隊敵軍，弓兵 20 秒內集火' },
+  raid: { name: '騎兵繞後', desc: '點選一隊敵軍，騎兵繞到側背突擊' },
+  commit: { name: '主將親征', desc: '旗本 30 秒內攻擊附近敵軍，動搖者優先' },
+};
+const CMD_ORDER: CmdKind[] = ['charge', 'regroup', 'relieve', 'focus', 'raid', 'commit'];
+const cmdCd: Partial<Record<CmdKind, number>> = {};
+let pendingPick: CmdKind | null = null;
+let cmdOpen = false;
+hud.onCmd = () => { cmdOpen = !cmdOpen; hud.setCmdOpen(cmdOpen); infoT = 0; };
+function weakestEngaged(): Unit | null {
+  let w: Unit | null = null, wm = 101;
+  for (const u of S.units) if (u.side === 0 && active(u) && u.contacts.length && u.type !== 'general') { const m = effM(S, u); if (m < wm) { wm = m; w = u; } }
+  return w;
+}
+function cmdState(k: CmdKind): string {
+  if (!started) return '尚未出陣';
+  if ((cmdCd[k] ?? 0) > S.t) return `冷卻中（${Math.ceil(cmdCd[k]! - S.t)} 秒）`;
+  const c = cmdOf(S, 0); if (c && c.kind === k) return `執行中（${Math.ceil(c.until - S.t)} 秒）`;
+  const g = general(S, 0);
+  if (k === 'commit' && (!g.cmdAlive || !active(g))) return '主將不在';
+  if (k === 'relieve' && !weakestEngaged()) return '沒有接戰中的友軍';
+  if (k === 'raid' && !S.units.some(u => u.side === 0 && u.type === 'cav' && active(u))) return '騎兵不在';
+  return '';
+}
+function doCmd(k: CmdKind, target?: number): boolean {
+  const w = cmdState(k); if (w) { hud.toast(`${CMD_INFO[k].name}：${w}`); return false; }
+  if ((k === 'focus' || k === 'raid') && target === undefined) { pendingPick = k; jutsu = null; hud.prompt(`${CMD_INFO[k].name}：點選目標敵軍`); cmdOpen = false; hud.setCmdOpen(false); return true; }
+  if (k === 'relieve' && target === undefined) target = weakestEngaged()!.id;
+  if (!issueCommand(S, 0, k, target)) { hud.toast(`${CMD_INFO[k].name}：目前無法執行`); return false; }
+  cmdCd[k] = S.t + CMD_CD[k];
+  hud.toast(`大名令：${CMD_INFO[k].name}${target !== undefined ? `（${nameOf(S.units[target])}）` : ''}`);
+  if (k === 'charge') say('全軍突擊！'); else if (k === 'regroup') say('全軍整頓');
+  infoT = 0; return true;
+}
+function cmdHtml(): string {
+  const btns = CMD_ORDER.map(k => { const w = cmdState(k); const cd = w.match(/（(\d+) 秒）/)?.[1]; return `<button type="button" class="act${w ? '' : ' ready'}" data-act="cmd:${k}" ${w ? 'disabled' : ''}>${CMD_INFO[k].name}${cd ? ` <small>${cd}s</small>` : ''}</button>`; }).join('');
+  const c = cmdOf(S, 0);
+  const pol = (key: keyof Doctrine) => `<button type="button" class="act" data-act="pol:${key}">${DOCTRINE_ROWS.find(r => r.key === key)!.label} <small>${doctrineLabel(key)}</small></button>`;
+  return `<div class="hd"><span class="k" style="background:#5a3a1a">令</span>
+    <div><div class="nm">大名令</div><div class="sub">${c ? `${CMD_INFO[c.kind].name} 執行中（${Math.ceil(c.until - S.t)} 秒）` : manualSet.size ? `親自指揮 ${manualSet.size} 隊，其餘由 AI 依方針帶兵` : '全軍由 AI 依方針帶兵'}</div></div>
+    <button class="x" type="button" aria-label="關閉">×</button></div>
+    <div class="acts">${btns}</div>
+    <div class="desc">${CMD_ORDER.map(k => `<div class="dl"><b>${CMD_INFO[k].name}</b>：${CMD_INFO[k].desc}</div>`).join('')}</div>
+    <div class="acts">${pol('attack')}${pol('cav')}${pol('retreatAt')}${manualSet.size ? '<button type="button" class="act" data-act="hand:all">全部交回 AI</button>' : ''}</div>
+    <div class="desc">點方針可切換。對任何部隊直接下令就是接管，AI 不再動它；在該隊面板「交回」即可還給 AI。</div>`;
+}
+// 軍師建議：每 3 秒依我方看得到的情報評估一次，一次一張卡；軍師陣亡就沒有建議
+type Advice = { id: string; text: string; cmd: CmdKind; target?: number; until: number };
+let advice: Advice | null = null; const adviceCd: Record<string, number> = {}; let adviceT = -99;
+function evalAdvice() {
+  if (!started || S.over) return;
+  const g = general(S, 0); if (!g.advAlive) { if (advice) { advice = null; hud.hideAdvice(); } return; }
+  if (advice) { if (S.t > advice.until || cmdState(advice.cmd)) { advice = null; hud.hideAdvice(); } return; }
+  if (S.t - adviceT < 3) return; adviceT = S.t;
+  const ok = (id: string, k: CmdKind) => !((adviceCd[id] ?? 0) > S.t) && !cmdState(k);
+  const own = S.units.filter(u => u.side === 0 && active(u));
+  const seen = S.units.filter(u => u.side === 1 && active(u) && intelOf(u) >= 2);
+  const cands: Advice[] = [];
+  const push = (id: string, text: string, cmd: CmdKind, target?: number) => { if (ok(id, cmd)) cands.push({ id, text, cmd, target, until: S.t + 15 }); };
+  // 友軍動搖且有人能去幫
+  const weak = weakestEngaged();
+  if (weak && effM(S, weak) < 50 && own.some(u => u !== weak && !u.contacts.length && !u.retreating && (u.type === 'spear' || u.type === 'samurai' || u.type === 'cav')))
+    push('relieve:' + weak.id, `${nameOf(weak)}動搖了，派空手的部隊從側背打它的對手。`, 'relieve', weak.id);
+  // 敵弓兵沒有長槍掩護
+  const cav = own.find(u => u.type === 'cav' && !u.contacts.length);
+  if (cav) {
+    const ea = seen.filter(E => E.type === 'archer' && dist(cav, E) < 260 && !seen.some(X => X.type === 'spear' && !X.contacts.length && dist(X, E) < 60)).sort((a, b) => dist(a, cav) - dist(b, cav))[0];
+    if (ea) push('raid:' + ea.id, `敵${nameOf(ea)}弓兵沒有長槍掩護，讓騎兵繞到背後衝鋒。`, 'raid', ea.id);
+  }
+  // 敵軍動搖：集中弓火
+  const wav = seen.filter(E => (E.state === 'waver' || intelOf(E) >= 3 && effM(S, E) < 50) && own.some(u => u.type === 'archer' && active(u) && dist(u, E) <= S.R.archerRange)).sort((a, b) => effM(S, a) - effM(S, b))[0];
+  if (wav) push('focus:' + wav.id, `敵${nameOf(wav)}士氣動搖，弓兵集火就能逼它潰走。`, 'focus', wav.id);
+  // 敵主將孤立
+  const eg = general(S, 1);
+  if (eg.cmdAlive && active(eg) && intelOf(eg) >= 2 && g.cmdAlive && active(g) && effM(S, g) >= 60 && dist(g, eg) < 200 && !seen.some(X => X.type === 'spear' && !X.contacts.length && dist(X, eg) < 60))
+    push('commit', `敵主將${eg.cmd}身邊沒有長槍，主公可親率旗本直取。`, 'commit');
+  // 敵軍勢低：全軍突擊；我方軍勢不利：整頓
+  const routing = seen.filter(E => E.state === 'rout').length;
+  if (S.army[1] < 40 || routing >= 2) push('charge', S.army[1] < 40 ? `敵軍勢只剩 ${Math.round(S.army[1])}，全軍壓上可一舉擊潰。` : `敵軍已有 ${routing} 隊潰走，趁勢全軍突擊。`, 'charge');
+  if (S.army[0] < 50 && S.army[1] > S.army[0] + 15 && own.filter(u => u.contacts.length).length >= 2) push('regroup', `我軍軍勢 ${Math.round(S.army[0])} 落後，先整頓戰線，別讓潰走連鎖。`, 'regroup');
+  const a = cands[0]; if (!a) return;
+  advice = a; adviceCd[a.id] = S.t + 60;
+  hud.showAdvice(`${img(portraitOf(g.advisor ?? undefined), 'pp')}<div class="tx"><b>${g.advisor}</b>：${a.text}</div>`,
+    () => { if (advice) { doCmd(advice.cmd, advice.target); adviceCd[advice.id] = S.t + 120; } advice = null; hud.hideAdvice(); },
+    () => { if (advice) adviceCd[advice.id] = S.t + 90; advice = null; hud.hideAdvice(); });
+}
+
 // ---------------- 忍者與忍術 ----------------
 function selectNinja(id: number) { selNin = id; selected.clear(); views.forEach(v => (v.selected = false)); inspect = -1; }
 function nextNinja(focus: boolean) {
@@ -332,7 +463,8 @@ function startJutsu(j: string) {
   const w = jutsuState(); if (w) { hud.toast(`${JUTSU[j].name}：${w}`); return; }
   jutsu = j; hud.prompt(`${JUTSU[j].name}：${JUTSU_PROMPT[JUTSU[j].target]}（忍者 80 m 內）`);
 }
-function cancelJutsu() { jutsu = null; hud.prompt(null); }
+function cancelJutsu() { jutsu = null; pendingPick = null; hud.prompt(null); }
+const picking = () => jutsu !== null || pendingPick !== null;
 hud.onCancelPrompt = cancelJutsu;
 function jutsuState(): string {
   if (!myNinjas().length) return '忍者已全數陣亡';
@@ -340,6 +472,10 @@ function jutsuState(): string {
   return '';
 }
 function castAt(sx: number, sy: number) {
+  if (pendingPick) { // 大名令選目標（集中弓火、騎兵繞後）
+    const E = pickUnit(sx, sy, 'enemy'); if (!E) { hud.toast('請點選一隊敵軍'); return; }
+    const k = pendingPick; pendingPick = null; hud.prompt(null); doCmd(k, E.id); return;
+  }
   const j = jutsu!; const J = JUTSU[j];
   const near = (x: number, y: number) => myNinjas().some(n => Math.hypot(n.x - x, n.y - y) <= 80);
   let a: { x: number; y: number; unit?: number; point?: number } | null = null;
@@ -420,7 +556,7 @@ canvas.addEventListener('pointerdown', e => {
     else if (e.button === 2 || (e.button === 0 && e.ctrlKey)) {
       // 右鍵（或 Mac 的 Ctrl＋點）：按下就下令，不等放開；之後有拖曳再改成拉陣線
       lineA = groundAt(e.clientX, e.clientY); mode = 'line'; p.button = 2;
-      if (jutsu) cancelJutsu(); else issueTap(e.clientX, e.clientY);
+      if (picking()) cancelJutsu(); else issueTap(e.clientX, e.clientY);
     } else mode = 'tapwait';
     return;
   }
@@ -437,7 +573,7 @@ canvas.addEventListener('pointerdown', e => {
   panAnchor = planeAt(e.clientX, e.clientY);
   clearTimeout(longTimer);
   longTimer = window.setTimeout(() => {
-    if (mode === 'tapwait' && selected.size && !jutsu) {
+    if (mode === 'tapwait' && selected.size && !picking()) {
       lineA = groundAt(p.sx, p.sy); lineB = lineA; mode = 'line';
       try { navigator.vibrate?.(12); } catch { /* 不支援時略過 */ }
       hud.toast('拖曳拉出陣線');
@@ -498,7 +634,7 @@ function endPointer(e: PointerEvent) {
     if (mode === 'line') {
       const b = groundAt(p.x, p.y);
       showPreview(null);
-      if (lineA && b && Math.hypot(lineA.x - b.x, lineA.y - b.y) > 5 && selNin < 0 && !jutsu) orderLine(lineA, b, false);
+      if (lineA && b && Math.hypot(lineA.x - b.x, lineA.y - b.y) > 5 && selNin < 0 && !picking()) orderLine(lineA, b, false);
       // 單點的指令已在按下時發出
     } else if (mode === 'box') {
       hud.box.style.display = 'none';
@@ -507,7 +643,7 @@ function endPointer(e: PointerEvent) {
       setSel(ids, e.shiftKey);
     } else if (mode === 'tapwait' && p.button === 0 && WATCH) {
       const u = pickUnit(p.x, p.y) ?? pickUnit(p.x, p.y, 'enemy'); inspect = u ? u.id : -1; infoT = 0;
-    } else if (mode === 'tapwait' && p.button === 0 && jutsu) {
+    } else if (mode === 'tapwait' && p.button === 0 && picking()) {
       castAt(p.x, p.y);
     } else if (mode === 'tapwait' && p.button === 0 && pickNinja(p.x, p.y)) {
       selectNinja(pickNinja(p.x, p.y)!.id);
@@ -541,7 +677,7 @@ function endPointer(e: PointerEvent) {
     const u = pickUnit(p.x, p.y) ?? pickUnit(p.x, p.y, 'enemy'); inspect = u && u.id !== inspect ? u.id : -1; infoT = 0;
     if (ptrs.size === 0) mode = 'none'; return;
   }
-  if (mode === 'tapwait' && quick && jutsu) { castAt(p.x, p.y); if (ptrs.size === 0) mode = 'none'; return; }
+  if (mode === 'tapwait' && quick && picking()) { castAt(p.x, p.y); if (ptrs.size === 0) mode = 'none'; return; }
   if (mode === 'tapwait' && quick && pickNinja(p.x, p.y)) {
     const n = pickNinja(p.x, p.y)!; if (selNin === n.id) selNin = -1; else selectNinja(n.id);
     if (ptrs.size === 0) mode = 'none'; return;
@@ -586,7 +722,7 @@ window.addEventListener('keydown', e => {
   }
   if (k === '-' || k === '_') { speed = SPEEDS[Math.max(0, SPEEDS.indexOf(speed) - 1)]; hud.toast(`速度 ${speed}×`); }
   if (k === '=' || k === '+') { speed = SPEEDS[Math.min(SPEEDS.length - 1, SPEEDS.indexOf(speed) + 1)]; hud.toast(`速度 ${speed}×`); }
-  if (k === 'escape') { if (jutsu) cancelJutsu(); else { setSel([], false); selNin = -1; } }
+  if (k === 'escape') { if (picking()) cancelJutsu(); else if (cmdOpen) { cmdOpen = false; hud.setCmdOpen(false); } else { setSel([], false); selNin = -1; } }
   if (k === 'r') skillSelected();
   if (k === 't') orderRetreat();
   if (k === 'c') for (const u of selUnits()) tryCry(u);
@@ -669,6 +805,7 @@ function skillRows(u: Unit): string {
   const cw = cryState(u); b.push(btn('cry', '鬨聲', !cw, cw ? (u.cryCd > S.t ? `${Math.ceil(u.cryCd - S.t)}s` : '') : 'C', skillIcon('cry')));
   const g = general(S, 0);
   if (u === g && g.strategy) { const w = stratState(); b.push(btn('strat', STRATEGY[g.strategy].name, !w, w ? (w.match(/（(\d+) 秒）/)?.[1] ?? '') + (w.includes('秒') ? 's' : '') : 'V', skillIcon(g.strategy))); }
+  if (DAIMYO) b.push(`<button type="button" class="act${manualSet.has(u.id) ? '' : ' on'}" data-act="hand">${manualSet.has(u.id) ? '交回 AI' : '親自指揮'}</button>`);
   out.push(`<div class="acts">${b.join('')}</div>`);
   const d: string[] = [];
   if (u.skill && SKILL[u.skill]) d.push(`<b>${SKILL[u.skill].name}</b>：${SKILL[u.skill].desc}${u.cmdAlive ? '' : '（武將已討死）'}`);
@@ -692,6 +829,14 @@ function ninjaHtml(n: Ninja): string {
     <div class="desc"><div class="dl key">${w ? `忍術${w}。` : ''}共用冷卻 90 秒；目標須在任一忍者 80 m 內。</div>${c.jutsu.map(j => `<div class="dl key"><b>${JUTSU[j].name}</b>：${JUTSU[j].desc}</div>`).join('')}<div class="dl">忍者靠近敵軍 ${S.R.insightR} m 內可洞悉其士氣；被發現後遭敵軍貼近 3 秒會陣亡。</div></div>`;
 }
 hud.onInfoAct = act => {
+  if (act.startsWith('cmd:')) { doCmd(act.slice(4) as CmdKind); return; }
+  if (act.startsWith('pol:')) { // 戰中改方針
+    const key = act.slice(4) as keyof Doctrine; const row = DOCTRINE_ROWS.find(r => r.key === key)!;
+    const i = row.opts.findIndex(o => o.id === String(doctrine0[key])); setDoctrine(key, row.opts[(i + 1) % row.opts.length].id);
+    hud.toast(`${row.label}：${doctrineLabel(key)}`); infoT = 0; return;
+  }
+  if (act === 'hand:all') { for (const id of [...manualSet]) handBack(S.units[id]); hud.toast('全部交回 AI 指揮'); infoT = 0; return; }
+  if (act === 'hand') { const u = infoUnit(); if (u && u.side === 0) { if (manualSet.has(u.id)) { handBack(u); hud.toast(`${nameOf(u)}交回 AI 指揮`); } else { manualSet.add(u.id); u.aiLockK = ''; hud.toast(`親自指揮${nameOf(u)}`); } } infoT = 0; return; }
   if (act.startsWith('j:')) { const j = act.slice(2); if (jutsu === j) cancelJutsu(); else startJutsu(j); return; }
   if (act === 'auto') { const n = S.ninjas[selNin]; if (n) { n.manual = false; hud.toast('忍者恢復自動偵察'); } return; }
   const u = infoUnit(); if (!u || u.side !== 0) return;
@@ -749,7 +894,7 @@ function infoHtml(u: Unit): string {
     ${side === 0 && !WATCH ? skillRows(u) : lvl >= 3 && u.skill && SKILL[u.skill] ? `<div class="desc"><b>${SKILL[u.skill].name}</b>：${SKILL[u.skill].desc}${u.skillCd > S.t ? `（冷卻 ${Math.ceil(u.skillCd - S.t)} 秒）` : '（可施放）'}</div>` : ''}`;
 }
 
-hud.onInfoClose = () => { if (inspectPoint >= 0 && !selected.size && inspect < 0 && selNin < 0) inspectPoint = -1; else if (selNin >= 0) { selNin = -1; cancelJutsu(); } else if (inspect >= 0) inspect = -1; else if (selected.size === 1) { infoClosed = [...selected][0]; hud.setInfo(null); } };
+hud.onInfoClose = () => { if (cmdOpen) { cmdOpen = false; hud.setCmdOpen(false); return; } if (inspectPoint >= 0 && !selected.size && inspect < 0 && selNin < 0) inspectPoint = -1; else if (selNin >= 0) { selNin = -1; cancelJutsu(); } else if (inspect >= 0) inspect = -1; else if (selected.size === 1) { infoClosed = [...selected][0]; hud.setInfo(null); } };
 
 // ---------------- 戰鬥事件 ----------------
 const menBefore: number[] = [];
@@ -1138,7 +1283,8 @@ function frame(now: number) {
   infoT -= dt;
   if (infoT <= 0) {
     infoT = 0.25;
-    hud.setInfo(selNin >= 0 ? ninjaHtml(S.ninjas[selNin]) : infoU && infoU.id !== infoClosed ? infoHtml(infoU) : inspectPoint >= 0 ? pointHtml(inspectPoint) : null);
+    hud.setInfo(cmdOpen ? cmdHtml() : selNin >= 0 ? ninjaHtml(S.ninjas[selNin]) : infoU && infoU.id !== infoClosed ? infoHtml(infoU) : inspectPoint >= 0 ? pointHtml(inspectPoint) : null);
+    if (DAIMYO && !paused) evalAdvice();
     if (S.holdAll[0] > 0) hud.setHold(0, 60 - S.holdAll[0]); else if (S.holdAll[1] > 0) hud.setHold(1, 60 - S.holdAll[1]); else hud.setHold(-1, 0);
     const us = selUnits().filter(u => u.skill);
     hud.setSkillReady(us.length > 0, us.some(u => skillState(u).ok));
@@ -1153,7 +1299,7 @@ function frame(now: number) {
     if (k >= 1) marker.visible = false;
   }
   const fs = selUnits().filter(u => u.type !== 'cav' && u.type !== 'general');
-  hud.update(S.t, S.army, S.units.filter(mine), selected, u => effM(S, u), paused, speed, fs.length ? FORM_NAME[fs[0].form].slice(0, 1) : '', boxMode);
+  hud.update(S.t, S.army, S.units.filter(mine), selected, u => effM(S, u), paused, speed, fs.length ? FORM_NAME[fs[0].form].slice(0, 1) : '', boxMode, manualSet);
   renderer.render(scene, rig.cam);
   cpu += performance.now() - t0; fpsN++; fpsT += dt;
   if (fpsT >= 0.5) {
@@ -1169,7 +1315,7 @@ requestAnimationFrame(frame);
 
 // 測試用：無頭瀏覽器腳本透過這個介面下指令、快轉
 (window as unknown as Record<string, unknown>).__kessen = {
-  S, rig, focus, setSel, orderAttack, orderMove, selectNinja, startJutsu, trySkill, screenOf, intelOf,
+  S, rig, focus, setSel, orderAttack, orderMove, selectNinja, startJutsu, trySkill, screenOf, intelOf, doCmd, evalAdvice, manualSet, DAIMYO,
   advance(sec: number) {
     for (let i = 0; i < Math.round(sec / SIM_DT); i++) {
       for (const v of views) { v.prevX = v.u.x; v.prevY = v.u.y; }

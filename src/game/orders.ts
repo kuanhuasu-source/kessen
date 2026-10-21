@@ -52,8 +52,12 @@ function chase(S: State, u: Unit, T: Unit, run: boolean) {
 
 export function playerOrders(S: State) {
   const dt = S.dt;
+  // 大名模式：由 AI 帶的部隊不走玩家指令層，只有親自接管的部隊才處理
+  const aiLed = ((S.meta.aiSides as number[] | undefined) ?? []).includes(0);
+  const manual = S.meta.manual as Set<number> | undefined;
   for (const u of S.units) {
     if (u.side !== 0) continue;
+    if (aiLed && !manual?.has(u.id)) continue;
     if (!active(u)) { u.target = -1; continue; }
     // 玩家下的撤退令：退到目的地且脫離接戰才結束
     if (retreatOrders.has(u.id)) {

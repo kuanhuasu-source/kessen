@@ -11,6 +11,41 @@ type SideAI = { posture: 'advance' | 'hold' | 'attack'; attackT: number; aggr: n
   ax: number; ayl: number; phase: 'form' | 'approach' | 'volley' | 'advance' | 'melee'; volleyUntil: number;
   ids: Record<string, number>; slots: Map<number, { x: number; yl: number }> };
 
+// 大名模式：玩家在軍議定的方針（S.meta.doctrine[side]）、親自接管的部隊（S.meta.manual）、戰中的大名令（S.meta.cmd[side]）
+export type Doctrine = { attack: 'auto' | 'now' | 'volley' | 'waver' | 'hold'; cav: 'auto' | 'guard' | 'raid' | 'free'; retreatAt: number; formation: 'auto' | 'line' | 'crane' | 'fish' };
+export const DEFAULT_DOCTRINE: Doctrine = { attack: 'auto', cav: 'auto', retreatAt: 0, formation: 'auto' };
+export type CmdKind = 'charge' | 'regroup' | 'relieve' | 'focus' | 'commit' | 'raid';
+export type Cmd = { kind: CmdKind; until: number; target?: number };
+export const CMD_DUR: Record<CmdKind, number> = { charge: 30, regroup: 20, relieve: 25, focus: 20, commit: 30, raid: 25 };
+export function doctrineOf(S: State, s: Side): Doctrine { return ((S.meta.doctrine as Doctrine[] | undefined)?.[s]) ?? DEFAULT_DOCTRINE; }
+export function isManual(S: State, u: Unit) { return (S.meta.manual as Set<number> | undefined)?.has(u.id) ?? false; }
+export function cmdOf(S: State, s: Side, kind?: CmdKind): Cmd | null {
+  const c = (S.meta.cmd as (Cmd | null)[] | undefined)?.[s] ?? null;
+  return c && c.until > S.t && (!kind || c.kind === kind) ? c : null;
+}
+// 下達大名令。relieve 的 target 是要支援的友軍，focus 的 target 是集火的敵軍。回傳是否成立
+export function issueCommand(S: State, s: Side, kind: CmdKind, target?: number): boolean {
+  const t = S.t;
+  const A = (S.meta.ai as SideAI[])[s];
+  const cmds = (S.meta.cmd as (Cmd | null)[] | undefined) ?? ((S.meta.cmd = [null, null]) as (Cmd | null)[]);
+  const mine = S.units.filter(u => u.side === s && active(u) && !isManual(S, u));
+  if (kind === 'regroup') {
+    A.ayl = Math.max(60, A.ayl - 60);
+    for (const u of mine) if (u.contacts.length && u.state === 'waver' && u.type !== 'general') u.retreating = true;
+  } else if (kind === 'relieve') {
+    const T = target !== undefined ? S.units[target] : null;
+    if (!T || !T.contacts.length) return false;
+    const helper = mine.filter(u => u !== T && !u.contacts.length && !u.retreating && (u.type === 'spear' || u.type === 'samurai' || u.type === 'cav'))
+      .sort((a, b) => (dist(a, T) * (a.type === 'cav' ? 0.6 : 1)) - (dist(b, T) * (b.type === 'cav' ? 0.6 : 1)))[0];
+    if (!helper) return false;
+    helper.aiLockK = 'help:' + T.id; helper.aiLockT = t;
+  } else if (kind === 'focus' || kind === 'raid') {
+    if (target === undefined) return false;
+  }
+  cmds[s] = { kind, until: t + CMD_DUR[kind], target };
+  return true;
+}
+
 const Yl = (side: Side, y: number) => side === 0 ? y : 700 - y; // 己方座標 → 絕對座標
 const fwd = (side: Side) => side === 0 ? 1 : -1;
 const Q: Record<UType, number> = { spear: 1, archer: 0.8, samurai: 2.2, cav: 2.2, general: 2.5 };
@@ -99,7 +134,7 @@ function tick(S: State) {
     const full = sides.includes(s);
     if (full && t >= A.nextStrat) { A.nextStrat = t + 5; strategic(S, s, A); }
     if (full && t >= A.nextTac) { A.nextTac = t + 1; tactical(S, s, A); }
-    if (S.R.ninjaOn && t >= A.nextNin) { A.nextNin = t + 1; ninjaAI(S, s, A, full); }
+    if (S.R.ninjaOn && t >= A.nextNin) { A.nextNin = t + 1; ninjaAI(S, s, A, full && S.meta.playerSide !== s); } // 大名模式：忍術仍由玩家施放
   }
 }
 
@@ -124,6 +159,22 @@ function strategic(S: State, s: Side, A: SideAI) {
   const ratio = strength(S, s, s) / Math.max(1, strength(S, e, s));
   const g = general(S, s);
   const enemyArmy = g.advAlive ? S.army[e] : (S.army[e] > 66 ? 85 : S.army[e] > 33 ? 50 : 25);
+  // 大名令優先：全軍突擊＝攻勢、全軍整頓＝守勢
+  if (cmdOf(S, s, 'charge')) { A.posture = 'attack'; return; }
+  if (cmdOf(S, s, 'regroup')) { A.posture = 'hold'; return; }
+  const D = doctrineOf(S, s);
+  if (D.attack !== 'auto') {
+    const mine = S.units.filter(u => u.side === s && active(u));
+    const arch = mine.filter(u => u.type === 'archer');
+    const spent = !arch.length || arch.every(u => u.ammo <= u.ammoMax * 0.5);
+    const enemyWaver = known(S, s).some(E => vis(S, s, E) >= 2 && (E.state === 'waver' || E.state === 'rout'));
+    const late = t > 300 && S.army[s] <= enemyArmy;
+    if (D.attack === 'now') A.posture = 'attack';
+    else if (D.attack === 'volley') A.posture = spent || t > 180 || ratio >= 1.3 || late ? 'attack' : 'hold';
+    else if (D.attack === 'waver') A.posture = enemyWaver || t > 240 || ratio >= 1.3 || late ? 'attack' : 'hold';
+    else A.posture = t > 420 || enemyArmy < 40 ? 'attack' : 'hold'; // hold：守住寺廟前的線
+    return;
+  }
   if (t >= A.attackT / A.aggr || ratio >= 1.15 / A.aggr || (t > 300 && S.army[s] <= enemyArmy) || t > 420) A.posture = 'attack';
   else A.posture = 'hold';
   if (A.posture === 'attack' && ratio < 0.55 && S.army[s] > enemyArmy + 10 && t < 540) A.posture = 'hold';
@@ -223,7 +274,9 @@ function tactical(S: State, s: Side, A: SideAI) {
       if (engagedCount >= 3 && (flankers >= 1 || cavAttacking)) useStrategy(S, s);
     } else if (engagedCount >= 3) useStrategy(S, s);
   }
+  const D = doctrineOf(S, s);
   for (const u of mine) {
+    if (isManual(S, u)) continue; // 大名親自指揮的部隊，AI 不碰
     // 動搖單位的命令延遲（每 2 秒才更新一次）
     if (u.state === 'waver' && Math.round(t) % 2 === 1) continue;
     const eff = effM(S, u);
@@ -236,6 +289,8 @@ function tactical(S: State, s: Side, A: SideAI) {
     if (R.aiRetreat && !u.retreating && u.contacts.length && eff < R.waverAt && !nearGen && !has(S, u, 'shingari') && u.type !== 'general') {
       u.retreating = true;
     }
+    // 軍議定的撤退線：士氣低於此值就脫離接戰退到主將旁
+    if (D.retreatAt > 0 && !u.retreating && u.contacts.length && eff < D.retreatAt && !has(S, u, 'shingari') && u.type !== 'general') u.retreating = true;
     if (u.retreating) {
       if (eff >= 65 && !u.contacts.length) { u.retreating = false; }
       else {
@@ -357,11 +412,11 @@ function infantryAI(S: State, u: Unit, A: SideAI) {
   else { const h = holdPos(S, u); moveTo(u, h.x, h.y + fwd(s) * 80); }
 }
 
-function attackMove(S: State, u: Unit, E: Unit) {
+function attackMove(S: State, u: Unit, E: Unit, run = false) {
   const p = seenPos(S, u.side, E);
   const d = Math.hypot(p.x - u.x, p.y - u.y);
   u.target = E.id;
-  moveTo(u, p.x, p.y, d < 70 && u.state !== 'waver');
+  moveTo(u, p.x, p.y, (run || d < 70) && u.state !== 'waver');
 }
 
 function archerAI(S: State, u: Unit, A: SideAI) {
@@ -379,6 +434,9 @@ function archerAI(S: State, u: Unit, A: SideAI) {
     if (E.state === 'rout' || E.state === 'shattered') sc -= 2;
     if (sc > bs) { bs = sc; best = E; }
   }
+  // 大名令「集中弓火」：集火目標在射程內就優先
+  const fc = cmdOf(S, s, 'focus');
+  if (fc && fc.target !== undefined) { const F = S.units[fc.target]; if (F && active(F) && vis(S, s, F) >= 2 && dist(u, F) <= rng * 1.2) best = F; }
   u.fireTarget = best ? best.id : -1;
   // 敵騎兵逼近 → 後撤靠近長槍或大將
   const steady = S.R.aiSteady;
@@ -441,10 +499,15 @@ function cavAI(S: State, u: Unit, A: SideAI) {
   }
   if (S.R.aiLine) {
     // 戰線式：接戰前守在翼側槽位，只迎擊逼近的敵騎兵／弓兵／潰兵；主線接戰後才繞翼
+    // 騎兵方針：guard 只護翼不出擊；raid 主線接戰後繞翼（預設）；free 一轉攻勢就自由獵殺。全軍突擊時視同 free
+    const Dc = doctrineOf(S, s).cav;
     const sl = A.slots.get(u.id)!;
     const E = pickTarget(S, u);
     const threat = E && dist(u, E) < 130 && (isCav(E) || E.type === 'archer' || E.state === 'rout');
-    if (!E || (A.phase !== 'melee' && !threat)) { moveTo(u, sl.x, Yl(s, sl.yl), false); return; }
+    const rc = cmdOf(S, s, 'raid');
+    if (rc && rc.target !== undefined) { const T = S.units[rc.target]; if (T && active(T) && T.state !== 'gone') { cavAttack(S, u, T); return; } }
+    const loose = cmdOf(S, s, 'charge') || (Dc === 'free' && A.posture === 'attack') || (Dc !== 'guard' && A.phase === 'melee');
+    if (!E || (!loose && !threat)) { moveTo(u, sl.x, Yl(s, sl.yl), false); return; }
     cavAttack(S, u, E); return;
   }
   if (A.posture === 'advance') { moveTo(u, A.cavWing === 'W' ? 320 : 690, Yl(s, 200)); return; }
@@ -487,6 +550,12 @@ function generalAI(S: State, u: Unit, A: SideAI) {
   const steady = S.R.aiSteady;
   const lockOn = (k: string) => steady && u.aiLockK.startsWith(k) && t - u.aiLockT < (k === 'c:' ? 10 : k === 'w:' ? 8 : 6);
   const lock = (k: string) => { u.aiLockK = k; u.aiLockT = t; };
+  // 大名令「主將親征」：打 220 m 內看得到的敵軍，動搖者優先
+  if (cmdOf(S, s, 'commit') && effM(S, u) >= 40) {
+    const E = known(S, s).filter(x => active(x) && vis(S, s, x) >= 2 && dist(u, x) < 220)
+      .sort((a, b) => ((a.state === 'waver' || a.state === 'rout' ? 0 : 100) + dist(a, u)) - ((b.state === 'waver' || b.state === 'rout' ? 0 : 100) + dist(b, u)))[0];
+    if (E) { attackMove(S, u, E, true); return; }
+  }
   // 止抖：已鎖定的親征目標，只要還在動搖／潰走且在 160 m 內就追到底
   if (lockOn('c:')) {
     const E = S.units[+u.aiLockK.slice(2)];
@@ -535,20 +604,27 @@ function generalAI(S: State, u: Unit, A: SideAI) {
 // ---------------- 戰線式指揮（aiLine） ----------------
 // 整條線以同一個錨點推進：4 隊步兵有固定槽位，弓兵在線後 45 m，主將在中央後方，騎兵在翼側。
 // 階段：form（就定位）→ approach（逼近）→ volley（進入射程邊停 20 秒讓弓兵齊射）→ advance（全線推進）→ melee（接戰，錨點跟著接戰的部隊）。
-function formationOf(S: State, s: Side): 'line' | 'crane' {
+function formationOf(S: State, s: Side): 'line' | 'crane' | 'fish' {
+  const d = doctrineOf(S, s).formation;
+  if (d !== 'auto') return d;
   const f = S.R.aiFormation;
   return f === 'crane' || (f === 'craneT' && s === 0) || (f === 'craneU' && s === 1) ? 'crane' : 'line';
 }
+const FORM_OFFS: Record<'line' | 'crane' | 'fish', number[][]> = {
+  line: [[-80, 0], [-27, 0], [27, 0], [80, 0]],
+  crane: [[-115, 30], [-40, 0], [40, 0], [115, 30]],   // 鶴翼：兩翼前伸
+  fish: [[-80, -25], [-27, 12], [27, 12], [80, -25]],   // 魚鱗：中央突出
+};
 function lineAI(S: State, s: Side, A: SideAI) {
   const t = S.t, e = (1 - s) as Side, R = S.R;
-  const mine = S.units.filter(u => u.side === s && active(u) && !u.reinf);
+  const mine = S.units.filter(u => u.side === s && active(u) && !u.reinf && !isManual(S, u));
   const lineUnits = mine.filter(u => u.role === 'line');
   const engaged = lineUnits.filter(u => u.contacts.length);
   // 敵線估計（己方座標）：看得到的敵軍（弓兵除外）中最靠近我方的第 2 隊，避免被單一突出的部隊誤導
   const ens = S.units.filter(E => E.side === e && onField(E) && active(E) && vis(S, s, E) >= 1 && pType(S, s, E) !== 'archer')
     .map(E => { const p = seenPos(S, s, E); return { yl: Yl(s, p.y), x: p.x }; }).filter(o => Math.abs(o.x - A.ax) < 320).sort((a, b) => a.yl - b.yl);
   const frontYl = ens.length ? ens[Math.min(1, ens.length - 1)].yl : 999;
-  let targetYl = A.posture === 'advance' ? 295 : A.posture === 'hold' ? Math.min(A.ayl, 295) : 700;
+  let targetYl = A.posture === 'advance' ? 295 : A.posture === 'hold' ? Math.max(A.ayl, 295) : 700; // hold：推進到對峙線就停，不再前進（之前寫成 min 會卡在半路）
   if (engaged.length) {
     A.phase = 'melee';
     const m = engaged.reduce((a, u) => a + Yl(s, u.y), 0) / engaged.length;
@@ -557,7 +633,7 @@ function lineAI(S: State, s: Side, A: SideAI) {
     const gap = frontYl - A.ayl;
     const archersReady = mine.some(u => u.type === 'archer' && u.ammo >= 3);
     const shooting = mine.some(u => u.type === 'archer' && t - u.lastArrowT < 12); // 對峙時已經在射就不必再停下齊射
-    if (A.phase !== 'volley' && A.phase !== 'advance' && gap <= R.archerRange - 30 && archersReady && !shooting) { A.phase = 'volley'; A.volleyUntil = t + 20; }
+    if (A.phase !== 'volley' && A.phase !== 'advance' && gap <= R.archerRange - 30 && archersReady && !shooting && doctrineOf(S, s).attack !== 'now' && !cmdOf(S, s, 'charge')) { A.phase = 'volley'; A.volleyUntil = t + 20; }
     else if (A.phase !== 'volley' && A.phase !== 'advance' && gap <= R.archerRange - 30 && shooting) A.phase = 'advance';
     if (A.phase === 'volley') { if (t < A.volleyUntil && gap > 60) targetYl = A.ayl; else A.phase = 'advance'; }
     else if (A.phase !== 'advance') A.phase = 'approach';
@@ -572,7 +648,7 @@ function lineAI(S: State, s: Side, A: SideAI) {
     if (ens.length) { const cx = ens.slice(0, 4).reduce((a, o) => a + o.x, 0) / Math.min(4, ens.length); A.ax = clamp(A.ax + clamp(cx - A.ax, -2, 2), 380, 620); }
   }
   // 槽位
-  const offs = formationOf(S, s) === 'crane' ? [[-115, 30], [-40, 0], [40, 0], [115, 30]] : [[-80, 0], [-27, 0], [27, 0], [80, 0]];
+  const offs = FORM_OFFS[formationOf(S, s)];
   A.slots.clear();
   for (let i = 0; i < 4; i++) { const id = A.ids['line' + i]; if (id !== undefined) A.slots.set(id, { x: A.ax + offs[i][0], yl: A.ayl + offs[i][1] }); }
   A.slots.set(A.ids.archer1, { x: A.ax - 45, yl: A.ayl - 45 }); A.slots.set(A.ids.archer2, { x: A.ax + 45, yl: A.ayl - 45 });
@@ -597,20 +673,29 @@ function lineInfantry(S: State, u: Unit, A: SideAI) {
   const sl = A.slots.get(u.id);
   if (!sl) { const h = holdPos(S, u); moveTo(u, h.x, h.y); return; }
   const sx = sl.x, sy = Yl(s, sl.yl);
+  // 大名令「馳援」：去打被支援友軍的對手（從側背）
+  if (u.aiLockK.startsWith('help:')) {
+    const F = S.units[+u.aiLockK.slice(5)];
+    const X = F && F.contacts.length ? S.units[F.primary >= 0 && F.contacts.includes(F.primary) ? F.primary : F.contacts[0]] : null;
+    if (X && active(X) && S.t - u.aiLockT < CMD_DUR.relieve) { flankMove(S, u, X); return; }
+    u.aiLockK = '';
+  }
+  const charge = !!cmdOf(S, s, 'charge');
   // 現有目標還在正前方附近就繼續（止抖）
   const cur = S.units[u.target];
-  if (u.aiLockK === 'atk' && cur && active(cur) && cur.state !== 'rout' && !cur.retreating && vis(S, s, cur) >= 1 && dist(u, cur) < 110) { attackMove(S, u, cur); return; }
+  if (u.aiLockK === 'atk' && cur && active(cur) && cur.state !== 'rout' && !cur.retreating && vis(S, s, cur) >= 1 && dist(u, cur) < (charge ? 200 : 110)) { attackMove(S, u, cur, charge); return; }
   u.aiLockK = '';
-  const ahead = A.phase === 'melee' ? 90 : A.posture === 'hold' ? 70 : 60;
+  const ahead = charge ? 220 : A.phase === 'melee' ? 90 : A.posture === 'hold' ? 70 : 60;
+  const lat = charge ? 160 : 75;
   let best: Unit | null = null, bd = 1e9;
   for (const E of known(S, s)) {
     if (!active(E) || E.state === 'rout' || E.retreating) continue;
     const p = seenPos(S, s, E);
     const dy = Yl(s, p.y) - sl.yl;
-    if (Math.abs(p.x - sx) > 75 || dy < -25 || dy > ahead) continue;
+    if (Math.abs(p.x - sx) > lat || dy < -25 || dy > ahead) continue;
     const d = Math.hypot(p.x - u.x, p.y - u.y); if (d < bd) { bd = d; best = E; }
   }
-  if (best) { u.aiLockK = 'atk'; u.target = best.id; u.targetT = S.t; attackMove(S, u, best); return; }
+  if (best) { u.aiLockK = 'atk'; u.target = best.id; u.targetT = S.t; attackMove(S, u, best, charge); return; }
   // 擴大戰果：鄰隊在打、自己空手 → 從側背接近鄰隊的對手
   if (A.phase === 'melee') {
     let X: Unit | null = null, xd = S.t > 240 ? 180 : 120; // 打久了就放寬，避免拖到時間到
@@ -618,15 +703,16 @@ function lineInfantry(S: State, u: Unit, A: SideAI) {
       if (!active(E) || E.state === 'rout' || !E.contacts.some(c => S.units[c].side === s)) continue;
       const d = dist(u, E); if (d < xd) { xd = d; X = E; }
     }
-    if (X) {
-      u.target = X.id; u.targetT = S.t; u.aiLockK = 'atk';
-      const side = Math.sign((u.x - X.x) * -Math.sin(X.f) + (u.y - X.y) * Math.cos(X.f)) || 1; // 從較近的那一側繞
-      const fx = X.x + (-Math.sin(X.f)) * side * 28 - Math.cos(X.f) * 10, fy = X.y + Math.cos(X.f) * side * 28 - Math.sin(X.f) * 10;
-      if (Math.hypot(fx - u.x, fy - u.y) > 20) moveTo(u, fx, fy, true); else moveTo(u, X.x, X.y, true);
-      return;
-    }
+    if (X) { u.aiLockK = 'atk'; flankMove(S, u, X); return; }
   }
   moveTo(u, sx, sy, false);
+}
+// 從較近的那一側繞到目標側後方再接戰
+function flankMove(S: State, u: Unit, X: Unit) {
+  u.target = X.id; u.targetT = S.t;
+  const side = Math.sign((u.x - X.x) * -Math.sin(X.f) + (u.y - X.y) * Math.cos(X.f)) || 1;
+  const fx = X.x + (-Math.sin(X.f)) * side * 28 - Math.cos(X.f) * 10, fy = X.y + Math.cos(X.f) * side * 28 - Math.sin(X.f) * 10;
+  if (Math.hypot(fx - u.x, fy - u.y) > 20) moveTo(u, fx, fy, true); else moveTo(u, X.x, X.y, true);
 }
 
 // ---------------- 武將技 ----------------

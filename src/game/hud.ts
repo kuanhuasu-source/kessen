@@ -98,6 +98,26 @@ body { font-family: var(--ui); -webkit-user-select: none; user-select: none; -we
 /* 觀戰模式 */
 .rail .w { display: none !important; }
 #hud.watch .rail .w { display: grid !important; }
+.rail .c { display: none !important; }
+#hud.daimyo .rail .c { display: grid !important; }
+#hud .rail #b-cmd { font-family: var(--display); font-size: 16px; }
+#hud .rail #b-cmd.on { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+/* 大名模式：親自接管的旗牌、軍師建議卡、軍議 */
+.card.manual::after { content: '手'; position: absolute; left: -4px; top: -6px; font-size: 9px; line-height: 14px; padding: 0 4px; border-radius: 7px; background: var(--gold); color: var(--ink); font-weight: 700; }
+.advice { position: fixed; left: 50%; transform: translateX(-50%); top: calc(var(--edge-t) + 62px); max-width: min(420px, 70vw); pointer-events: auto; z-index: 5;
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 10px; background: var(--ink-b); border: 1px solid var(--gold); font-size: 12px; line-height: 1.4; animation: advin 0.3s ease-out; }
+@keyframes advin { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.advice .pp { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; object-position: center 18%; border: 1px solid var(--gold); flex: none; }
+.advice .tx b { color: var(--gold); font-family: var(--display); }
+.advice .bt { display: flex; flex-direction: column; gap: 4px; flex: none; }
+.advice .bt button { min-height: 26px; min-width: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line); background: transparent !important; font-family: var(--display) !important; font-size: 13px; }
+.advice .bt button:first-child { background: var(--gold) !important; color: var(--ink) !important; border-color: var(--gold); font-weight: 700; }
+.setup .war { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+.setup .war h3 { font-family: var(--display); font-size: 14px; margin: 0 0 4px; color: var(--gold); }
+.setup .war .pick > span { width: 70px; font-size: 13px; }
+.setup .war .chip { min-height: 30px; padding: 0 10px; font-size: 12.5px; }
+.setup .war .m { color: var(--paper-dim); font-size: 11px; margin: 2px 0 0; }
+@media (max-width: 700px), (max-height: 430px) { .advice { max-width: 62vw; font-size: 11.5px; top: calc(var(--edge-t) + 58px); } .setup .war .chip { min-height: 28px; padding: 0 8px; font-size: 11.5px; } }
 #hud.watch #b-form, #hud.watch #b-halt, #hud.watch #b-retreat, #hud.watch #b-box, #hud.watch #b-skill, #hud.watch .cards { display: none !important; }
 #hud.watch .info { bottom: var(--edge-b); }
 .feed { position: fixed; left: var(--edge-l); top: var(--edge-t); width: min(250px, calc(50% - 190px)); display: flex; flex-direction: column; gap: 3px; }
@@ -240,6 +260,17 @@ export class Hud {
   private retreatBtn!: HTMLButtonElement; private holdEl!: HTMLElement;
   private promptEl!: HTMLElement; private skillBtn!: HTMLButtonElement; private ninCard: HTMLButtonElement | null = null;
   private av: HTMLElement[] = []; private bars: HTMLElement[] = [];
+  onCmd: () => void = () => {};
+  setDaimyo(on: boolean) { this.root.classList.toggle('daimyo', on); }
+  setCmdOpen(on: boolean) { const b = this.root.querySelector('#b-cmd')!; b.setAttribute('aria-pressed', String(on)); b.classList.toggle('on', on); }
+  // 軍師建議卡
+  showAdvice(html: string, onYes: () => void, onNo: () => void) {
+    const el = this.root.querySelector<HTMLElement>('.advice')!;
+    el.innerHTML = `${html}<div class="bt"><button type="button">准</button><button type="button">否</button></div>`;
+    const [y, n] = el.querySelectorAll('button'); y.onclick = onYes; n.onclick = onNo;
+    el.hidden = false;
+  }
+  hideAdvice() { this.root.querySelector<HTMLElement>('.advice')!.hidden = true; }
   private formBtn!: HTMLButtonElement; private haltBtn!: HTMLButtonElement; private boxBtn!: HTMLButtonElement;
 
   constructor(units: Unit[], cb: HudCallbacks) {
@@ -263,12 +294,14 @@ export class Hud {
         <button id="b-box" aria-label="框選" aria-pressed="false" title="框選（觸控用）">框</button>
         <button id="b-retreat" aria-label="撤退" title="選取部隊有序撤退（T）">退</button>
         <button id="b-skill" aria-label="武將技" title="選取部隊施放武將技（R）">技</button>
+        <button id="b-cmd" class="c" aria-label="大名令" aria-pressed="false" title="大名令：全軍突擊、整頓、馳援、集中弓火、主將親征">令</button>
         <button id="b-cam" class="w" aria-label="導播鏡頭" aria-pressed="true" title="導播鏡頭：自動跟隨戰況">鏡</button>
         <button id="b-vis" class="w" aria-label="視野" title="切換視野：全知／武田／上杉">全</button>
       </div>
       <div class="cards" role="toolbar" aria-label="部隊"></div>
       <div class="info" hidden aria-live="polite"></div>
       <div class="prompt" hidden><span></span><button type="button" id="b-cancel">取消</button></div>
+      <div class="advice" hidden></div>
       <div class="setup" hidden></div>
       <div class="feed" aria-live="polite"></div>
       <div class="hold" hidden></div>
@@ -335,6 +368,7 @@ export class Hud {
     this.promptEl = this.root.querySelector('.prompt')!;
     this.root.querySelector<HTMLButtonElement>('#b-cancel')!.onclick = () => this.onCancelPrompt();
     this.skillBtn = this.root.querySelector('#b-skill')!; this.skillBtn.onclick = () => cb.onSkill();
+    this.root.querySelector<HTMLButtonElement>('#b-cmd')!.onclick = () => this.onCmd();
     this.retreatBtn = this.root.querySelector('#b-retreat')!; this.retreatBtn.onclick = () => cb.onRetreat();
     this.holdEl = this.root.querySelector('.hold')!;
     this.toastEl = this.root.querySelector('.toast')!;
@@ -378,7 +412,7 @@ export class Hud {
     this.toastEl.textContent = msg; this.toastEl.classList.add('on');
     clearTimeout(this.toastT); this.toastT = window.setTimeout(() => this.toastEl.classList.remove('on'), 1400);
   }
-  update(t: number, army: [number, number], units: Unit[], selected: Set<number>, morale: (u: Unit) => number, paused: boolean, speed: number, form: string, boxMode: boolean) {
+  update(t: number, army: [number, number], units: Unit[], selected: Set<number>, morale: (u: Unit) => number, paused: boolean, speed: number, form: string, boxMode: boolean, manual?: Set<number>) {
     this.formBtn.disabled = !form; this.formBtn.textContent = form || '陣';
     this.haltBtn.disabled = selected.size === 0; this.retreatBtn.disabled = selected.size === 0;
     this.boxBtn.setAttribute('aria-pressed', String(boxMode));
@@ -401,6 +435,7 @@ export class Hud {
     for (const u of units) {
       const c = this.cards.get(u.id); if (!c) continue;
       c.classList.toggle('sel', selected.has(u.id));
+      c.classList.toggle('manual', !!manual?.has(u.id));
       c.hidden = u.state === 'gone' || u.state === 'shattered';
       c.classList.toggle('rout', u.state === 'rout');
       c.querySelector('.men')!.textContent = String(u.men);
@@ -463,12 +498,14 @@ export class Hud {
     mode: 'play' | 'watch'; clans0: { id: string; html: string; short: string }[]; clan0: string; clans1: { id: string; short: string }[]; clan1: string;
     onMode: (m: 'play' | 'watch') => void; onPick0: (id: string) => void; onPick1: (id: string) => void; onGo: () => void; onHelp: () => void; onNew: () => void;
     bg?: string; // 背景插畫
+    war?: { rows: { key: string; label: string; opts: { id: string; label: string }[]; cur: string; note?: string }[]; onPick: (key: string, id: string) => void }; // 軍議（大名模式）
   }) {
     const el = this.root.querySelector<HTMLElement>('.setup')!;
     const play = o.mode === 'play';
     el.innerHTML = `<div class="sheet" role="dialog" aria-label="出陣準備"><h2>川中島・出陣</h2>
       <div class="modes"><button type="button" data-m="play" aria-pressed="${play}">親自指揮武田軍</button><button type="button" data-m="watch" aria-pressed="${!play}">觀戰：AI 對 AI</button></div>
-      ${play ? `<div class="clans">${o.clans0.map(c => `<button type="button" class="clan" data-c0="${c.id}" aria-pressed="${c.id === o.clan0}">${c.html}</button>`).join('')}</div>`
+      ${play ? `<div class="clans">${o.clans0.map(c => `<button type="button" class="clan" data-c0="${c.id}" aria-pressed="${c.id === o.clan0}">${c.html}</button>`).join('')}</div>
+        ${o.war ? `<div class="war"><h3>軍議</h3>${o.war.rows.map(r => `<div class="pick"><span>${r.label}</span>${r.opts.map(x => `<button type="button" class="chip" data-w="${r.key}" data-v="${x.id}" aria-pressed="${x.id === r.cur}">${x.label}</button>`).join('')}${r.note ? `<p class="m">${r.note}</p>` : ''}</div>`).join('')}</div>` : ''}`
         : `<div class="pick"><span style="color:#e3a39c">武田忍者眾</span>${o.clans0.map(c => `<button type="button" class="chip" data-c0="${c.id}" aria-pressed="${c.id === o.clan0}">${c.short}</button>`).join('')}</div>
            <div class="pick"><span style="color:#a9bde0">上杉忍者眾</span>${o.clans1.map(c => `<button type="button" class="chip" data-c1="${c.id}" aria-pressed="${c.id === o.clan1}">${c.short}</button>`).join('')}</div>
            <p class="lead" style="display:block">雙方都由 AI 指揮。導播鏡頭會跟著戰況走，拖曳或縮放就改手動，10 秒後交回導播；點任一部隊可查看並跟隨。右側「視」切換全知或單方視野。</p>`}
@@ -478,6 +515,10 @@ export class Hud {
     el.querySelectorAll<HTMLButtonElement>('[data-m]').forEach(b => b.onclick = () => { if (b.dataset.m !== o.mode) o.onMode(b.dataset.m as 'play' | 'watch'); });
     el.querySelectorAll<HTMLButtonElement>('[data-c0]').forEach(b => b.onclick = () => o.onPick0(b.dataset.c0!));
     el.querySelectorAll<HTMLButtonElement>('[data-c1]').forEach(b => b.onclick = () => o.onPick1(b.dataset.c1!));
+    el.querySelectorAll<HTMLButtonElement>('[data-w]').forEach(b => b.onclick = () => {
+      el.querySelectorAll<HTMLButtonElement>(`[data-w="${b.dataset.w}"]`).forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      o.war!.onPick(b.dataset.w!, b.dataset.v!);
+    });
     el.querySelector<HTMLButtonElement>('.go')!.onclick = () => { el.hidden = true; o.onGo(); };
     el.querySelector<HTMLButtonElement>('[data-help]')!.onclick = () => o.onHelp();
     el.querySelector<HTMLButtonElement>('[data-new]')?.addEventListener('click', () => o.onNew());
