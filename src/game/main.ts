@@ -186,7 +186,12 @@ tgtRing.renderOrder = 3; tgtRing.visible = false; scene.add(tgtRing);
 
 const selUnits = () => [...selected].map(id => S.units[id]).filter(u => u && u.state !== 'gone');
 function orderMove(p: { x: number; y: number }, run: boolean) {
-  const us = selUnits(); if (!us.length) return;
+  if (WATCH) { hud.toast('觀戰模式：雙方都由 AI 指揮，無法下令；回出陣畫面選「親自指揮」'); return; }
+  const all = selUnits(); if (!all.length) { hud.toast('先選取部隊（點部隊或左下旗牌）'); return; }
+  // 接戰中的部隊被釘住，移動指令無效；要脫離要用撤退（T）
+  const pinned = all.filter(u => u.contacts.length && !u.retreating && u.disUntil <= S.t);
+  const us = all.filter(u => !pinned.includes(u));
+  if (!us.length) { hud.toast(`${pinned.length > 1 ? '選取的部隊' : (pinned[0].cmd || '援軍') + '隊'}接戰中無法移動；要脫離請用撤退（右側「退」或 T）`); return; }
   const cx = us.reduce((a, u) => a + u.x, 0) / us.length, cy = us.reduce((a, u) => a + u.y, 0) / us.length;
   for (const u of us) {
     const ox = us.length > 1 ? u.x - cx : 0, oy = us.length > 1 ? u.y - cy : 0;
@@ -195,7 +200,7 @@ function orderMove(p: { x: number; y: number }, run: boolean) {
   }
   flash(p.x, p.y);
   const tn = terrainShort(p.x, p.y, us.some(u => UT[u.type].cav));
-  hud.toast((run ? '跑步前進' : '前進') + (tn ? `（${tn}）` : ''));
+  hud.toast((run ? '跑步前進' : '前進') + (tn ? `（${tn}）` : '') + (pinned.length ? `；${pinned.length} 隊接戰中留在原地` : ''));
 }
 function lineTargets(a: { x: number; y: number }, b: { x: number; y: number }) {
   const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1;
@@ -216,6 +221,7 @@ function lineTargets(a: { x: number; y: number }, b: { x: number; y: number }) {
 }
 const UT_MIN = (u: Unit) => (u.type === 'cav' || u.type === 'general' ? 3 : 5);
 function orderLine(a: { x: number; y: number }, b: { x: number; y: number }, run: boolean) {
+  if (WATCH) { hud.toast('觀戰模式：雙方都由 AI 指揮，無法下令；回出陣畫面選「親自指揮」'); return; }
   for (const t of lineTargets(a, b)) {
     const u = t.u;
     u.filesWanted = t.files; updDims(u);
@@ -398,7 +404,7 @@ function issueTap(sx: number, sy: number) {
   const run = isDouble(sx, sy);
   const E = pickUnit(sx, sy, 'enemy');
   if (E) { orderAttack(E, run); lastOrder = { t: performance.now(), x: sx, y: sy }; return; }
-  const p = groundAt(sx, sy); if (!p) return;
+  const p = groundAt(sx, sy); if (!p) { if (selected.size) hud.toast('請點在戰場地面上'); return; }
   orderMove(p, run);
   lastOrder = { t: performance.now(), x: sx, y: sy };
 }
