@@ -411,13 +411,17 @@ function issueTap(sx: number, sy: number) {
 
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 canvas.addEventListener('pointerdown', e => {
-  canvas.setPointerCapture(e.pointerId);
+  try { canvas.setPointerCapture(e.pointerId); } catch { /* 合成事件或已釋放的指標 */ }
   const p: P = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), button: e.button, type: e.pointerType };
   ptrs.set(e.pointerId, p);
   if (e.pointerType === 'mouse') {
+    if (mode === 'line') { showPreview(null); mode = 'none'; lineA = lineB = null; } // 上一次右鍵沒收到放開（macOS 右鍵選單會吃掉 pointerup）
     if (e.button === 1) mode = 'rotate';
-    else if (e.button === 2) { lineA = groundAt(e.clientX, e.clientY); mode = 'line'; }
-    else mode = 'tapwait';
+    else if (e.button === 2 || (e.button === 0 && e.ctrlKey)) {
+      // 右鍵（或 Mac 的 Ctrl＋點）：按下就下令，不等放開；之後有拖曳再改成拉陣線
+      lineA = groundAt(e.clientX, e.clientY); mode = 'line'; p.button = 2;
+      if (jutsu) cancelJutsu(); else issueTap(e.clientX, e.clientY);
+    } else mode = 'tapwait';
     return;
   }
   // 觸控
@@ -448,6 +452,7 @@ canvas.addEventListener('pointermove', e => {
     if (now - hoverT > 80) { hoverT = now; const E = pickUnit(e.clientX, e.clientY, 'enemy'); hoverEnemy = E ? E.id : -1; canvas.style.cursor = selected.size && E ? 'crosshair' : ''; }
   }
   const p = ptrs.get(e.pointerId); if (!p) return;
+  if (p.type === 'mouse' && e.buttons === 0) { endPointer(e); return; } // 放開事件沒送到（右鍵選單、視窗切換）：補結束
   const dx = e.clientX - p.x, dy = e.clientY - p.y;
   p.x = e.clientX; p.y = e.clientY;
   const moved = Math.hypot(p.x - p.sx, p.y - p.sy);
@@ -493,9 +498,8 @@ function endPointer(e: PointerEvent) {
     if (mode === 'line') {
       const b = groundAt(p.x, p.y);
       showPreview(null);
-      if (jutsu) cancelJutsu();
-      else if (lineA && b && Math.hypot(lineA.x - b.x, lineA.y - b.y) > 5 && selNin < 0) orderLine(lineA, b, isDouble(p.x, p.y));
-      else issueTap(p.x, p.y);
+      if (lineA && b && Math.hypot(lineA.x - b.x, lineA.y - b.y) > 5 && selNin < 0 && !jutsu) orderLine(lineA, b, false);
+      // 單點的指令已在按下時發出
     } else if (mode === 'box') {
       hud.box.style.display = 'none';
       const x0 = Math.min(p.sx, p.x), x1 = Math.max(p.sx, p.x), y0 = Math.min(p.sy, p.y), y1 = Math.max(p.sy, p.y);
@@ -552,6 +556,9 @@ function endPointer(e: PointerEvent) {
   if (ptrs.size === 0) mode = 'none';
 }
 canvas.addEventListener('pointerup', endPointer);
+// macOS／Safari 的右鍵放開有時只到 window 不到 canvas：用 mouseup 補
+window.addEventListener('mouseup', e => { for (const p of ptrs.values()) if (p.type === 'mouse') { p.x = e.clientX; p.y = e.clientY; endPointer({ pointerId: p.id, shiftKey: e.shiftKey } as PointerEvent); } });
+window.addEventListener('contextmenu', e => { if ((e.target as HTMLElement | null)?.closest?.('#hud')) return; e.preventDefault(); }, true);
 canvas.addEventListener('pointercancel', e => { ptrs.delete(e.pointerId); clearTimeout(longTimer); showPreview(null); hud.box.style.display = 'none'; if (!ptrs.size) mode = 'none'; });
 canvas.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') mouse.inside = false; });
 canvas.addEventListener('wheel', e => { e.preventDefault(); manualCam(); rig.zoom(Math.exp(e.deltaY * 0.0012)); }, { passive: false });

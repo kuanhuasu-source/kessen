@@ -114,5 +114,7 @@ node tools/shot.mjs "/tmp/phone.html#mode=watch&seed=42" out.png 844 390 2 ./scr
 - 玩家撤退令要獨立記錄（`retreatOrders`），否則脫離接觸瞬間會被「士氣 ≥ 50 解除整頓」清掉。
 - `let` 變數若在初始化時被呼叫的函式用到，要宣告在呼叫之前（TDZ）。
 - 截圖腳本快轉（`advance`）不會跑導播鏡頭與士兵移動，要靠 `snap()` 或等幾秒。
+- macOS 的右鍵選單在按下時就出現，`pointerup` 可能收不到：右鍵指令改在 `pointerdown` 就發出，拖曳拉陣線才等放開；`pointermove` 的 `buttons === 0` 與 window `mouseup` 當補救；Ctrl＋左鍵視同右鍵。
+- 無頭瀏覽器 10 fps 時 `setTimeout` 會延遲數百毫秒，測連點要用同步的合成事件（`dispatchEvent`），`setPointerCapture` 對合成事件會丟例外，已 try/catch。
 - Gemini 圖片 API 的長寬比只接受 1:1、2:3、3:2、3:4、4:3、4:5、5:4、9:16、16:9、21:9、1:4、4:1、1:8、8:1（旗指物原本寫 1:2 被拒，改 9:16）。
 - sharp：單通道 raw 經 `resize` 會變 3 通道，要再 `extractChannel(0)`；`resize` 的 `background` 要給物件不能給數字。
