@@ -617,6 +617,22 @@ function moveUnits(S: State) {
     u.f = Math.atan2(dy, dx);
     u.runDist = u.run ? u.runDist + s : 0;
   }
+  // 友軍不重疊：沒接戰的部隊太靠近就互相推開（部隊不能疊在同一個點上）
+  if (S.R.unitSeparation) {
+    const A = S.units;
+    for (let i = 0; i < A.length; i++) {
+      const a = A[i]; if (!active(a) || a.contacts.length) continue;
+      for (let j = i + 1; j < A.length; j++) {
+        const b = A[j]; if (b.side !== a.side || !active(b) || b.contacts.length) continue;
+        const minD = (a.rad + b.rad) * 0.9; let dx = b.x - a.x, dy = b.y - a.y; let d = Math.hypot(dx, dy);
+        if (d >= minD) continue;
+        if (d < 0.01) { dx = 1; dy = 0; d = 1; }
+        const push = Math.min((minD - d) / 2, 2.5 * dt);
+        a.x = clamp(a.x - dx / d * push, 2, 998); a.y = clamp(a.y - dy / d * push, 2, 698);
+        b.x = clamp(b.x + dx / d * push, 2, 998); b.y = clamp(b.y + dy / d * push, 2, 698);
+      }
+    }
+  }
   // 忍者
   for (const n of S.ninjas) {
     if (!n.alive) continue;
@@ -774,12 +790,23 @@ export function step(S: State) {
     }
   }
   for (const u of U) if (u.contacts.length) u.runDist = 0;
-  // 近戰
+  // 近戰（正面寬度上限：同一目標同時能被打的人數受其周長限制，多出來的攻擊者只能在後面等）
+  const capScale = new Map<number, number>();
+  if (R.frontageCap) {
+    const want = new Map<number, number>();
+    for (const A of U) {
+      if (!fighting(A, t) || !A.contacts.length) continue;
+      const front = Math.min(A.men, Math.ceil(A.men / A.ranks) * R.frontRanks);
+      const share = front / A.contacts.length;
+      for (const tid of A.contacts) { const T = U[tid]; const cT = cat(T, A); const face = cat(A, T) === 1 ? T.depth : T.width; const n = Math.min(share, 2 * face / 1.8 + 2) * (cT === 0 ? 1 : cT === 1 ? 0.5 : 0.25); want.set(tid, (want.get(tid) ?? 0) + n); }
+    }
+    for (const [tid, n] of want) { const T = U[tid]; if (T.state === 'rout' || T.state === 'shattered') continue; const cap = 2 * (T.width + T.depth) / 1.8 + 4; if (n > cap) capScale.set(tid, cap / n); }
+  }
   for (const A of U) {
     if (!fighting(A, t) || !A.contacts.length) continue;
     const front = Math.min(A.men, Math.ceil(A.men / A.ranks) * R.frontRanks);
     const share = front / A.contacts.length;
-    for (const tid of A.contacts) meleeAttack(S, A, U[tid], share);
+    for (const tid of A.contacts) meleeAttack(S, A, U[tid], share * (capScale.get(tid) ?? 1));
   }
   // 遠程
   for (const A of U) {

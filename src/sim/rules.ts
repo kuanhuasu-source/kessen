@@ -67,6 +67,8 @@ export const V1 = {
   nokizaruIntel: 'mid' as 'low' | 'mid' | 'high',
   kogaVision: 1.3,       // 甲賀眾視野倍率
   streams: 'none' as 'none' | 'two' | 'east', // 戰場溪流（data.ts STREAMS）
+  frontageCap: false,    // 正面寬度上限：同一目標同時被打的人數受其周長限制（防止全軍疊在一起圍毆）
+  unitSeparation: false, // 友軍不重疊：部隊太靠近會被推開
   fogV2: false,          // 情報 v2：視野縮小、識別要觀察一段時間、情報會隨時間退化、開戰不知敵方佈陣
   v2UnitSpot: 130, v2UnitSee: 80,    // 部隊：察覺／識別距離（m）
   v2NinSpot: 190, v2NinSee: 110,     // 忍者：察覺／識別距離

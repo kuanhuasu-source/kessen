@@ -12,7 +12,8 @@ type SideAI = { posture: 'advance' | 'hold' | 'attack'; attackT: number; aggr: n
   ids: Record<string, number>; slots: Map<number, { x: number; yl: number }>; reserveId: number };
 
 // 大名模式：玩家在軍議定的方針（S.meta.doctrine[side]）、親自接管的部隊（S.meta.manual）、戰中的大名令（S.meta.cmd[side]）
-export type Doctrine = { attack: 'auto' | 'now' | 'volley' | 'waver' | 'hold'; cav: 'auto' | 'guard' | 'raid' | 'free'; retreatAt: number; formation: 'auto' | 'line' | 'crane' | 'fish' };
+export type Formation = 'line' | 'crane' | 'fish' | 'blob' | 'oblique' | 'stack'; // blob＝全軍擠成一團（量測用）、oblique＝斜線陣（右翼前伸、左翼後縮）
+export type Doctrine = { attack: 'auto' | 'now' | 'volley' | 'waver' | 'hold'; cav: 'auto' | 'guard' | 'raid' | 'free'; retreatAt: number; formation: 'auto' | Formation };
 export const DEFAULT_DOCTRINE: Doctrine = { attack: 'auto', cav: 'auto', retreatAt: 0, formation: 'auto' };
 // 配置（S.meta.deployment[side]；S.meta.deploy 是佈陣紀錄字串，別撞名）：戰線順序（由左到右的部隊 key，3 或 4 隊）、預備隊、騎兵翼、各翼方針
 export type Wing = 'hold' | 'steady' | 'press';
@@ -623,19 +624,23 @@ function generalAI(S: State, u: Unit, A: SideAI) {
 // ---------------- 戰線式指揮（aiLine） ----------------
 // 整條線以同一個錨點推進：4 隊步兵有固定槽位，弓兵在線後 45 m，主將在中央後方，騎兵在翼側。
 // 階段：form（就定位）→ approach（逼近）→ volley（進入射程邊停 20 秒讓弓兵齊射）→ advance（全線推進）→ melee（接戰，錨點跟著接戰的部隊）。
-function formationOf(S: State, s: Side): 'line' | 'crane' | 'fish' {
+function formationOf(S: State, s: Side): Formation {
   const d = doctrineOf(S, s).formation;
   if (d !== 'auto') return d;
   const f = S.R.aiFormation;
   return f === 'crane' || (f === 'craneT' && s === 0) || (f === 'craneU' && s === 1) ? 'crane' : 'line';
 }
-const FORM_OFFS: Record<'line' | 'crane' | 'fish', number[][]> = {
+const FORM_OFFS: Record<Formation, number[][]> = {
   line: [[-80, 0], [-27, 0], [27, 0], [80, 0]],
   crane: [[-115, 30], [-40, 0], [40, 0], [115, 30]],   // 鶴翼：兩翼前伸
   fish: [[-80, -25], [-27, 12], [27, 12], [80, -25]],   // 魚鱗：中央突出
+  blob: [[-16, 8], [-6, -6], [6, 6], [16, -8]],         // 一團
+  stack: [[0, 0], [0, 0], [0, 0], [0, 0]],              // 全部疊在同一點（量測用）
+  oblique: [[-110, -30], [-45, -10], [20, 10], [85, 30]], // 斜線：右翼前伸
 };
-const FORM_OFFS3: Record<'line' | 'crane' | 'fish', number[][]> = { // 三隊成線（有預備隊時）
+const FORM_OFFS3: Record<Formation, number[][]> = { // 三隊成線（有預備隊時）
   line: [[-55, 0], [0, 0], [55, 0]], crane: [[-95, 25], [0, 0], [95, 25]], fish: [[-55, -20], [0, 15], [55, -20]],
+  blob: [[-12, 6], [0, -6], [12, 6]], oblique: [[-80, -25], [0, 0], [70, 25]], stack: [[0, 0], [0, 0], [0, 0]],
 };
 const WING_Y: Record<Wing, number> = { hold: -15, steady: 0, press: 20 }; // 各翼方針：猛攻前伸、固守後縮
 function wingOf(A: SideAI, i: number, n: number): 'L' | 'C' | 'R' { return i === 0 ? 'L' : i === n - 1 ? 'R' : 'C'; }
@@ -688,9 +693,16 @@ function lineAI(S: State, s: Side, A: SideAI) {
     A.slots.set(id, { x: A.ax + offs[i][0], yl: A.ayl + offs[i][1] + wy });
   }
   if (A.reserveId >= 0) A.slots.set(A.reserveId, { x: A.ax, yl: A.ayl - 35 });
-  A.slots.set(A.ids.archer1, { x: A.ax - 45, yl: A.ayl - 45 }); A.slots.set(A.ids.archer2, { x: A.ax + 45, yl: A.ayl - 45 });
-  A.slots.set(A.ids.gen, { x: A.ax, yl: A.ayl - R.aiGenBack });
-  A.slots.set(A.ids.cav, { x: clamp(A.ax + (A.cavWing === 'W' ? -230 : 230), 60, 940), yl: A.ayl - 10 });
+  if (formationOf(S, s) === 'stack') { for (const k of ['archer1', 'archer2', 'gen', 'cav']) A.slots.set(A.ids[k], { x: A.ax, yl: A.ayl }); }
+  else if (formationOf(S, s) === 'blob') { // 一團：弓兵、主將、騎兵都擠在裡面
+    A.slots.set(A.ids.archer1, { x: A.ax - 14, yl: A.ayl - 20 }); A.slots.set(A.ids.archer2, { x: A.ax + 14, yl: A.ayl - 20 });
+    A.slots.set(A.ids.gen, { x: A.ax, yl: A.ayl - 12 });
+    A.slots.set(A.ids.cav, { x: A.ax + 32, yl: A.ayl - 6 });
+  } else {
+    A.slots.set(A.ids.archer1, { x: A.ax - 45, yl: A.ayl - 45 }); A.slots.set(A.ids.archer2, { x: A.ax + 45, yl: A.ayl - 45 });
+    A.slots.set(A.ids.gen, { x: A.ax, yl: A.ayl - R.aiGenBack });
+    A.slots.set(A.ids.cav, { x: clamp(A.ax + (A.cavWing === 'W' ? -230 : 230), 60, 940), yl: A.ayl - 10 });
+  }
   // 據點：守勢時派槽位 170 m 內、附近沒有敵軍的步兵去佔；敵軍握有全部據點時不計姿態，派最近的部隊去搶回
   const busy = mine.some(u => u.role.startsWith('cap:') && u.type !== 'cav');
   const threat = S.holdAll[e] > 0;

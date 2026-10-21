@@ -14,6 +14,7 @@ const VARIANTS: Record<string, Partial<Rules>> = {
   craneT: { aiSteady: true, aiLine: true, aiFormation: 'craneT' },
   two: { streams: 'two', aiHoldYl: 250 }, east: { streams: 'east' },
   fog2: { fogV2: true },
+  fix: { frontageCap: true, unitSeparation: true },
   noRally: { maxRouts: 1 },
   noRetreat: { aiRetreat: false },
   rallyCap50: { rallyCap: 50 },
