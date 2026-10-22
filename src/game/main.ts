@@ -431,10 +431,10 @@ function tryStrat() { const w = stratState(); if (w) { hud.toast(`${STRATEGY[gen
 // ---------------- 大名令與軍師建議（大名模式） ----------------
 const CMD_INFO: Record<CmdKind, { name: string; desc: string }> = {
   charge: { name: '全軍突擊', desc: '30 秒內全線跑步壓上、騎兵自由獵殺' },
-  regroup: { name: '全軍整頓', desc: '戰線後退 60 m，動搖的部隊脫離接戰，20 秒守勢' },
-  relieve: { name: '馳援', desc: '派最近的空手部隊，從側背打最弱友軍的對手' },
-  focus: { name: '集中弓火', desc: '點選一隊敵軍，弓兵 20 秒內集火' },
-  raid: { name: '騎兵繞後', desc: '點選一隊敵軍，騎兵繞到側背突擊' },
+  regroup: { name: '全軍整頓', desc: '戰線後退 60 m，動搖的部隊脫離接戰，接戰中的部隊士氣 +8，20 秒守勢' },
+  relieve: { name: '馳援', desc: '派最近的兩隊空手部隊，從側背打最弱友軍的對手' },
+  focus: { name: '集中弓火', desc: '點選一隊敵軍，弓兵 20 秒內集火：箭雨更密、每輪士氣再 −4' },
+  raid: { name: '騎兵繞後', desc: '點選一隊敵軍，騎兵繞到側背突擊：衝鋒加成 +12、接觸震撼 −10' },
   commit: { name: '主將親征', desc: '旗本 30 秒內攻擊附近敵軍，動搖者優先' },
 };
 const CMD_ORDER: CmdKind[] = ['relieve', 'focus', 'raid', 'regroup']; // 2026-10-22 回顧：全軍突擊與主將親征量不出效果（AI 本來就會做），砍掉
