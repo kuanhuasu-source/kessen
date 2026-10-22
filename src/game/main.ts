@@ -882,7 +882,7 @@ function ninjaHtml(n: Ninja): string {
     <button class="x" type="button" aria-label="關閉">×</button></div>
     <div class="row"><span>狀態</span><span>${st}</span></div>
     <div class="acts">${btns}${n.manual ? '<button type="button" class="act" data-act="auto">改回自動</button>' : ''}</div>
-    <div class="desc"><div class="dl key">${w ? `忍術${w}。` : ''}冷卻 90 秒；目標須在任一忍者 80 m 內。</div><div class="dl key"><b>${JUTSU[c.jutsu[0]].name}</b>：${JUTSU[c.jutsu[0]].desc}</div><div class="dl key">${img(jutsuIcon(P.icon), 'ic')}<b>特性・${P.name}</b>：${P.desc}（自動生效）</div><div class="dl">忍者靠近敵軍 ${S.R.insightR} m 內可洞悉其士氣；被發現後遭敵軍貼近 3 秒會陣亡。</div></div>`;
+    <div class="desc"><div class="dl key">${w ? `忍術${w}。` : ''}冷卻 90 秒；目標須在任一忍者 80 m 內。</div><div class="dl key"><b>${JUTSU[c.jutsu[0]].name}</b>：${JUTSU[c.jutsu[0]].desc}</div><div class="dl key"><b>特性・${P.name}</b>：${P.desc}（自動生效）</div><div class="dl">忍者靠近敵軍 ${S.R.insightR} m 內可洞悉其士氣；被發現後遭敵軍貼近 3 秒會陣亡。</div></div>`;
 }
 hud.onInfoAct = act => {
   if (act.startsWith('cmd:')) { doCmd(act.slice(4) as CmdKind); return; }
