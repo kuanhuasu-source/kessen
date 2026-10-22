@@ -543,7 +543,7 @@ function cavAI(S: State, u: Unit, A: SideAI) {
     const threat = E && dist(u, E) < 130 && (isCav(E) || isRanged(E) || E.state === 'rout');
     const rc = cmdOf(S, s, 'raid');
     if (rc && rc.target !== undefined) { const T = S.units[rc.target]; if (T && active(T) && T.state !== 'gone') { cavAttack(S, u, T); return; } }
-    const passive = S.R.daimyoPassive && S.meta.playerSide === s; // 大名模式：騎兵繞後要靠大名令（free 仍自由獵殺）
+    const passive = (S.R.daimyoPassive || S.R.daimyoPassiveCav) && S.meta.playerSide === s; // 大名模式：騎兵繞後要靠大名令（free 仍自由獵殺）
     const loose = cmdOf(S, s, 'charge') || (Dc === 'free' && A.posture === 'attack') || (Dc !== 'guard' && !passive && A.phase === 'melee');
     if (!E || (!loose && !threat)) { moveTo(u, sl.x, Yl(s, sl.yl), false); return; }
     cavAttack(S, u, E); return;

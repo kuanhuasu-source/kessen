@@ -58,7 +58,7 @@ S.meta.aiSides = WATCH || DAIMYO ? [0, 1] : [1];  // 全手動：AI 只指揮上
 S.meta.playerSide = WATCH ? -1 : 0;            // 玩家那一方的忍術永遠由玩家施放
 const manualSet = new Set<number>(); S.meta.manual = manualSet;
 const DOCTRINE_KEY = 'kessen.doctrine';
-let doctrine0: Doctrine = { attack: 'auto', cav: 'raid', retreatAt: 35, formation: 'line' }; // 預設軍師裁量（與 AI 相同的時機判斷）：開場節奏 A 之後「開戰即攻」會讓我軍先渡溪挨半渡而擊（策略模擬：auto 45%、開戰即攻 40%）
+let doctrine0: Doctrine = { attack: 'volley', cav: 'raid', retreatAt: 35, formation: 'line' }; // 預設射完箭再攻：開場節奏 A 之後大名模式 240 局不介入／全採納建議：射完箭再攻 43／48%、軍師裁量 40／39%、開戰即攻 30／40%（開戰即攻會先渡溪挨半渡而擊）
 try { const j = localStorage.getItem(DOCTRINE_KEY); if (j) doctrine0 = { ...doctrine0, ...JSON.parse(j) }; } catch { /* 無法讀取時用預設 */ }
 S.meta.doctrine = [DAIMYO ? doctrine0 : { ...DEFAULT_DOCTRINE }, { ...DEFAULT_DOCTRINE }];
 function saveDoctrine() { try { localStorage.setItem(DOCTRINE_KEY, JSON.stringify(doctrine0)); } catch { /* 略過 */ } }

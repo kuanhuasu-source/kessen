@@ -8,7 +8,7 @@ import { adviseSide, cmdBlocked, weakestEngaged, CMD_CD } from '../src/sim/advis
 import { GAME_RULES, SIM_DT } from '../src/sim/game-rules.ts';
 import { makeRules, type Rules } from '../src/sim/rules.ts';
 
-const RV: Record<string, Partial<Rules>> = { base: {}, passive: { daimyoPassive: true }, c8: { cmdCommitMorale: 8 }, ch5: { cmdChargeMorale: 5 }, both: { cmdCommitMorale: 8, cmdChargeMorale: 5 }, c12: { cmdCommitMorale: 12 }, ch8: { cmdChargeMorale: 8 } };
+const RV: Record<string, Partial<Rules>> = { base: {}, passive: { daimyoPassive: true }, passiveCav: { daimyoPassiveCav: true }, c8: { cmdCommitMorale: 8 }, ch5: { cmdChargeMorale: 5 }, both: { cmdCommitMorale: 8, cmdChargeMorale: 5 }, c12: { cmdCommitMorale: 12 }, ch8: { cmdChargeMorale: 8 } };
 const N = Number(process.argv[2] || 60);
 const rates = (process.argv[3] || '0,0.5,1').split(',').map(Number);
 const rv = process.argv[4] || 'base';
@@ -34,7 +34,7 @@ for (const p of rates) {
         shown++; const b = byKind[kindOf(a.id)] ??= { shown: 0, taken: 0 }; b.shown++;
         if (rng() < p) {
           const target = a.cmd === 'relieve' && a.target === undefined ? weakestEngaged(S, 0)!.id : a.target;
-          if (issueCommand(S, 0, a.cmd, target)) { cmdCd[a.cmd] = S.t + CMD_CD[a.cmd]; taken++; b.taken++; }
+          if (issueCommand(S, 0, a.cmd, target)) { cmdCd[a.cmd] = S.t + CMD_CD[a.cmd] * Number(process.env.CD || 1); taken++; b.taken++; } // CD=0.33 可試縮短冷卻
           adviceCd[a.id] = S.t + 120;
         } else adviceCd[a.id] = S.t + 90;
       }
