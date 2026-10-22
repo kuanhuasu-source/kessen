@@ -37,12 +37,19 @@ export const JUTSU: Record<string, { name: string; desc: string; target: JTarget
   kirigakure: { name: '霧隱', desc: '60 m 煙霧 30 秒：煙中我軍只會被察覺、受箭減半', target: 'pos' },
   sahou: { name: '詐報', desc: '讓敵軍以為此處與東側 120 m 有我軍，持續 45 秒', target: 'pos' },
   gisei: { name: '偽旗', desc: '', target: 'enemy' },
-  sakuteki: { name: '搜敵', desc: '', target: 'none' },
-  sennyu: { name: '潛入', desc: '', target: 'enemy' },
+  sakuteki: { name: '搜敵', desc: '200 m 內的敵方忍者全部暴露 30 秒', target: 'none' },
+  sennyu: { name: '潛入', desc: '指定一隊敵軍，60 秒內持續洞悉其士氣', target: 'enemy' },
+};
+// 忍者眾特性（clanPassive）：原本的第二種忍術改成自動生效
+export const CLAN_PASSIVE: Record<string, { name: string; desc: string; icon: string }> = {
+  mitsumono: { name: '情報網', desc: '忍者 150 m 內的敵軍識別速度加倍', icon: 'monomi' },
+  nokizaru: { name: '防諜', desc: '敵方忍者進到任一軒猿 100 m 內就會暴露', icon: 'sakuteki' },
+  iga: { name: '破壞', desc: '未被發現的忍者待在敵方據點 40 m 內時，該據點對敵軍失效', icon: 'houka' },
+  koga: { name: '疑兵', desc: '敵軍識別我方部隊要多花一半時間', icon: 'sahou' },
 };
 export const CLAN_INFO: Record<string, { name: string; n: number; intel: string; stealth: string; note: string; jutsu: [string, string] }> = {
-  mitsumono: { name: '三ツ者', n: 4, intel: '高', stealth: '中', note: '武田家的情報網。開戰即知己方半場所有地形秘密；物見可洞悉敵軍。', jutsu: ['rumor', 'monomi'] },
+  mitsumono: { name: '三ツ者', n: 4, intel: '高', stealth: '中', note: '武田家的情報網。開戰即知己方半場所有地形秘密。', jutsu: ['rumor', 'monomi'] },
   iga: { name: '伊賀眾', n: 3, intel: '中', stealth: '中', note: '被發現時 50% 機率脫身。擅長破壞。', jutsu: ['ansatsu', 'houka'] },
   koga: { name: '甲賀眾', n: 5, intel: '高', stealth: '低', note: '人數最多、視野 +30%，但容易被發現，也沒有洞悉手段。', jutsu: ['kirigakure', 'sahou'] },
-  nokizaru: { name: '軒猿', n: 4, intel: '中', stealth: '高', note: '上杉家的忍者，擅長反諜。', jutsu: ['gisei', 'sakuteki'] },
+  nokizaru: { name: '軒猿', n: 4, intel: '中', stealth: '高', note: '上杉家的忍者，擅長反諜。', jutsu: ['sennyu', 'sakuteki'] },
 };

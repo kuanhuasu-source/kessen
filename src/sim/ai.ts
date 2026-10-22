@@ -920,17 +920,17 @@ function ninjaAI(S: State, s: Side, A: SideAI, jutsu = true) {
   const nin = S.ninjas.filter(n => n.side === s && n.alive);
   if (!nin.length) return;
   const within = (x: number, y: number) => nin.some(n => Math.hypot(n.x - x, n.y - y) <= 80);
-  const [j1, j2] = clan.jutsu;
+  const act = (j: string) => !S.R.clanPassive || clan.jutsu[0] === j; // clanPassive：只有主動忍術能放
   const vEn = ens.filter(u => vis(S, s, u) >= 2 && active(u));
   switch (clan.id) {
     case 'mitsumono': {
       const tg = vEn.filter(u => within(u.x, u.y) && u.contacts.length && pMorale(S, s, u) <= 65).sort((a, b) => pMorale(S, s, a) - pMorale(S, s, b))[0];
       if (tg) { useJutsu(S, s, 'rumor', { x: tg.x, y: tg.y, unit: tg.id }); break; }
-      if (clash && within(clash.x, clash.y) && cn >= 2) useJutsu(S, s, 'monomi', { x: clash.x, y: clash.y });
+      if (act('monomi') && clash && within(clash.x, clash.y) && cn >= 2) useJutsu(S, s, 'monomi', { x: clash.x, y: clash.y });
       break;
     }
     case 'nokizaru': {
-      if (S.R.giseiOn && !A.giseiDone && t > 20 && t < 150) {
+      if (S.R.giseiOn && act('gisei') && !A.giseiDone && t > 20 && t < 150) {
         const own = S.units.find(u => u.side === s && u.type === (S.R.giseiProtect ? 'archer' : 'spear') && active(u) && !u.contacts.length && within(u.x, u.y));
         if (own && useJutsu(S, s, 'gisei', { x: own.x, y: own.y, unit: own.id })) { A.giseiDone = true; break; }
       }
@@ -939,7 +939,7 @@ function ninjaAI(S: State, s: Side, A: SideAI, jutsu = true) {
         if (tg && useJutsu(S, s, 'sennyu', { x: tg.x, y: tg.y, unit: tg.id })) break;
       }
       const en = S.ninjas.filter(m => m.side === e && m.alive && m.detUntil <= t && nin.some(n => Math.hypot(n.x - m.x, n.y - m.y) <= 200));
-      if (en.length) { const n0 = nin.find(n => en.some(m => Math.hypot(n.x - m.x, n.y - m.y) <= 200))!; useJutsu(S, s, 'sakuteki', { x: n0.x, y: n0.y }); }
+      if (act('sakuteki') && en.length) { const n0 = nin.find(n => en.some(m => Math.hypot(n.x - m.x, n.y - m.y) <= 200))!; useJutsu(S, s, 'sakuteki', { x: n0.x, y: n0.y }); }
       break;
     }
     case 'iga': {
@@ -947,19 +947,18 @@ function ninjaAI(S: State, s: Side, A: SideAI, jutsu = true) {
       const idle = cand.find(u => !u.contacts.length);
       if (idle) { useJutsu(S, s, 'ansatsu', { x: idle.x, y: idle.y, unit: idle.id }); break; }
       const pi = S.points.findIndex(p => p.owner === e && p.burnedUntil <= t && within(p.x, p.y));
-      if (pi >= 0) { useJutsu(S, s, 'houka', { x: S.points[pi].x, y: S.points[pi].y, point: pi }); break; }
+      if (act('houka') && pi >= 0) { useJutsu(S, s, 'houka', { x: S.points[pi].x, y: S.points[pi].y, point: pi }); break; }
       if (cand.length && t > 120 && !S.R.assassinFailKills) useJutsu(S, s, 'ansatsu', { x: cand[0].x, y: cand[0].y, unit: cand[0].id });
       break;
     }
     case 'koga': {
       const shot = S.units.find(u => u.side === s && active(u) && t - u.lastArrowT < 6 && within(u.x, u.y));
       if (shot) { useJutsu(S, s, 'kirigakure', { x: shot.x, y: shot.y }); break; }
-      if (t > 30 && t < 150) {
+      if (act('sahou') && t > 30 && t < 150) {
         const n0 = nin.find(n => n.role === 'scoutW' || n.role === 'scoutE');
         if (n0) useJutsu(S, s, 'sahou', { x: n0.x, y: n0.y });
       }
       break;
     }
   }
-  void j1; void j2;
 }

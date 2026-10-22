@@ -433,6 +433,7 @@ export function battleCry(S: State, u: Unit) {
 export function useJutsu(S: State, side: Side, j: string, a: { x: number; y: number; unit?: number; point?: number; ninja?: number }): boolean {
   const R = S.R, t = S.t;
   if (!R.ninjaOn || S.jutsuCd[side] > t || R.offJutsu.includes(j)) return false;
+  if (R.clanPassive && CLANS[S.clan[side]].jutsu[0] !== j) return false; // 只有主動忍術能施放
   const nin = S.ninjas.filter(n => n.side === side && n.alive);
   if (!nin.length) return false;
   const near = nin.find(n => Math.hypot(n.x - a.x, n.y - a.y) <= 80);
@@ -745,7 +746,9 @@ function updateVision(S: State) {
       if (v2) {
         // 識別與洞悉要累積觀察時間；沒看到時慢慢遺忘
         let o = S.obs[side].get(E.id); if (!o) { o = { t2: 0, t3: 0 }; S.obs[side].set(E.id, o); }
-        o.t2 = see ? Math.min(o.t2 + S.dt, 60) : Math.max(0, o.t2 - S.dt); o.t3 = insight ? Math.min(o.t3 + S.dt, 60) : Math.max(0, o.t3 - S.dt);
+        let im = 1; // 識別累積速度：三ツ者情報網（忍者 150 m 內 ×2）、對甲賀疑兵（÷1.5）
+        if (R.clanPassive) { if (S.clan[side] === 'mitsumono' && S.ninjas.some(n => n.side === side && n.alive && Math.hypot(n.x - E.x, n.y - E.y) <= 150)) im *= 2; if (S.clan[E.side] === 'koga') im /= 1.5; }
+        o.t2 = see ? Math.min(o.t2 + S.dt * im, 60) : Math.max(0, o.t2 - S.dt); o.t3 = insight ? Math.min(o.t3 + S.dt, 60) : Math.max(0, o.t3 - S.dt);
         if (see && o.t2 >= R.v2IdentT) lvl = 2;
         if (insight && o.t3 >= R.v2InsightT) lvl = 3;
       }
@@ -811,6 +814,11 @@ export function step(S: State) {
   }
   dmgAcc.length = 0; atkBy.length = 0; shinsaAcc.length = 0;
   S.smokes = S.smokes.filter(s => s.until > t); S.monomi = S.monomi.filter(s => s.until > t);
+  if (R.clanPassive && R.ninjaOn) for (const s of [0, 1] as Side[]) { // 忍者眾自動特性
+    const c = S.clan[s], e = (1 - s) as Side;
+    if (c === 'iga') for (const p of S.points) if (p.owner === e && S.ninjas.some(n => n.side === s && n.alive && n.detUntil <= t && Math.hypot(n.x - p.x, n.y - p.y) <= 40)) p.burnedUntil = Math.max(p.burnedUntil, t + 1);
+    if (c === 'nokizaru') for (const m of S.ninjas) if (m.side === e && m.alive && m.detUntil <= t && m.immuneUntil <= t && S.ninjas.some(n => n.side === s && n.alive && Math.hypot(n.x - m.x, n.y - m.y) <= 100)) { m.detUntil = t + 10; S.rec.nin[e].detected++; fx(S, { k: 'jutsu', a: s, s: 'sakuteki' }); }
+  }
   // AI
   S.ai(S);
   // 移動

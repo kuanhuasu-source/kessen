@@ -64,7 +64,7 @@ export type Clan = {
 
 export const CLANS: Record<string, Clan> = {
   mitsumono: { id: 'mitsumono', name: '三ツ者', sides: [0], n: 4, intel: 'high', stealth: 'mid', jutsu: ['rumor', 'monomi'] },
-  nokizaru: { id: 'nokizaru', name: '軒猿', sides: [1], n: 4, intel: 'mid', stealth: 'high', jutsu: ['gisei', 'sakuteki'] },
+  nokizaru: { id: 'nokizaru', name: '軒猿', sides: [1], n: 4, intel: 'mid', stealth: 'high', jutsu: ['sennyu', 'sakuteki'] }, // clanPassive：jutsu[0] 是唯一主動忍術，jutsu[1] 變成自動的特性
   iga: { id: 'iga', name: '伊賀眾', sides: [0, 1], n: 3, intel: 'mid', stealth: 'mid', jutsu: ['ansatsu', 'houka'] },
   koga: { id: 'koga', name: '甲賀眾', sides: [0, 1], n: 5, intel: 'high', stealth: 'low', jutsu: ['kirigakure', 'sahou'] },
 };

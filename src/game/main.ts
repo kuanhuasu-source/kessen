@@ -11,7 +11,7 @@ import { UnitView, TYPE_NAME, KANJI, type CorpseSink } from './units.ts';
 import { Corpses, Arrows, Dust, Pulses, FacingDisc } from './effects.ts';
 import { playerOrders, attackRun, seenPos, retreatOrders } from './orders.ts';
 import { NinjaView, AreaFx } from './ninja.ts';
-import { SKILL, PASSIVE, STRATEGY, ADV_PASSIVE, JUTSU, CLAN_INFO } from './skills.ts';
+import { SKILL, PASSIVE, STRATEGY, ADV_PASSIVE, JUTSU, CLAN_INFO, CLAN_PASSIVE } from './skills.ts';
 import { CameraRig } from './camera.ts';
 import { Hud } from './hud.ts';
 import { portraitOf, ninjaPortrait, skillIcon, jutsuIcon, kamon, illus, img, kanBox } from './art.ts';
@@ -231,10 +231,11 @@ if (params.get('go') === '1') {
   },
   clans0: PLAYER_CLANS.map(id => {
     const c = CLAN_INFO[id];
-    return { id, short: `${img(ninjaPortrait(id), 'pp')}${c.name}<small>${c.jutsu.map(j => JUTSU[j].name).join('・')}</small>`,
-      html: `<b>${img(ninjaPortrait(id), 'pp')}${c.name}</b><span class="m">${c.n} 人・情報${c.intel}・隱密${c.stealth}・難度 ${CLAN_DIFF[id] ?? '普通'}</span><span class="j">${c.jutsu.map(j => `<em>${JUTSU[j].name}</em>：${JUTSU[j].desc}`).join('<br>')}</span><span class="m">${c.note}</span>` };
+    const P = CLAN_PASSIVE[id];
+    return { id, short: `${img(ninjaPortrait(id), 'pp')}${c.name}<small>${JUTSU[c.jutsu[0]].name}・${P.name}</small>`,
+      html: `<b>${img(ninjaPortrait(id), 'pp')}${c.name}</b><span class="m">${c.n} 人・情報${c.intel}・隱密${c.stealth}・難度 ${CLAN_DIFF[id] ?? '普通'}</span><span class="j"><em>${JUTSU[c.jutsu[0]].name}</em>：${JUTSU[c.jutsu[0]].desc}<br><em>特性・${P.name}</em>：${P.desc}</span><span class="m">${c.note}</span>` };
   }), clan0,
-  clans1: FOE_CLANS.map(id => ({ id, short: `${img(ninjaPortrait(id), 'pp')}${CLAN_INFO[id].name}<small>${(id === 'nokizaru' ? ['sennyu', 'sakuteki'] : CLAN_INFO[id].jutsu).map(j => JUTSU[j].name).join('・')}</small>` })), clan1,
+  clans1: FOE_CLANS.map(id => ({ id, short: `${img(ninjaPortrait(id), 'pp')}${CLAN_INFO[id].name}<small>${JUTSU[CLAN_INFO[id].jutsu[0]].name}・${CLAN_PASSIVE[id].name}</small>` })), clan1,
   onMode: m => reloadWith({ mode: m === 'watch' ? 'watch' : null }),
   onPick0: id => { if (id !== clan0) reloadWith({ clan: id }); },
   onPick1: id => { if (id !== clan1) reloadWith({ foe: id }); },
@@ -874,13 +875,14 @@ function ninjaHtml(n: Ninja): string {
   const c = CLAN_INFO[S.clan[0]], alive = myNinjas().length, w = jutsuState();
   const det = n.detUntil > S.t;
   const st = !n.alive ? '<span class="neg">陣亡</span>' : det ? '<span class="neg">被發現！撤退中</span>' : n.manual ? '待命（點地面移動）' : '自動偵察中';
-  const btns = c.jutsu.map(j => `<button type="button" class="act${!w ? ' ready' : ''}${jutsu === j ? ' on' : ''}" data-act="j:${j}" ${w ? 'disabled' : ''}>${img(jutsuIcon(j), 'ic')}${JUTSU[j].name}</button>`).join('');
+  const P = CLAN_PASSIVE[S.clan[0]];
+  const btns = [c.jutsu[0]].map(j => `<button type="button" class="act${!w ? ' ready' : ''}${jutsu === j ? ' on' : ''}" data-act="j:${j}" ${w ? 'disabled' : ''}>${img(jutsuIcon(j), 'ic')}${JUTSU[j].name}</button>`).join('');
   return `<div class="hd">${kanBox('k', '忍', '#2a262e', ninjaPortrait(S.clan[0]))}
     <div><div class="nm">${c.name}・忍者 ${n.id + 1 - S.ninjas.findIndex(x => x.side === 0)}</div><div class="sub">存活 ${alive}／${c.n} 人</div></div>
     <button class="x" type="button" aria-label="關閉">×</button></div>
     <div class="row"><span>狀態</span><span>${st}</span></div>
     <div class="acts">${btns}${n.manual ? '<button type="button" class="act" data-act="auto">改回自動</button>' : ''}</div>
-    <div class="desc"><div class="dl key">${w ? `忍術${w}。` : ''}共用冷卻 90 秒；目標須在任一忍者 80 m 內。</div>${c.jutsu.map(j => `<div class="dl key"><b>${JUTSU[j].name}</b>：${JUTSU[j].desc}</div>`).join('')}<div class="dl">忍者靠近敵軍 ${S.R.insightR} m 內可洞悉其士氣；被發現後遭敵軍貼近 3 秒會陣亡。</div></div>`;
+    <div class="desc"><div class="dl key">${w ? `忍術${w}。` : ''}冷卻 90 秒；目標須在任一忍者 80 m 內。</div><div class="dl key"><b>${JUTSU[c.jutsu[0]].name}</b>：${JUTSU[c.jutsu[0]].desc}</div><div class="dl key">${img(jutsuIcon(P.icon), 'ic')}<b>特性・${P.name}</b>：${P.desc}（自動生效）</div><div class="dl">忍者靠近敵軍 ${S.R.insightR} m 內可洞悉其士氣；被發現後遭敵軍貼近 3 秒會陣亡。</div></div>`;
 }
 hud.onInfoAct = act => {
   if (act.startsWith('cmd:')) { doCmd(act.slice(4) as CmdKind); return; }
@@ -1006,6 +1008,7 @@ function jutsuFx(side: 0 | 1, j: string, unit?: number, point?: number) {
   if (side === 0) {
     if (name === 'ansatsu' && U) say(res === 'ok' ? `暗殺成功：${U.cmd} 討死！` : `暗殺 ${U.cmd} 失敗`);
     else if (name === 'houka' && point !== undefined) say(`放火：${['村落', '寺廟', '補給點'][point]} 60 秒內失效`);
+    else if (name === 'sakuteki') say('防諜：敵方忍者暴露了');
     else say(`忍術「${J.name}」`);
     if (U && name === 'rumor') floatText(U, `流言 ${S.R.rumor}`, 'hit');
     return;
@@ -1014,7 +1017,7 @@ function jutsuFx(side: 0 | 1, j: string, unit?: number, point?: number) {
   if (name === 'rumor' && U) { say(`敵忍散布流言：${nameOf(U)}士氣 ${S.R.rumor}，30 秒不回復`); floatText(U, `流言 ${S.R.rumor}`, 'bad'); }
   else if (name === 'ansatsu' && U) say(res === 'ok' ? `${U.cmd} 遭敵忍暗殺！` : `擊退刺殺 ${U.cmd} 的敵忍`);
   else if (name === 'houka' && point !== undefined) say(`敵忍放火：我方${['村落', '寺廟', '補給點'][point]} 60 秒內失效`);
-  else if (name === 'sakuteki') say('敵軍「搜敵」：附近的我方忍者暴露了');
+  else if (name === 'sakuteki') say('敵軍防諜：附近的我方忍者暴露了');
   else if (name === 'kirigakure') say('敵軍陣中升起煙霧（霧隱）');
 }
 const ninDet = new Map<number, boolean>();
