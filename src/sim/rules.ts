@@ -117,7 +117,7 @@ export const V1 = {
   counterDeploy: true,
   ninjaSides: [true, true] as [boolean, boolean], // 哪一方有忍者
   offJutsu: [] as string[],
-  clanPassive: false,      // 忍者眾只留一種主動忍術（jutsu[0]），第二種改為自動特性：三ツ者情報網（忍者 150 m 內識別累積 ×2）、軒猿防諜（敵忍者進 100 m 即暴露）、伊賀破壞（未被發現的忍者在敵據點 40 m 內時據點失效）、甲賀疑兵（敵軍識別甲賀方部隊要多 50% 時間）
+  clanPassive: false, passiveSakutekiR: 100, passiveSakutekiImmune: 0, // 軒猿防諜的半徑與暴露後的免疫秒數      // 忍者眾只留一種主動忍術（jutsu[0]），第二種改為自動特性：三ツ者情報網（忍者 150 m 內識別累積 ×2）、軒猿防諜（敵忍者進 100 m 即暴露）、伊賀破壞（未被發現的忍者在敵據點 40 m 內時據點失效）、甲賀疑兵（敵軍識別甲賀方部隊要多 50% 時間）
   insightR: 40,
   assassinFailKills: false, // 暗殺失敗時執行的忍者陣亡
   sennyuOn: false,          // 軒猿新忍術「潛入」：指定一隊敵軍，60 秒內持續洞悉          // 忍者取得洞悉的距離                        // 停用的忍術

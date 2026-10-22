@@ -817,7 +817,7 @@ export function step(S: State) {
   if (R.clanPassive && R.ninjaOn) for (const s of [0, 1] as Side[]) { // 忍者眾自動特性
     const c = S.clan[s], e = (1 - s) as Side;
     if (c === 'iga') for (const p of S.points) if (p.owner === e && S.ninjas.some(n => n.side === s && n.alive && n.detUntil <= t && Math.hypot(n.x - p.x, n.y - p.y) <= 40)) p.burnedUntil = Math.max(p.burnedUntil, t + 1);
-    if (c === 'nokizaru') for (const m of S.ninjas) if (m.side === e && m.alive && m.detUntil <= t && m.immuneUntil <= t && S.ninjas.some(n => n.side === s && n.alive && Math.hypot(n.x - m.x, n.y - m.y) <= 100)) { m.detUntil = t + 10; S.rec.nin[e].detected++; fx(S, { k: 'jutsu', a: s, s: 'sakuteki' }); }
+    if (c === 'nokizaru') for (const m of S.ninjas) if (m.side === e && m.alive && m.detUntil <= t && m.immuneUntil <= t && S.ninjas.some(n => n.side === s && n.alive && n.detUntil <= t && Math.hypot(n.x - m.x, n.y - m.y) <= R.passiveSakutekiR)) { m.detUntil = t + 10; m.immuneUntil = t + 10 + R.passiveSakutekiImmune; S.rec.nin[e].detected++; fx(S, { k: 'jutsu', a: s, s: 'sakuteki' }); }
   }
   // AI
   S.ai(S);
