@@ -104,7 +104,7 @@ node tools/shot.mjs "/tmp/phone.html#mode=watch&seed=42" out.png 844 390 2 ./scr
 - AI：不做有序撤退；主將站戰線後 40 m 並追擊附近動搖或潰走敵軍。戰線式指揮（aiLine）：佈陣整體前移 50 m（`deployFwd`，戰線起點 160）、成線階段急行軍（`aiFormRun`）、對峙線在己方 280 m（溪前）、攻勢發起時間 10～40 秒÷侵略性（`aiAttackT0`／`aiAttackTR`）、錨點 3.8 m/s 推進（`aiAnchorSpd`）、對射 12 秒（`aiVolleyDur`）；回顧前是 110／走路／250／30～110 秒／3.3／20 秒，首戰 88 秒；回顧後 150 局：首戰 56 秒、時長 292 秒、崩潰 84%、時間到 16%、武田 45%；接戰後空手部隊在 120 m（240 秒後 180 m）內側擊鄰隊對手。AI 對 AI 150 場（2026-10-22，含溪流、起伏、鐵砲／大筒）：時長 335 秒、首戰 84 秒、交戰期 251 秒、總崩潰結束 79%、時間到 16%、據點 5%、武田勝 51%。策略模擬（`tools/strategy.ts`，武田對預設 AI 80 局）：auto 43%、橫陣＋射完箭再攻 29%、橫陣＋開戰即攻 48%、一團 53%、魚鱗 50%
 - 測試：網址 `#ai=legacy|steady|line|crane` 切換 AI 變體；`node tools/ai-diag.ts 20 line` 看抖動指標。`#cmd=manual` 全手動模式。`window.__kessen.doCmd('charge')`、`evalAdvice()`、`manualSet` 給腳本用。
 - 大名令只留四道：馳援、集中弓火、騎兵繞後、全軍整頓（全軍突擊與主將親征 240 局量不出效果，2026-10-22 回顧砍掉；`issueCommand` 仍支援 charge／commit 給工具用）。軍師建議也只剩對應的四類。
-- 大名模式的預設方針：軍師裁量（attack 'auto'，與 AI 同一套時機；開戰即攻在新節奏下會先渡溪挨半渡而擊）、騎兵接戰後繞後、撤退線 35、橫陣；`playerOrders`（orders.ts）只處理接管的部隊。將領互換在 `applyWarCouncil`（main.ts）於出陣時套用：改 `cmd/skill/passive`、箭矢 ±5、`S.meta.tenkyu` 跟著典廄走、`hud.refreshCard`。localStorage 鍵：`kessen.doctrine`、`kessen.deploy`、`kessen.roster`。
+- 大名模式的預設方針：射完箭再攻（240 局：不介入 43%／全採納建議 48%；軍師裁量 40／39%、開戰即攻 30／40%，開戰即攻在新節奏下會先渡溪挨半渡而擊）、騎兵接戰後繞後、撤退線 35、橫陣。`daimyoPassive`／`daimyoPassiveCav`（玩家方 AI 等令才側擊／繞後）量測結果 18／27%，保留為關閉；`playerOrders`（orders.ts）只處理接管的部隊。將領互換在 `applyWarCouncil`（main.ts）於出陣時套用：改 `cmd/skill/passive`、箭矢 ±5、`S.meta.tenkyu` 跟著典廄走、`hud.refreshCard`。localStorage 鍵：`kessen.doctrine`、`kessen.deploy`、`kessen.roster`。
 
 ## 8. 待辦與已知問題
 
