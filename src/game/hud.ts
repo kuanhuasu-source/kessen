@@ -313,7 +313,7 @@ export class Hud {
         <button id="b-box" aria-label="框選" aria-pressed="false" title="框選（觸控用）">框</button>
         <button id="b-retreat" aria-label="撤退" title="選取部隊有序撤退（T）">退</button>
         <button id="b-skill" aria-label="武將技" title="選取部隊施放武將技（R）">技</button>
-        <button id="b-cmd" class="c" aria-label="大名令" aria-pressed="false" title="大名令：全軍突擊、整頓、馳援、集中弓火、主將親征">令</button>
+        <button id="b-cmd" class="c" aria-label="大名令" aria-pressed="false" title="大名令：馳援、集中弓火、騎兵繞後、全軍整頓">令</button>
         <button id="b-cam" class="w" aria-label="導播鏡頭" aria-pressed="true" title="導播鏡頭：自動跟隨戰況">鏡</button>
         <button id="b-vis" class="w" aria-label="視野" title="切換視野：全知／武田／上杉">全</button>
       </div>
@@ -332,7 +332,7 @@ export class Hud {
       <div class="help" hidden>
         <div class="sheet" role="dialog" aria-label="操作說明">
           <h2>決戰・M6 原型</h2>
-          <p><b>勝負</b>：任一方軍勢低於 25 總崩潰、全軍覆沒、或控制三個據點滿 60 秒即分勝負；10 分鐘到時軍勢高者勝。<b>據點</b>：村落派援軍、寺廟讓附近友軍士氣 +10、補給點回補箭矢；點地圖上的據點可看效果與佔領進度。<b>撤退</b>（右側「退」或 T）：部隊脫離接戰退到主將附近，撤退中不還手，但不會連累友軍士氣、也不扣軍勢。上杉軍由 AI 指揮，戰場有迷霧；潰走的部隊重整後士氣最多回到 50，再潰走即潰滅。選取部隊後在左下面板施放武將技、鬨聲，大將另有軍略；「忍」旗牌可選忍者偵察並施放忍術。</p>
+          <p><b>勝負</b>：任一方軍勢低於 25 總崩潰或全軍覆沒即分勝負；10 分鐘到時軍勢高者勝。<b>據點</b>：不是勝利條件，只給增益：村落派援軍、寺廟讓附近友軍士氣 +10、補給點回補箭矢；點地圖上的據點可看效果與佔領進度。<b>撤退</b>（右側「退」或 T）：部隊脫離接戰退到主將附近，撤退中不還手，但不會連累友軍士氣、也不扣軍勢。上杉軍由 AI 指揮，戰場有迷霧；潰走的部隊重整後士氣最多回到 50，再潰走即潰滅。選取部隊後在左下面板施放武將技、鬨聲，大將另有軍略；「忍」旗牌可選忍者偵察並施放忍術。</p>
           <div class="cols">
             <div><h3>滑鼠與鍵盤</h3><dl>
               <dt>左鍵點選</dt><dd>選取部隊；<kbd>Shift</kbd> 加選；拖曳框選</dd>

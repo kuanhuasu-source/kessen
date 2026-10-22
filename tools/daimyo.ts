@@ -20,7 +20,7 @@ for (const p of rates) {
   let w = 0, t = 0, shown = 0, taken = 0; const byKind: Record<string, { shown: number; taken: number }> = {};
   for (let i = 0; i < N; i++) {
     const S: State = newState(R, 21000 + i, [CLAN_CHOICES[0][i % 3], CLAN_CHOICES[1][(i + 1) % 3]]); S.dt = SIM_DT; setup(S); S.fx = [];
-    S.meta.doctrine = [{ ...DEFAULT_DOCTRINE, attack: 'now', cav: 'raid', retreatAt: 35, formation: 'line' }, { ...DEFAULT_DOCTRINE }];
+    S.meta.doctrine = [{ ...DEFAULT_DOCTRINE, attack: (process.env.ATTACK as 'auto' | 'now' | 'volley') || 'auto', cav: 'raid', retreatAt: 35, formation: 'line' }, { ...DEFAULT_DOCTRINE }]; // 大名模式預設方針（ATTACK=now|volley 可改）
     S.meta.deployment = [JSON.parse(JSON.stringify(DEFAULT_DEPLOY)), null];
     S.meta.playerSide = 0;
     const rng = mulberry32(777 + i);

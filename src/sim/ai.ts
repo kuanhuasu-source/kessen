@@ -26,8 +26,8 @@ export function applyDeploy(S: State, s: Side, d: Deploy) {
   const byKey = (k: string) => S.units.find(u => u.side === s && u.key === k);
   for (let i = 0; i < 4; i++) delete A.ids['line' + i];
   const xs = d.line.length === 3 ? [440, 500, 560] : [410, 470, 530, 590];
-  d.line.forEach((k, i) => { const u = byKey(k); if (!u) return; A.ids['line' + i] = u.id; u.role = 'line'; u.x = xs[i]; u.y = Yl(s, 110); u.holdX = u.x; u.holdY = u.y; });
-  if (d.reserve) { const u = byKey(d.reserve); if (u) { A.reserveId = u.id; u.role = 'reserve'; u.x = 500; u.y = Yl(s, 75); } } else A.reserveId = -1;
+  d.line.forEach((k, i) => { const u = byKey(k); if (!u) return; A.ids['line' + i] = u.id; u.role = 'line'; u.x = xs[i]; u.y = Yl(s, 110 + S.R.deployFwd); u.holdX = u.x; u.holdY = u.y; });
+  if (d.reserve) { const u = byKey(d.reserve); if (u) { A.reserveId = u.id; u.role = 'reserve'; u.x = 500; u.y = Yl(s, 75 + S.R.deployFwd); } } else A.reserveId = -1;
   A.cavWing = d.cavWing;
   A.cavKeys.forEach((k, i) => { const cav = byKey(k); if (!cav) return; const wingW = (d.cavWing === 'W') === (i === 0); cav.x = wingW ? 300 : 700; cav.y = Yl(s, 90); cav.role = wingW ? 'cav' : 'cap:supply'; });
   for (const u of S.units) if (u.side === s) { u.hasDest = false; u.destX = u.x; u.destY = u.y; }
@@ -79,9 +79,9 @@ const CLS = (t: UType): 'spear' | 'archer' | 'samurai' | 'cav' | 'general' => is
 export function setup(S: State) {
   const rng = S.rng;
   const ai: [SideAI, SideAI] = [0, 1].map(() => ({
-    posture: 'advance', attackT: S.R.aiLine ? 30 + rng() * 80 : 45 + rng() * 105, aggr: 0.8 + rng() * 0.4, cavWing: rng() < 0.5 ? 'W' : 'E', // 戰線式：成線推進本身就要 1 分鐘，發起攻勢的時間提早
+    posture: 'advance', attackT: S.R.aiLine ? S.R.aiAttackT0 + rng() * S.R.aiAttackTR : 45 + rng() * 105, aggr: 0.8 + rng() * 0.4, cavWing: rng() < 0.5 ? 'W' : 'E', // 戰線式：成線推進本身就要 1 分鐘，發起攻勢的時間提早
     nextTac: 0, nextStrat: 0, nextNin: 0, giseiDone: false,
-    ax: 500, ayl: 110, phase: 'form', volleyUntil: 0, ids: {}, slots: new Map(), reserveId: -1, rangedKeys: [], cavKeys: [],
+    ax: 500, ayl: 110 + S.R.deployFwd, phase: 'form', volleyUntil: 0, ids: {}, slots: new Map(), reserveId: -1, rangedKeys: [], cavKeys: [],
   } as SideAI)) as [SideAI, SideAI];
   S.meta.ai = ai;
   // 戰線順序來自名單（長槍與武士）；四成機率把前兩隊對調
@@ -104,7 +104,8 @@ export function setup(S: State) {
   for (const s of [0, 1] as Side[]) {
     const roster = s === 0 ? ROSTER_T : ROSTER_U;
     const R = (k: string) => roster.find(r => r.key === k)!;
-    const mk = (k: string, x: number, yl: number) => makeUnit(S, s, R(k), R(k).type, k, x, Yl(s, yl));
+    const F = S.R.deployFwd;
+    const mk = (k: string, x: number, yl: number) => makeUnit(S, s, R(k), R(k).type, k, x, Yl(s, yl + F));
     mk('gen', 500, 40).role = 'general';
     const n = order[s].length; const xs = n === 3 ? [440, 500, 560] : [410, 470, 530, 590];
     order[s].forEach((k, i) => { const u = mk(k, xs[i], 110); u.role = 'line'; });
@@ -684,14 +685,14 @@ function lineAI(S: State, s: Side, A: SideAI) {
     const gap = frontYl - A.ayl;
     const archersReady = mine.some(u => isRanged(u) && u.ammo >= 3);
     const shooting = mine.some(u => isRanged(u) && t - u.lastArrowT < 12); // 對峙時已經在射就不必再停下齊射
-    if (A.phase !== 'volley' && A.phase !== 'advance' && gap <= R.archerRange - 30 && archersReady && !shooting && doctrineOf(S, s).attack !== 'now' && !cmdOf(S, s, 'charge')) { A.phase = 'volley'; A.volleyUntil = t + 20; }
+    if (A.phase !== 'volley' && A.phase !== 'advance' && gap <= R.archerRange - 30 && archersReady && !shooting && doctrineOf(S, s).attack !== 'now' && !cmdOf(S, s, 'charge')) { A.phase = 'volley'; A.volleyUntil = t + R.aiVolleyDur; }
     else if (A.phase !== 'volley' && A.phase !== 'advance' && gap <= R.archerRange - 30 && shooting) A.phase = 'advance';
     if (A.phase === 'volley') { if (t < A.volleyUntil && gap > 60) targetYl = A.ayl; else A.phase = 'advance'; }
     else if (A.phase !== 'advance') A.phase = 'approach';
   } else A.phase = A.posture === 'advance' ? 'form' : 'approach';
   // 錨點以最慢者的速度推進（每秒呼叫一次），有人落後 45 m 以上就等
   if (!engaged.length) {
-    const spd = 3.3;
+    const spd = R.aiAnchorSpd;
     const lag = lineUnits.some(u => !u.retreating && Yl(s, u.y) < A.ayl - 45);
     if (targetYl > A.ayl) { if (!lag) A.ayl = Math.min(targetYl, A.ayl + spd); }
     else if (targetYl < A.ayl) A.ayl = Math.max(targetYl, A.ayl - spd);
@@ -784,7 +785,7 @@ function lineInfantry(S: State, u: Unit, A: SideAI) {
     }
     if (X) { u.aiLockK = 'atk'; flankMove(S, u, X); return; }
   }
-  moveTo(u, sx, sy, false);
+  moveTo(u, sx, sy, S.R.aiFormRun && A.phase === 'form'); // 成線階段可用跑的（急行軍到對峙線）
 }
 // 預備隊（二番備）：站在戰線中央後方；友軍動搖（士氣 < 55）或大名令馳援時出動打其對手，事後回到預備位置
 function reserveAI(S: State, u: Unit, A: SideAI) {

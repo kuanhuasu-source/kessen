@@ -1014,7 +1014,7 @@ export function step(S: State) {
     for (const s of [0, 1] as Side[]) {
       const alive = U.some(u => u.side === s && (active(u) || u.state === 'rout'));
       if (!alive) { S.over = { winner: (1 - s) as Side, type: 'wipe', t }; break; }
-      if (S.holdAll[s] >= 60) { S.over = { winner: s, type: 'points', t }; break; }
+      if (R.pointWin && S.holdAll[s] >= 60) { S.over = { winner: s, type: 'points', t }; break; }
     }
   }
   if (!S.over && t + dt >= 600) {

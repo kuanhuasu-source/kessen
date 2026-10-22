@@ -16,8 +16,10 @@ export const GAME_RULES = makeRules({
   archerRange: 200,      // 弓兵射程 150 → 200 m
   fogV2: true,           // 情報 v2（2026-10-21）：部隊察覺 130／識別 80 m、忍者 190／110 m、識別要累積觀察 8 秒、洞悉 12 秒、識別 40 秒後退化、察覺 120 秒後遺忘、地形秘密要靠到 15 m、忍者 4.5 m/s 掃描偵察、開戰只知己方半場秘密、不做針對性佈陣
   // 2026-10-21 地形與反一團（AI 對 AI 60 場、策略模擬各 60 局）
-  streams: 'two', aiHoldYl: 250, // 兩條溪流（各在對峙線前），渡口在大路與兩翼；對峙線退到 250
+  streams: 'two', // 兩條溪流（各在對峙線前），渡口在大路與兩翼
+  aiHoldYl: 280, deployFwd: 50, aiFormRun: true, aiAttackT0: 10, aiAttackTR: 30, aiAnchorSpd: 3.8, aiVolleyDur: 12, // 回顧（2026-10-22）開場節奏 A：佈陣前移 50、急行軍成線、攻勢 10～40 秒、對峙線 280（溪前）、錨點 3.8 m/s、對射 12 秒 → 首戰 88 → 57 秒
   reliefNoise: 0.4,              // 緩坡起伏降到 ±0.7 m（滿幅會讓時間到從 12% 升到 20%）
+  pointWin: false,       // 回顧（2026-10-22）：據點勝利只佔 5%，拿掉；據點只給增益
   gunHit: 0.4, gunDmg: 4, cannonLam: 2.6, cannonReload: 25, cannonDmg: 12, cannonSplash: 0.6, // 鐵砲／大筒平衡（2026-10-22）：預設值武田 83%，此組 52%
   arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true, // 箭雨濺射、擁擠減速、AI 側擊反應：一團 48%→33%、疊放 50%→27%、鶴翼 38%→57%
   name: 'game',

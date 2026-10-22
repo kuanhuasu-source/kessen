@@ -67,6 +67,7 @@ export const V1 = {
   nokizaruIntel: 'mid' as 'low' | 'mid' | 'high',
   kogaVision: 1.3,       // 甲賀眾視野倍率
   streams: 'none' as 'none' | 'two' | 'east', // 戰場溪流（data.ts STREAMS）
+  pointWin: true,        // 控制全部據點 60 秒獲勝（遊戲 2026-10-22 起關閉：據點只給增益）
   cmdCommitMorale: 0, cmdChargeMorale: 0, // 大名令附帶士氣：主將親征時主將 80 m 內友軍 +N、全軍突擊時全軍 +N（0＝只改行為）
   gunDmg: 5, gunReload: 15, gunVolley: -3, gunHit: 0.5,          // 鐵砲：每發命中傷害、裝填秒數、每輪士氣打擊（60 m 內命中 50%，射程邊 25%）
   cannonDmg: 10, cannonReload: 40, cannonVolley: -8, cannonTerror: -3, cannonMin: 60, cannonLam: 1.8, cannonSplash: 0, // cannonLam：150 m 內每發期望彈數；cannonSplash：目標 20 m 內其他敵隊各吃這個期望彈數（跳彈） // 大筒：每發 1～3 彈各 10 傷害、士氣 −8、30 m 內其他敵隊 −3、60 m 內無法射擊
@@ -88,6 +89,7 @@ export const V1 = {
   waterArrow: 1.3,       // 水中受箭命中倍率
   waterHit: -10,         // 半渡而擊：攻擊水中（非渡口）的部隊，接觸時額外士氣打擊
   aiHoldYl: 295,         // AI 戰線式指揮的對峙線（己方座標）
+  aiAttackT0: 30, aiAttackTR: 80, aiAnchorSpd: 3.3, deployFwd: 0, aiFormRun: false, aiVolleyDur: 20, // deployFwd：兩軍佈陣整體前移（m）；aiFormRun：成線階段用跑的 // 戰線式 AI 發起攻勢的時間（秒，aiAttackT0 + 亂數 × aiAttackTR，再除以侵略性）與錨點推進速度（m/s）
   cmdKillChance: 0.05,
   cmdKillOnlyRouting: false, // v2：只有在部隊潰逃被追擊時才可能被討取   // 兵力 < 25% 時，每名接戰敵隊每秒的討取機率
   buffCapPct: 0.5,

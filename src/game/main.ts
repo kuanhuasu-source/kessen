@@ -42,7 +42,7 @@ const clan1 = FOE_CLANS.includes(params.get('foe') ?? '') ? params.get('foe')! :
 const AI_VARIANTS: Record<string, Partial<typeof GAME_RULES>> = {
   legacy: { aiSteady: false, aiLine: false }, steady: { aiSteady: true, aiLine: false }, line: { aiSteady: true, aiLine: true },
   crane: { aiSteady: true, aiLine: true, aiFormation: 'crane' }, craneT: { aiSteady: true, aiLine: true, aiFormation: 'craneT' },
-  two: { streams: 'two', aiHoldYl: 250 }, east: { streams: 'east' }, // 溪流地形試用
+  two: { streams: 'two' }, east: { streams: 'east' }, // 溪流地形試用（two 已是預設）
   fog2: { fogV2: true }, fog1: { fogV2: false },
 };
 const aiVar = params.get('ai');
@@ -58,7 +58,7 @@ S.meta.aiSides = WATCH || DAIMYO ? [0, 1] : [1];  // 全手動：AI 只指揮上
 S.meta.playerSide = WATCH ? -1 : 0;            // 玩家那一方的忍術永遠由玩家施放
 const manualSet = new Set<number>(); S.meta.manual = manualSet;
 const DOCTRINE_KEY = 'kessen.doctrine';
-let doctrine0: Doctrine = { attack: 'now', cav: 'raid', retreatAt: 35, formation: 'line' }; // 預設開戰即攻：上杉有大筒，守著等射完箭會先挨轟（策略模擬 80 局：射完箭再攻 29%、開戰即攻 48%）
+let doctrine0: Doctrine = { attack: 'auto', cav: 'raid', retreatAt: 35, formation: 'line' }; // 預設軍師裁量（與 AI 相同的時機判斷）：開場節奏 A 之後「開戰即攻」會讓我軍先渡溪挨半渡而擊（策略模擬：auto 45%、開戰即攻 40%）
 try { const j = localStorage.getItem(DOCTRINE_KEY); if (j) doctrine0 = { ...doctrine0, ...JSON.parse(j) }; } catch { /* 無法讀取時用預設 */ }
 S.meta.doctrine = [DAIMYO ? doctrine0 : { ...DEFAULT_DOCTRINE }, { ...DEFAULT_DOCTRINE }];
 function saveDoctrine() { try { localStorage.setItem(DOCTRINE_KEY, JSON.stringify(doctrine0)); } catch { /* 略過 */ } }
@@ -139,7 +139,7 @@ function applyWarCouncil() {
 }
 const DOCTRINE_ROWS: { key: keyof Doctrine; label: string; opts: { id: string; label: string }[]; note?: string }[] = [
   { key: 'formation', label: '陣形', opts: [{ id: 'line', label: '橫陣' }, { id: 'crane', label: '鶴翼' }, { id: 'fish', label: '魚鱗' }], note: '橫陣四隊並列；鶴翼兩翼前伸包抄；魚鱗中央突出' },
-  { key: 'attack', label: '攻勢時機', opts: [{ id: 'now', label: '開戰即攻' }, { id: 'volley', label: '射完箭再攻' }, { id: 'waver', label: '等敵軍動搖' }, { id: 'hold', label: '固守' }], note: '敵有大筒（260 m）時守著等會先挨轟；鐵砲只有 120 m' },
+  { key: 'attack', label: '攻勢時機', opts: [{ id: 'auto', label: '軍師裁量' }, { id: 'now', label: '開戰即攻' }, { id: 'volley', label: '射完箭再攻' }, { id: 'waver', label: '等敵軍動搖' }, { id: 'hold', label: '固守' }], note: '軍師裁量：開戰後 10～40 秒發起；先渡溪的一方會挨半渡而擊，守著等又會先吃大筒' },
   { key: 'cav', label: '騎兵', opts: [{ id: 'guard', label: '護翼' }, { id: 'raid', label: '接戰後繞後' }, { id: 'free', label: '自由遊擊' }] },
   { key: 'retreatAt', label: '撤退線', opts: [{ id: '0', label: '不撤' }, { id: '35', label: '士氣 35' }, { id: '45', label: '士氣 45' }], note: '士氣低於此值的部隊自動脫離接戰退到主將旁' },
 ];
@@ -437,7 +437,7 @@ const CMD_INFO: Record<CmdKind, { name: string; desc: string }> = {
   raid: { name: '騎兵繞後', desc: '點選一隊敵軍，騎兵繞到側背突擊' },
   commit: { name: '主將親征', desc: '旗本 30 秒內攻擊附近敵軍，動搖者優先' },
 };
-const CMD_ORDER: CmdKind[] = ['charge', 'regroup', 'relieve', 'focus', 'raid', 'commit'];
+const CMD_ORDER: CmdKind[] = ['relieve', 'focus', 'raid', 'regroup']; // 2026-10-22 回顧：全軍突擊與主將親征量不出效果（AI 本來就會做），砍掉
 const cmdCd: Partial<Record<CmdKind, number>> = {};
 let pendingPick: CmdKind | null = null;
 let cmdOpen = false;
@@ -1045,7 +1045,7 @@ function pointHtml(i: number): string {
   return `<div class="hd"><span class="k" style="background:${p.owner === 0 ? 'var(--takeda)' : p.owner === 1 ? 'var(--uesugi)' : '#6b645a'}">${POINT_NAME[i][0]}</span>
     <div><div class="nm">${POINT_NAME[i]}</div><div class="sub">${own}</div></div>
     <button class="x" type="button" aria-label="關閉">×</button></div>${rows.join('')}
-    <div class="desc">部隊站進圓圈內 20 秒即可佔領（雙方都在圈內時暫停）。一方控制全部三個據點 60 秒即獲勝。</div>`;
+    <div class="desc">部隊站進圓圈內 20 秒即可佔領（雙方都在圈內時暫停）。據點只給增益，不是勝利條件。</div>`;
 }
 const pointOwner = S.points.map(p => p.owner);
 function watchFeed(e: { k: string; a: number; b?: number; n?: number; s?: string }) {
@@ -1118,7 +1118,7 @@ function director(dt: number) {
   rig.clamp();
 }
 // ---------------- 觀戰：結算 ----------------
-const OVER_TYPE: Record<string, string> = { collapse: '總崩潰', wipe: '全軍覆沒', points: '控制全部據點 60 秒', time: '時間到，軍勢較高者勝' };
+const OVER_TYPE: Record<string, string> = { collapse: '總崩潰', wipe: '全軍覆沒', points: '控制全部據點 60 秒', time: '時間到，軍勢較高者勝' }; // points 只在規則 pointWin 開著時會出現
 function showEnd() {
   const o = S.over!; const R = S.rec;
   const w = o.winner;
@@ -1246,7 +1246,7 @@ function resize() {
 let bannerH = window.innerHeight;
 window.addEventListener('resize', resize);
 resize();
-rig.tx = 500; rig.ty = 150; rig.dist = 280; rig.snap();
+rig.tx = 500; rig.ty = 150 + S.R.deployFwd; rig.dist = 280; rig.snap(); // 佈陣前移時鏡頭跟著前移
 
 let infoT = 0, smokeAcc = 0, hoofAcc = 0;
 hud.addNinjaCard(dbl => nextNinja(dbl), S.clan[0]);
@@ -1344,7 +1344,7 @@ function frame(now: number) {
     infoT = 0.25;
     hud.setInfo(cmdOpen ? cmdHtml() : selNin >= 0 ? ninjaHtml(S.ninjas[selNin]) : infoU && infoU.id !== infoClosed ? infoHtml(infoU) : inspectPoint >= 0 ? pointHtml(inspectPoint) : null);
     if (DAIMYO && !paused) evalAdvice();
-    if (S.holdAll[0] > 0) hud.setHold(0, 60 - S.holdAll[0]); else if (S.holdAll[1] > 0) hud.setHold(1, 60 - S.holdAll[1]); else hud.setHold(-1, 0);
+    if (S.R.pointWin && S.holdAll[0] > 0) hud.setHold(0, 60 - S.holdAll[0]); else if (S.R.pointWin && S.holdAll[1] > 0) hud.setHold(1, 60 - S.holdAll[1]); else hud.setHold(-1, 0);
     // 情報讀數與未探索遮罩（情報 v2）
     if (S.R.fogV2 && S.R.fogOn && !(WATCH && visMode === 'all')) {
       const vs = viewSide(); const en = S.units.filter(u => u.side !== vs && u.state !== 'gone' && !u.reinf);
