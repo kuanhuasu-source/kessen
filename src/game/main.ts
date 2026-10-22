@@ -824,7 +824,7 @@ function terrainNotes(u: Unit): string[] {
 }
 const MORALE_SRC: Record<string, string> = {
   losses: '傷亡', flank: '側擊', rear: '背襲', chargeHit: '騎兵衝鋒', volley: '箭雨', friendRout: '友軍潰走', cmdDeath: '武將討死',
-  kuruma: '車懸', akazonae: '赤備', kesshiEnd: '決死結束', rumor: '流言', toseki: '投石', enemyCry: '敵方鬨聲', _drain: '持續消耗', water: '半渡而擊', gun: '鐵砲', cannon: '大筒', commit: '主公親征', charge: '全軍突擊',
+  kuruma: '車懸', akazonae: '赤備', kesshiEnd: '決死結束', rumor: '流言', toseki: '投石', enemyCry: '敵方鬨聲', _drain: '持續消耗', water: '半渡而擊', gun: '鐵砲', cannon: '大筒', commit: '主公親征', charge: '全軍突擊', raid: '繞後令', focus: '集火令', regroup: '整頓令',
 };
 const ARMY_SRC: Record<string, string> = {
   unitRout: '部隊潰走', unitShatter: '部隊潰滅', bannerFall: '馬印倒下', enemyRout: '敵軍潰走', genDeath: '大將討死', viceDeath: '武將討死',
@@ -1246,7 +1246,7 @@ function resize() {
 let bannerH = window.innerHeight;
 window.addEventListener('resize', resize);
 resize();
-rig.tx = 500; rig.ty = 150 + S.R.deployFwd; rig.dist = 280; rig.snap(); // 佈陣前移時鏡頭跟著前移
+rig.tx = 500; rig.ty = 190 + S.R.deployFwd; rig.dist = 280; rig.snap(); // 佈陣前移時鏡頭跟著前移，戰線與溪流在畫面中段
 
 let infoT = 0, smokeAcc = 0, hoofAcc = 0;
 hud.addNinjaCard(dbl => nextNinja(dbl), S.clan[0]);

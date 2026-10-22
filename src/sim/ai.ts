@@ -50,14 +50,15 @@ export function issueCommand(S: State, s: Side, kind: CmdKind, target?: number):
   if (kind === 'regroup') {
     A.ayl = Math.max(60, A.ayl - 60);
     for (const u of mine) if (u.contacts.length && u.state === 'waver' && u.type !== 'general') u.retreating = true;
+    if (S.R.cmdRegroupMorale) for (const u of mine) if (u.retreating || u.state === 'waver') mHit(S, u, S.R.cmdRegroupMorale, 'regroup'); // 整頓令：穩住動搖與撤退中的部隊
   } else if (kind === 'relieve') {
     const T = target !== undefined ? S.units[target] : null;
     if (!T || !T.contacts.length) return false;
     const cost = (u: Unit) => dist(u, T) * (u.type === 'cav' ? 0.6 : 1) * (u.role === 'reserve' ? 0.5 : 1); // 預備隊優先
-    const helper = mine.filter(u => u !== T && !u.contacts.length && !u.retreating && (u.type === 'spear' || u.type === 'samurai' || u.type === 'cav'))
-      .sort((a, b) => cost(a) - cost(b))[0];
-    if (!helper) return false;
-    helper.aiLockK = 'help:' + T.id; helper.aiLockT = t;
+    const helpers = mine.filter(u => u !== T && !u.contacts.length && !u.retreating && (u.type === 'spear' || u.type === 'samurai' || u.type === 'cav'))
+      .sort((a, b) => cost(a) - cost(b)).slice(0, Math.max(1, S.R.cmdRelieveN));
+    if (!helpers.length) return false;
+    for (const helper of helpers) { helper.aiLockK = 'help:' + T.id; helper.aiLockT = t; }
   } else if (kind === 'focus' || kind === 'raid') {
     if (target === undefined) return false;
   } else if (kind === 'commit') {

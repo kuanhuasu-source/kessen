@@ -488,8 +488,14 @@ function chargeOK(S: State, A: Unit, T: Unit, cA: number) {
   return true;
 }
 
+// 目前生效的大名令（S.meta.cmd 由 ai.ts 的 issueCommand 寫入；這裡只讀）
+export function activeCmd(S: State, side: Side, kind: string, target?: number) {
+  const c = (S.meta.cmd as ({ kind: string; until: number; target?: number } | null)[] | undefined)?.[side];
+  return !!c && c.kind === kind && c.until > S.t && (target === undefined || c.target === target);
+}
 function chargeBonus(S: State, A: Unit) {
   const R = S.R; let c = UT[A.type].charge;
+  if (R.cmdRaidCharge && isCav(A) && activeCmd(S, A.side, 'raid')) c += R.cmdRaidCharge; // 繞後令：騎兵衝鋒加成
   if (A.state === 'high') c += R.highCharge;
   if (passiveOn(A, 'charge4')) c += 4;
   if (has(S, A, 'charge15')) c += 15;
@@ -563,6 +569,7 @@ function volley(S: State, A: Unit, T: Unit) {
   fx(S, { k: 'volley', a: A.id, b: T.id, n: hits });
   damage(S, T, hits * S.R.arrowDmg, A);
   mHit(S, T, S.R.volley, 'volley');
+  if (S.R.cmdFocusMorale && activeCmd(S, A.side, 'focus', T.id)) mHit(S, T, S.R.cmdFocusMorale, 'focus'); // 集火令：集中箭雨的額外動搖
   T.lastArrowT = S.t;
   if (S.R.arrowSplash > 0) for (const X of S.units) { // 濺射：擠在目標旁邊的敵隊一起中箭
     if (X === T || X.side !== T.side || !active(X) || Math.hypot(X.x - T.x, X.y - T.y) > 15) continue;
@@ -842,6 +849,7 @@ export function step(S: State) {
         if (isCav(A)) {
           mHit(S, T, R.chargeHit, 'chargeHit');
           if (has(S, A, 'chargeShock')) mHit(S, T, R.akazonaeExtra, 'akazonae');
+          if (R.cmdRaidShock && activeCmd(S, A.side, 'raid', T.id)) mHit(S, T, R.cmdRaidShock, 'raid'); // 繞後令指定的目標：額外震撼
         }
       }
     }
