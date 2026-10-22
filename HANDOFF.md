@@ -98,14 +98,14 @@ node tools/shot.mjs "/tmp/phone.html#mode=watch&seed=42" out.png 844 390 2 ./scr
 - 士氣：高昂 ≥ 80、動搖 < 50、潰逃 < 25；潰逃後 15 秒未受攻擊且士氣 ≥ 35 重整（主將 60 m 內減半），重整後士氣上限 50，第 2 次潰逃即潰滅。
 - 軍勢：低於 25 總崩潰；高於 80 全軍緩升。
 - 勝利：總崩潰、全滅、控制三據點 60 秒、10 分鐘到時軍勢高者勝。
-- AI：不做有序撤退；主將站戰線後 40 m 並追擊附近動搖或潰走敵軍。戰線式指揮（aiLine）：對峙線在己方 295 m，攻勢發起時間 30～110 秒÷侵略性；錨點 3.3 m/s 推進；接戰後空手部隊在 120 m（240 秒後 180 m）內側擊鄰隊對手。AI 對 AI 60 場：時長 298 秒、首戰 102 秒、交戰期 197 秒、總崩潰結束 87%、時間到 8%、據點 5%、武田勝 55%（修正對峙線卡在半路的 bug 後；修正前 334 秒／首戰 126 秒／武田 63%）
+- AI：不做有序撤退；主將站戰線後 40 m 並追擊附近動搖或潰走敵軍。戰線式指揮（aiLine）：對峙線在己方 295 m，攻勢發起時間 30～110 秒÷侵略性；錨點 3.3 m/s 推進；接戰後空手部隊在 120 m（240 秒後 180 m）內側擊鄰隊對手。AI 對 AI 150 場（2026-10-22，含溪流、起伏、鐵砲／大筒）：時長 335 秒、首戰 84 秒、交戰期 251 秒、總崩潰結束 79%、時間到 16%、據點 5%、武田勝 51%。策略模擬（`tools/strategy.ts`，武田對預設 AI 80 局）：auto 43%、橫陣＋射完箭再攻 29%、橫陣＋開戰即攻 48%、一團 53%、魚鱗 50%
 - 測試：網址 `#ai=legacy|steady|line|crane` 切換 AI 變體；`node tools/ai-diag.ts 20 line` 看抖動指標。`#cmd=manual` 全手動模式。`window.__kessen.doCmd('charge')`、`evalAdvice()`、`manualSet` 給腳本用。
-- 大名模式的預設方針：射完箭再攻、騎兵接戰後繞後、撤退線 35、橫陣；`playerOrders`（orders.ts）只處理接管的部隊。將領互換在 `applyWarCouncil`（main.ts）於出陣時套用：改 `cmd/skill/passive`、箭矢 ±5、`S.meta.tenkyu` 跟著典廄走、`hud.refreshCard`。localStorage 鍵：`kessen.doctrine`、`kessen.deploy`、`kessen.roster`。
+- 大名模式的預設方針：開戰即攻（上杉有大筒，守著等會先挨轟）、騎兵接戰後繞後、撤退線 35、橫陣；`playerOrders`（orders.ts）只處理接管的部隊。將領互換在 `applyWarCouncil`（main.ts）於出陣時套用：改 `cmd/skill/passive`、箭矢 ±5、`S.meta.tenkyu` 跟著典廄走、`hud.refreshCard`。localStorage 鍵：`kessen.doctrine`、`kessen.deploy`、`kessen.roster`。
 
 ## 8. 待辦與已知問題
 
 - 真機效能：624 人維持 30 fps 尚未在手機上確認（需使用者回報 fps 與機型）。
-- 設計待決：逆轉率偏低（約 14%）、三ツ者對軒猿勝率偏高、甲賀眾無法取得洞悉。
+- 設計待決：逆轉率偏低（約 16%）、甲賀眾無法取得洞悉，在情報 v2 下武田選甲賀只有 31%（標為「較難」）。
 - 介面：設計文件的按鍵配置（R 撤退、Z/X 技能）與遊戲實作不同（遊戲：R 武將技、T 撤退、C 鬨聲、V 軍略），之後統一。
 - 兵種圖示（設計文件列 10 張）未列入美術清單，目前以漢字角標代替。
 - 少數肖像構圖偏小（nin_koga 是遠景群像），可視需要重生成。

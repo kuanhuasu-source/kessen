@@ -57,7 +57,7 @@ S.meta.aiSides = WATCH || DAIMYO ? [0, 1] : [1];  // 全手動：AI 只指揮上
 S.meta.playerSide = WATCH ? -1 : 0;            // 玩家那一方的忍術永遠由玩家施放
 const manualSet = new Set<number>(); S.meta.manual = manualSet;
 const DOCTRINE_KEY = 'kessen.doctrine';
-let doctrine0: Doctrine = { attack: 'volley', cav: 'raid', retreatAt: 35, formation: 'line' };
+let doctrine0: Doctrine = { attack: 'now', cav: 'raid', retreatAt: 35, formation: 'line' }; // 預設開戰即攻：上杉有大筒，守著等射完箭會先挨轟（策略模擬 80 局：射完箭再攻 29%、開戰即攻 48%）
 try { const j = localStorage.getItem(DOCTRINE_KEY); if (j) doctrine0 = { ...doctrine0, ...JSON.parse(j) }; } catch { /* 無法讀取時用預設 */ }
 S.meta.doctrine = [DAIMYO ? doctrine0 : { ...DEFAULT_DOCTRINE }, { ...DEFAULT_DOCTRINE }];
 function saveDoctrine() { try { localStorage.setItem(DOCTRINE_KEY, JSON.stringify(doctrine0)); } catch { /* 略過 */ } }
@@ -138,12 +138,12 @@ function applyWarCouncil() {
 }
 const DOCTRINE_ROWS: { key: keyof Doctrine; label: string; opts: { id: string; label: string }[]; note?: string }[] = [
   { key: 'formation', label: '陣形', opts: [{ id: 'line', label: '橫陣' }, { id: 'crane', label: '鶴翼' }, { id: 'fish', label: '魚鱗' }], note: '橫陣四隊並列；鶴翼兩翼前伸包抄；魚鱗中央突出' },
-  { key: 'attack', label: '攻勢時機', opts: [{ id: 'now', label: '開戰即攻' }, { id: 'volley', label: '射完箭再攻' }, { id: 'waver', label: '等敵軍動搖' }, { id: 'hold', label: '固守' }] },
+  { key: 'attack', label: '攻勢時機', opts: [{ id: 'now', label: '開戰即攻' }, { id: 'volley', label: '射完箭再攻' }, { id: 'waver', label: '等敵軍動搖' }, { id: 'hold', label: '固守' }], note: '敵有大筒（260 m）時守著等會先挨轟；鐵砲只有 120 m' },
   { key: 'cav', label: '騎兵', opts: [{ id: 'guard', label: '護翼' }, { id: 'raid', label: '接戰後繞後' }, { id: 'free', label: '自由遊擊' }] },
   { key: 'retreatAt', label: '撤退線', opts: [{ id: '0', label: '不撤' }, { id: '35', label: '士氣 35' }, { id: '45', label: '士氣 45' }], note: '士氣低於此值的部隊自動脫離接戰退到主將旁' },
 ];
-// 忍者眾難度（依 AI 對 AI 100 局矩陣：甲賀 57%、三ツ者 51%、伊賀 49% 的我方勝率）
-const CLAN_DIFF: Record<string, string> = { koga: '較易', mitsumono: '普通', iga: '普通' };
+// 忍者眾難度（依 AI 對 AI 矩陣各 120 局、情報 v2 與新編制：三ツ者 46%、伊賀 46%、甲賀 31% 的我方勝率；甲賀沒有洞悉，在情報 v2 下吃虧）
+const CLAN_DIFF: Record<string, string> = { koga: '較難', mitsumono: '普通', iga: '普通' };
 const doctrineLabel = (key: keyof Doctrine) => DOCTRINE_ROWS.find(r => r.key === key)!.opts.find(o => o.id === String(doctrine0[key]))?.label ?? '';
 function setDoctrine(key: string, id: string) {
   if (key === 'retreatAt') doctrine0.retreatAt = +id; else (doctrine0 as unknown as Record<string, string>)[key] = id;

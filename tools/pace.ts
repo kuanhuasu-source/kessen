@@ -15,6 +15,7 @@ const VARIANTS: Record<string, Partial<Rules>> = {
   two: { streams: 'two', aiHoldYl: 250 }, east: { streams: 'east' },
   fog2: { fogV2: true },
   gunWeak: { gunHit: 0.4, gunDmg: 4 }, cannonStrong: { cannonLam: 2.6, cannonReload: 25, cannonDmg: 12, cannonSplash: 0.6 }, gcBoth: { gunHit: 0.4, gunDmg: 4, cannonLam: 2.6, cannonReload: 25, cannonDmg: 12, cannonSplash: 0.6 },
+  gcMid: { gunHit: 0.45, gunDmg: 4, cannonLam: 2.2, cannonReload: 30, cannonDmg: 12, cannonSplash: 0.4 }, gcDef: { gunHit: 0.5, gunDmg: 5, cannonLam: 1.8, cannonReload: 40, cannonDmg: 10, cannonSplash: 0 },
   gcMore: { gunHit: 0.35, gunDmg: 4, gunReload: 18, cannonLam: 3, cannonReload: 22, cannonDmg: 12, cannonSplash: 0.8 },
   fix: { frontageCap: true, unitSeparation: true },
   ship: { streams: 'two', aiHoldYl: 250, arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true }, shipFlat: { streams: 'two', aiHoldYl: 250, arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true, reliefNoise: 0 }, shipOneHill: { streams: 'two', aiHoldYl: 250, arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true, reliefHills: false }, shipNoStream: { arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true },

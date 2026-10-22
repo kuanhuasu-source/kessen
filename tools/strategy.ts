@@ -10,7 +10,10 @@ const RV: Record<string, Partial<Rules>> = { base: {}, fix: { frontageCap: true,
   splash: { arrowSplash: 0.5 }, crowd: { crowdSlow: 0.25 }, react: { aiFlankReact: true }, all3: { arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true },
   ship: { streams: 'two', aiHoldYl: 250, arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true } };
 const STRATS: Record<string, { d: Partial<Doctrine>; dep?: Partial<Deploy> }> = {
-  line:     { d: { formation: 'line', attack: 'volley', cav: 'raid' } },
+  auto:     { d: {} }, // 與預設 AI 相同（對照組）
+  line:     { d: { formation: 'line', attack: 'volley', cav: 'raid' } }, // 大名模式預設方針
+  lineNow:  { d: { formation: 'line', attack: 'now', cav: 'raid' } },
+  lineAuto: { d: { formation: 'line', attack: 'auto', cav: 'raid' } },
   blob:     { d: { formation: 'blob', attack: 'now', cav: 'guard' } },
   blobHold: { d: { formation: 'blob', attack: 'volley', cav: 'guard' } },
   stack:    { d: { formation: 'stack', attack: 'now', cav: 'guard' } },
