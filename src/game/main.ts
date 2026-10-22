@@ -80,6 +80,7 @@ function depBox(id: string, label: string, key: string | null): string {
   const u = unitByKey(key); const r = ROSTER_T.find(x => x.cmd === roster0[key])!;
   return `<button type="button" class="dbox" data-x="box:${id}" aria-pressed="${depSel === id}"><span class="p">${label}・${TYPE_NAME[u.type]}</span><span class="n">${img(portraitOf(r.cmd), 'pp')}${r.cmd}</span><span class="s">${SKILL[r.skill]?.name ?? ''}</span></button>`;
 }
+let advOpen = false; // 配置的進階區（各翼方針、將領互換）是否展開；收起時只剩調位置、預備隊、騎兵翼
 function depHtml(): string {
   const n = deploy0.line.length; const labels = n === 3 ? ['左翼', '中央', '右翼'] : POS_LABEL;
   const line = deploy0.line.map((k, i) => depBox('line' + i, labels[i], k)).join('');
@@ -87,17 +88,21 @@ function depHtml(): string {
   const rKeys = ROSTER_T.filter(r => isRanged({ type: r.type } as Unit)).map(r => r.key), cKeys = ROSTER_T.filter(r => r.type === 'cav').map(r => r.key);
   const rest = [...rKeys.map((k, i) => depBox(k, `${TYPE_NAME[ROSTER_T.find(r => r.key === k)!.type]}・${i === 0 ? '左' : '右'}`, k)), ...cKeys.map((k, i) => depBox(k, `騎兵・${((deploy0.cavWing === 'W') === (i === 0)) ? '左' : '右'}翼`, k))].join('');
   const wings = (['L', 'C', 'R'] as const).map(w => `<div class="pick"><span>${w === 'L' ? '左翼方針' : w === 'C' ? '中央方針' : '右翼方針'}</span>${(['hold', 'steady', 'press'] as Wing[]).map(v => `<button type="button" class="chip" data-x="wing:${w}:${v}" aria-pressed="${deploy0.wings[w] === v}">${WING_LABEL[v]}</button>`).join('')}</div>`).join('');
-  return `<div class="pick"><span>配置</span><div class="modes sm" style="margin:0;flex:1"><button type="button" data-x="mode:pos" aria-pressed="${depMode === 'pos'}">調位置</button><button type="button" data-x="mode:cmd" aria-pressed="${depMode === 'cmd'}">換將領</button></div></div>
-    <p class="m">${depMode === 'pos' ? '點兩個格子交換位置；放一隊到「預備」就成三隊戰線，預備隊在中央後方，友軍動搖時出動。' : '點兩個格子交換將領，武將技與被動跟著將領走（急射只對弓兵有用，赤備衝鋒對騎兵最好）。'}</p>
-    <div class="dep">${line}${res}</div><div class="dep">${rest}<button type="button" class="chip" data-x="cav:${deploy0.cavWing === 'W' ? 'E' : 'W'}">騎兵改${deploy0.cavWing === 'W' ? '右' : '左'}翼</button></div>
+  const modes = `<div class="modes sm" style="margin:0;flex:1"><button type="button" data-x="mode:pos" aria-pressed="${depMode === 'pos'}">調位置</button><button type="button" data-x="mode:cmd" aria-pressed="${depMode === 'cmd'}">換將領</button></div>`;
+  const adv = advOpen ? `<div class="pick"><span>進階</span>${modes}<button type="button" class="chip" data-x="adv:0">收起</button></div>
+    ${depMode === 'cmd' ? '<p class="m">點兩個格子交換將領，武將技與被動跟著將領走（急射只對弓兵有用，赤備衝鋒對騎兵最好）。</p>' : ''}
     ${wings}
-    <p class="m">猛攻：該翼前伸 20 m、主動接戰範圍較大並跑步衝入；固守：後縮 15 m、只打逼近的敵軍。</p>`;
+    <p class="m">猛攻：該翼前伸 20 m、主動接戰範圍較大並跑步衝入；固守：後縮 15 m、只打逼近的敵軍。</p>` : `<div class="pick"><span></span><button type="button" class="chip" data-x="adv:1">進階 ▸ 各翼方針、將領互換</button></div>`;
+  return `<div class="pick"><span>配置</span><p class="m" style="margin:0;flex:1">${depMode === 'pos' ? '點兩個格子交換位置；放一隊到「預備」就成三隊戰線，預備隊在中央後方，友軍動搖時出動。' : '換將領模式：點兩個格子交換將領。'}</p></div>
+    <div class="dep">${line}${res}</div><div class="dep">${rest}<button type="button" class="chip" data-x="cav:${deploy0.cavWing === 'W' ? 'E' : 'W'}">騎兵改${deploy0.cavWing === 'W' ? '右' : '左'}翼</button></div>
+    ${adv}`;
 }
 function depKeyOf(id: string): string | null { return id.startsWith('line') ? deploy0.line[+id.slice(4)] ?? null : id === 'reserve' ? deploy0.reserve : id; }
 function depSet(id: string, key: string | null) { if (id.startsWith('line')) { if (key) deploy0.line[+id.slice(4)] = key; } else if (id === 'reserve') deploy0.reserve = key; }
 function depAct(act: string) {
   const [k, a, b] = act.split(':');
   if (k === 'mode') { depMode = a as 'pos' | 'cmd'; depSel = null; }
+  else if (k === 'adv') { advOpen = a === '1'; if (!advOpen) { depMode = 'pos'; depSel = null; } }
   else if (k === 'cav') { deploy0.cavWing = a as 'W' | 'E'; }
   else if (k === 'wing') { deploy0.wings[a as 'L' | 'C' | 'R'] = b as Wing; }
   else if (k === 'box') {
