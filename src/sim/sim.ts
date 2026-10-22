@@ -565,6 +565,7 @@ function volley(S: State, A: Unit, T: Unit) {
   if (inWater(S, T.x, T.y) === 1) p *= S.R.waterArrow; // 水中行動遲緩，容易中箭
   if (T.form === 'loose') p *= 0.6; else if (T.form === 'dense') p *= 1.3;
   if (S.smokes.some(s => s.until > S.t && Math.hypot(T.x - s.x, T.y - s.y) <= 60)) p *= 0.5;
+  if (S.R.cmdFocusHit !== 1 && activeCmd(S, A.side, 'focus', T.id)) p *= S.R.cmdFocusHit; // 集火令：齊射更密
   const hits = poisson(S.rng, A.men * p);
   fx(S, { k: 'volley', a: A.id, b: T.id, n: hits });
   damage(S, T, hits * S.R.arrowDmg, A);

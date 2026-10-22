@@ -50,7 +50,7 @@ export function issueCommand(S: State, s: Side, kind: CmdKind, target?: number):
   if (kind === 'regroup') {
     A.ayl = Math.max(60, A.ayl - 60);
     for (const u of mine) if (u.contacts.length && u.state === 'waver' && u.type !== 'general') u.retreating = true;
-    if (S.R.cmdRegroupMorale) for (const u of mine) if (u.retreating || u.state === 'waver') mHit(S, u, S.R.cmdRegroupMorale, 'regroup'); // 整頓令：穩住動搖與撤退中的部隊
+    if (S.R.cmdRegroupMorale) for (const u of mine) if (u.retreating || u.state === 'waver' || u.contacts.length) mHit(S, u, S.R.cmdRegroupMorale, 'regroup'); // 整頓令：穩住接戰中、動搖與撤退中的部隊
   } else if (kind === 'relieve') {
     const T = target !== undefined ? S.units[target] : null;
     if (!T || !T.contacts.length) return false;
