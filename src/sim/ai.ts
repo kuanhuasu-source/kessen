@@ -543,7 +543,8 @@ function cavAI(S: State, u: Unit, A: SideAI) {
     const threat = E && dist(u, E) < 130 && (isCav(E) || isRanged(E) || E.state === 'rout');
     const rc = cmdOf(S, s, 'raid');
     if (rc && rc.target !== undefined) { const T = S.units[rc.target]; if (T && active(T) && T.state !== 'gone') { cavAttack(S, u, T); return; } }
-    const loose = cmdOf(S, s, 'charge') || (Dc === 'free' && A.posture === 'attack') || (Dc !== 'guard' && A.phase === 'melee');
+    const passive = S.R.daimyoPassive && S.meta.playerSide === s; // 大名模式：騎兵繞後要靠大名令（free 仍自由獵殺）
+    const loose = cmdOf(S, s, 'charge') || (Dc === 'free' && A.posture === 'attack') || (Dc !== 'guard' && !passive && A.phase === 'melee');
     if (!E || (!loose && !threat)) { moveTo(u, sl.x, Yl(s, sl.yl), false); return; }
     cavAttack(S, u, E); return;
   }
@@ -775,8 +776,8 @@ function lineInfantry(S: State, u: Unit, A: SideAI) {
     const d = Math.hypot(p.x - u.x, p.y - u.y); if (d < bd) { bd = d; best = E; }
   }
   if (best) { u.aiLockK = 'atk'; u.target = best.id; u.targetT = S.t; attackMove(S, u, best, charge || wing === 'press'); return; }
-  // 擴大戰果：鄰隊在打、自己空手 → 從側背接近鄰隊的對手
-  if (A.phase === 'melee') {
+  // 擴大戰果：鄰隊在打、自己空手 → 從側背接近鄰隊的對手（大名模式 daimyoPassive：玩家方不自動做，要靠「馳援」）
+  if (A.phase === 'melee' && !(S.R.daimyoPassive && S.meta.playerSide === s)) {
     const engagedN = S.units.filter(v => v.side === s && active(v) && v.contacts.length).length;
     let X: Unit | null = null, xd = S.t > 240 ? 180 : (S.R.aiFlankReact && engagedN >= 2 ? 200 : 120); // 打久了或敵軍集中突破時放寬
     for (const E of known(S, s)) {

@@ -89,7 +89,8 @@ export const V1 = {
   waterArrow: 1.3,       // 水中受箭命中倍率
   waterHit: -10,         // 半渡而擊：攻擊水中（非渡口）的部隊，接觸時額外士氣打擊
   aiHoldYl: 295,         // AI 戰線式指揮的對峙線（己方座標）
-  aiAttackT0: 30, aiAttackTR: 80, aiAnchorSpd: 3.3, deployFwd: 0, aiFormRun: false, aiVolleyDur: 20, // deployFwd：兩軍佈陣整體前移（m）；aiFormRun：成線階段用跑的 // 戰線式 AI 發起攻勢的時間（秒，aiAttackT0 + 亂數 × aiAttackTR，再除以侵略性）與錨點推進速度（m/s）
+  aiAttackT0: 30, aiAttackTR: 80, aiAnchorSpd: 3.3, deployFwd: 0, aiFormRun: false, aiVolleyDur: 20,
+  daimyoPassive: false,  // 大名模式：玩家方的 AI 只守線，側擊鄰隊對手與騎兵繞後要靠大名令（讓玩家的介入有價值） // deployFwd：兩軍佈陣整體前移（m）；aiFormRun：成線階段用跑的 // 戰線式 AI 發起攻勢的時間（秒，aiAttackT0 + 亂數 × aiAttackTR，再除以侵略性）與錨點推進速度（m/s）
   cmdKillChance: 0.05,
   cmdKillOnlyRouting: false, // v2：只有在部隊潰逃被追擊時才可能被討取   // 兵力 < 25% 時，每名接戰敵隊每秒的討取機率
   buffCapPct: 0.5,

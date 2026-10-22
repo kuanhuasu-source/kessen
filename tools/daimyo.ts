@@ -8,7 +8,7 @@ import { adviseSide, cmdBlocked, weakestEngaged, CMD_CD } from '../src/sim/advis
 import { GAME_RULES, SIM_DT } from '../src/sim/game-rules.ts';
 import { makeRules, type Rules } from '../src/sim/rules.ts';
 
-const RV: Record<string, Partial<Rules>> = { base: {}, c8: { cmdCommitMorale: 8 }, ch5: { cmdChargeMorale: 5 }, both: { cmdCommitMorale: 8, cmdChargeMorale: 5 }, c12: { cmdCommitMorale: 12 }, ch8: { cmdChargeMorale: 8 } };
+const RV: Record<string, Partial<Rules>> = { base: {}, passive: { daimyoPassive: true }, c8: { cmdCommitMorale: 8 }, ch5: { cmdChargeMorale: 5 }, both: { cmdCommitMorale: 8, cmdChargeMorale: 5 }, c12: { cmdCommitMorale: 12 }, ch8: { cmdChargeMorale: 8 } };
 const N = Number(process.argv[2] || 60);
 const rates = (process.argv[3] || '0,0.5,1').split(',').map(Number);
 const rv = process.argv[4] || 'base';
