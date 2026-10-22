@@ -67,6 +67,7 @@ export const V1 = {
   nokizaruIntel: 'mid' as 'low' | 'mid' | 'high',
   kogaVision: 1.3,       // 甲賀眾視野倍率
   streams: 'none' as 'none' | 'two' | 'east', // 戰場溪流（data.ts STREAMS）
+  cmdCommitMorale: 0, cmdChargeMorale: 0, // 大名令附帶士氣：主將親征時主將 80 m 內友軍 +N、全軍突擊時全軍 +N（0＝只改行為）
   gunDmg: 5, gunReload: 15, gunVolley: -3, gunHit: 0.5,          // 鐵砲：每發命中傷害、裝填秒數、每輪士氣打擊（60 m 內命中 50%，射程邊 25%）
   cannonDmg: 10, cannonReload: 40, cannonVolley: -8, cannonTerror: -3, cannonMin: 60, cannonLam: 1.8, cannonSplash: 0, // cannonLam：150 m 內每發期望彈數；cannonSplash：目標 20 m 內其他敵隊各吃這個期望彈數（跳彈） // 大筒：每發 1～3 彈各 10 傷害、士氣 −8、30 m 內其他敵隊 −3、60 m 內無法射擊
   reliefNoise: 1,        // 地形緩坡起伏倍率（0 = 平地）

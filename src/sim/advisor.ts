@@ -58,13 +58,21 @@ export function adviseSide(S: State, s: Side, ok: (id: string, k: CmdKind) => bo
   // 4. 敵軍動搖：集中弓火
   const wav = seen.filter(E => (E.state === 'waver' || lvl(E) >= 3 && effM(S, E) < 50) && own.some(u => isRanged(u) && active(u) && dist(u, E) <= archerRange(S, u, E))).sort((a, b) => effM(S, a) - effM(S, b))[0];
   if (wav) push('focus:' + wav.id, `敵${unitName(wav)}士氣動搖，弓兵集火就能逼它潰走。`, 'focus', wav.id);
-  // 5. 敵主將孤立
+  // 5. 主將親征：主將附近有僵持中的近戰，敵隊已動搖（或士氣比我隊低）→ 旗本側面一衝就垮；敵主將孤立也算
   const eg = general(S, e);
-  if (eg.cmdAlive && active(eg) && lvl(eg) >= 2 && g.cmdAlive && active(g) && effM(S, g) >= 60 && dist(g, eg) < 200 && !guarded(eg))
-    push('commit', `敵主將${eg.cmd}身邊沒有長槍，主公可親率旗本直取。`, 'commit');
-  // 6. 敵軍勢低：全軍突擊；我方軍勢不利：整頓
-  const routing = seen.filter(E => E.state === 'rout').length;
-  if (S.army[e] < 40 || routing >= 2) push('charge', S.army[e] < 40 ? `敵軍勢只剩 ${Math.round(S.army[e])}，全軍壓上可一舉擊潰。` : `敵軍已有 ${routing} 隊潰走，趁勢全軍突擊。`, 'charge');
+  if (g.cmdAlive && active(g) && effM(S, g) >= 60) {
+    const tgt = seen.filter(E => E.contacts.length && dist(g, E) < 150 && E.type !== 'cav' && (E.state === 'waver' || effM(S, E) < 55))
+      .map(E => ({ E, mine: E.contacts.map(id => S.units[id]).filter(u => u.side === s && active(u)).sort((a, b) => effM(S, a) - effM(S, b))[0] }))
+      .filter(x => x.mine && effM(S, x.mine) < 70).sort((a, b) => effM(S, a.E) - effM(S, b.E))[0];
+    if (tgt) push('commit:' + tgt.E.id, `${unitName(tgt.mine!)}正與敵${unitName(tgt.E)}僵持，敵隊已動搖，主公親率旗本從側面衝一下就垮了。`, 'commit');
+    else if (eg.cmdAlive && active(eg) && lvl(eg) >= 2 && dist(g, eg) < 200 && !guarded(eg))
+      push('commit', `敵主將${eg.cmd}身邊沒有長槍，主公可親率旗本直取。`, 'commit');
+  }
+  // 6. 全軍突擊：敵軍已有人動搖或潰走、我方軍勢不落後 → 壓上引發連鎖潰逃；敵軍勢很低也算。我方軍勢不利：整頓
+  const routing = seen.filter(E => E.state === 'rout').length, wavering = seen.filter(E => E.state === 'waver').length;
+  if (S.t > 60 && wavering + 2 * routing >= 2 && S.army[s] >= S.army[e] - 5 && own.some(u => u.contacts.length))
+    push('charge', `敵軍 ${wavering} 隊動搖、${routing} 隊潰走，全軍壓上可引發連鎖潰逃。`, 'charge');
+  else if (S.army[e] < 40) push('charge', `敵軍勢只剩 ${Math.round(S.army[e])}，全軍壓上可一舉擊潰。`, 'charge');
   if (S.army[s] < 50 && S.army[e] > S.army[s] + 15 && own.filter(u => u.contacts.length).length >= 2) push('regroup', `我軍軍勢 ${Math.round(S.army[s])} 落後，先整頓戰線，別讓潰走連鎖。`, 'regroup');
   return cands[0] ?? null;
 }

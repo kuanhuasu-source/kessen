@@ -2,7 +2,7 @@
 import { UT, MAP, CLANS, STEALTH_R, ROSTER_T, ROSTER_U, STREAMS, isRangedType, type Side, type UType } from './data.ts';
 import {
   type State, type Unit, type Ninja, makeUnit, dist, cat, clamp, active, fighting, has, isCav, isRanged, effM, general, archerRange,
-  useSkill, useStrategy, battleCry, useJutsu, inForest, inPaddy, updDims, onField,
+  useSkill, useStrategy, battleCry, useJutsu, inForest, inPaddy, updDims, onField, mHit,
 } from './sim.ts';
 
 type SideAI = { posture: 'advance' | 'hold' | 'attack'; attackT: number; aggr: number; cavWing: 'W' | 'E';
@@ -60,6 +60,11 @@ export function issueCommand(S: State, s: Side, kind: CmdKind, target?: number):
     helper.aiLockK = 'help:' + T.id; helper.aiLockT = t;
   } else if (kind === 'focus' || kind === 'raid') {
     if (target === undefined) return false;
+  } else if (kind === 'commit') {
+    const g = general(S, s); if (!g.cmdAlive || !active(g)) return false;
+    if (S.R.cmdCommitMorale) for (const u of mine) if (u !== g && dist(u, g) <= 80) mHit(S, u, S.R.cmdCommitMorale, 'commit');
+  } else if (kind === 'charge') {
+    if (S.R.cmdChargeMorale) for (const u of mine) mHit(S, u, S.R.cmdChargeMorale, 'charge');
   }
   cmds[s] = { kind, until: t + CMD_DUR[kind], target };
   return true;
