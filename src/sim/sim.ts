@@ -747,7 +747,7 @@ function updateVision(S: State) {
         // 識別與洞悉要累積觀察時間；沒看到時慢慢遺忘
         let o = S.obs[side].get(E.id); if (!o) { o = { t2: 0, t3: 0 }; S.obs[side].set(E.id, o); }
         let im = 1; // 識別累積速度：三ツ者情報網（忍者 150 m 內 ×2）、對甲賀疑兵（÷1.5）
-        if (R.clanPassive) { if (S.clan[side] === 'mitsumono' && S.ninjas.some(n => n.side === side && n.alive && Math.hypot(n.x - E.x, n.y - E.y) <= 150)) im *= 2; if (S.clan[E.side] === 'koga') im /= 1.5; }
+        if (R.clanPassive) { if (S.clan[side] === 'mitsumono' && S.ninjas.some(n => n.side === side && n.alive && Math.hypot(n.x - E.x, n.y - E.y) <= 150)) im *= 2; if (S.clan[E.side] === 'koga') im /= R.passiveGiheiMul; }
         o.t2 = see ? Math.min(o.t2 + S.dt * im, 60) : Math.max(0, o.t2 - S.dt); o.t3 = insight ? Math.min(o.t3 + S.dt, 60) : Math.max(0, o.t3 - S.dt);
         if (see && o.t2 >= R.v2IdentT) lvl = 2;
         if (insight && o.t3 >= R.v2InsightT) lvl = 3;

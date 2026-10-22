@@ -21,7 +21,7 @@ export const GAME_RULES = makeRules({
   reliefNoise: 0.4,              // 緩坡起伏降到 ±0.7 m（滿幅會讓時間到從 12% 升到 20%）
   cmdRelieveN: 2, cmdRaidCharge: 12, cmdRaidShock: -10, cmdFocusMorale: -4, cmdFocusHit: 1.3, cmdRegroupMorale: 8, // 大名令加強（2026-10-22 方案一）：全採納建議 48%→52%（不介入 43%）；再加大到 15／−15／−6／1.6／12 也是 52%
   pointWin: false,
-  clanPassive: true,     // 回顧（2026-10-22）：忍術每家只留一主動，另一種改自動特性       // 回顧（2026-10-22）：據點勝利只佔 5%，拿掉；據點只給增益
+  clanPassive: true, passiveSakutekiImmune: 30, // 回顧（2026-10-22）：忍術每家只留一主動，另一種改自動特性；防諜暴露後 30 秒免疫（每局被發現 37 → 15 次，甲賀勝率 200 局 40%→37% 在誤差內）       // 回顧（2026-10-22）：據點勝利只佔 5%，拿掉；據點只給增益
   gunHit: 0.4, gunDmg: 4, cannonLam: 2.6, cannonReload: 25, cannonDmg: 12, cannonSplash: 0.6, // 鐵砲／大筒平衡（2026-10-22）：預設值武田 83%，此組 52%
   arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true, // 箭雨濺射、擁擠減速、AI 側擊反應：一團 48%→33%、疊放 50%→27%、鶴翼 38%→57%
   name: 'game',
