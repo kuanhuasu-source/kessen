@@ -23,7 +23,8 @@ export const GAME_RULES = makeRules({
   aiHunt: true, withdrawEnd: 90, // 時間到判定（2026-10-22）：時間到的局多半是兩軍互相穿過後各站對方本陣；aiHunt 讓攻勢追著敵軍走（時間到 25%→9%），退卻結束再降到 4%（退卻 11%）
   pointWin: false,
   clanPassive: true, passiveSakutekiImmune: 30, // 回顧（2026-10-22）：忍術每家只留一主動，另一種改自動特性；防諜暴露後 30 秒免疫（每局被發現 37 → 15 次，甲賀勝率 200 局 40%→37% 在誤差內）       // 回顧（2026-10-22）：據點勝利只佔 5%，拿掉；據點只給增益
-  gunHit: 0.4, gunDmg: 4, cannonLam: 2.6, cannonReload: 25, cannonDmg: 12, cannonSplash: 0.6, // 鐵砲／大筒平衡（2026-10-22）：預設值武田 83%，此組 52%
+  gunHit: 0.45, gunDmg: 4, // 2026-10-22 微調：追擊與退卻上線後武田 45%，鐵砲命中 0.4→0.45 回到 52%（150 局）；傷害 4→5 會到 57%、大筒 2.6→2.3 只到 47%
+  cannonLam: 2.6, cannonReload: 25, cannonDmg: 12, cannonSplash: 0.6, // 鐵砲／大筒平衡（2026-10-22）：預設值武田 83%，此組 52%
   arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true, // 箭雨濺射、擁擠減速、AI 側擊反應：一團 48%→33%、疊放 50%→27%、鶴翼 38%→57%
   name: 'game',
 });
