@@ -607,7 +607,7 @@ function speedOf(S: State, u: Unit, running: boolean) {
   else if (inPaddy(u.x, u.y)) v *= 0.7;
   const wt = inWater(S, u.x, u.y); if (wt === 1) v *= S.R.waterSpeed; else if (wt === 2) v *= S.R.fordSpeed;
   if (isCav(u) && inForest(u.x, u.y) && !onTrail(S, u.x, u.y)) v *= 0.6;
-  if (S.R.crowdSlow > 0) { let c = 0; for (const o of S.units) if (o !== u && o.side === u.side && active(o) && Math.abs(o.x - u.x) < 20 && Math.abs(o.y - u.y) < 20 && dist(o, u) < 20) c++; if (c >= 2) v *= 1 - S.R.crowdSlow; }
+  if (S.R.crowdSlow > 0 && crowdN[u.id] >= 2) v *= 1 - S.R.crowdSlow; // 擁擠：20 m 內有 ≥2 支友軍（每步在 moveUnits 開頭算一次）
   if (has(S, u, 'speed20')) v *= 1.2;
   if (has(S, u, 'speed30')) v *= 1.3;
   if (has(S, u, 'slow30')) v *= 0.7;
@@ -615,8 +615,13 @@ function speedOf(S: State, u: Unit, running: boolean) {
   return v;
 }
 
+const crowdN: number[] = []; // 每隊 20 m 內的友軍數（每步重算）
 function moveUnits(S: State) {
   const t = S.t, dt = S.dt;
+  if (S.R.crowdSlow > 0) {
+    const U = S.units; crowdN.length = U.length; crowdN.fill(0);
+    for (let i = 0; i < U.length; i++) { const a = U[i]; if (a.state === 'gone') continue; const aa = active(a); for (let j = i + 1; j < U.length; j++) { const b = U[j]; if (b.side !== a.side || b.state === 'gone') continue; const dx = a.x - b.x, dy = a.y - b.y; if (dx * dx + dy * dy < 400) { const ab = active(b); if (ab) crowdN[i]++; if (aa) crowdN[j]++; } } }
+  }
   for (const u of S.units) {
     if (u.state === 'gone') continue;
     if (u.state === 'rout' || u.state === 'shattered') {
@@ -693,21 +698,28 @@ function updateVision(S: State) {
   const R = S.R, t = S.t;
   for (const side of [0, 1] as Side[]) {
     const vis = S.vis[side];
-    const obs: { x: number; y: number; V: number; nin: boolean }[] = [];
+    const obs: { x: number; y: number; V: number; nin: boolean; spot: number }[] = []; // spot：察覺半徑（識別半徑 × 倍數）
     const koga = S.clan[side] === 'koga';
     const v2 = R.fogV2;
     for (const u of S.units) if (u.side === side && u.state !== 'gone') {
       let V = v2 ? R.v2UnitSee : 200; if (height(u.x, u.y) >= 8) V *= 1.5; if (inForest(u.x, u.y)) V *= 0.5;
-      obs.push({ x: u.x, y: u.y, V, nin: false });
+      obs.push({ x: u.x, y: u.y, V, nin: false, spot: V * (v2 ? R.v2UnitSpot / R.v2UnitSee : 1.5) });
     }
     if (R.ninjaOn) for (const n of S.ninjas) if (n.side === side && n.alive) {
       let V = (v2 ? R.v2NinSee : 250) * (koga ? S.R.kogaVision : 1); if (height(n.x, n.y) >= 8) V *= 1.5; if (inForest(n.x, n.y)) V *= 0.5;
-      obs.push({ x: n.x, y: n.y, V, nin: true });
+      obs.push({ x: n.x, y: n.y, V, nin: true, spot: V * (v2 ? R.v2NinSpot / R.v2NinSee : 1.5) });
     }
     // v2 察覺距離是識別距離的倍數（部隊 1.6、忍者 1.7）；v1 固定 1.5
-    const spotMul = v2 ? (o: { nin: boolean }) => (o.nin ? R.v2NinSpot / R.v2NinSee : R.v2UnitSpot / R.v2UnitSee) : () => 1.5;
     // 已探索格：任一觀察者的察覺範圍掃過的格子
-    if (v2) { const ex = S.explored[side]; for (let cy = 0; cy < 28; cy++) for (let cx = 0; cx < 40; cx++) { const i = cy * 40 + cx; if (ex[i]) continue; const px = cx * 25 + 12.5, py = cy * 25 + 12.5; for (const o of obs) if (Math.hypot(o.x - px, o.y - py) <= o.V * spotMul(o)) { ex[i] = 1; break; } } }
+    // 已探索格：任一觀察者的察覺範圍掃過的格子（只掃觀察者外框內的格子，用平方距離）
+    if (v2) {
+      const ex = S.explored[side];
+      for (const o of obs) {
+        const r = o.spot, r2 = r * r;
+        const cx0 = Math.max(0, Math.floor((o.x - r) / 25)), cx1 = Math.min(39, Math.floor((o.x + r) / 25)), cy0 = Math.max(0, Math.floor((o.y - r) / 25)), cy1 = Math.min(27, Math.floor((o.y + r) / 25));
+        for (let cy = cy0; cy <= cy1; cy++) { const dy = cy * 25 + 12.5 - o.y, dy2 = dy * dy; for (let cx = cx0; cx <= cx1; cx++) { const i = cy * 40 + cx; if (ex[i]) continue; const dx = cx * 25 + 12.5 - o.x; if (dx * dx + dy2 <= r2) ex[i] = 1; } }
+      }
+    }
     for (const E of S.units) {
       if (E.side === side) continue;
       if (E.state === 'gone') { vis[E.id] = 0; continue; }
@@ -719,7 +731,7 @@ function updateVision(S: State) {
         const det = Math.min(o.V, special);
         const d = Math.hypot(E.x - o.x, E.y - o.y);
         if (o.nin && d <= R.insightR) { insight = true; if (!v2) { lvl = 3; break; } }
-        if (d <= det) { see = true; lvl = Math.max(lvl, v2 ? 1 : 2); } else if (d <= det * spotMul(o)) lvl = Math.max(lvl, 1);
+        if (d <= det) { see = true; lvl = Math.max(lvl, v2 ? 1 : 2); } else if (d <= Math.min(o.spot, special * o.spot / o.V)) lvl = Math.max(lvl, 1);
       }
       const spotted = lvl >= 1;
       if (v2) {

@@ -18,6 +18,7 @@ export const GAME_RULES = makeRules({
   // 2026-10-21 地形與反一團（AI 對 AI 60 場、策略模擬各 60 局）
   streams: 'two', aiHoldYl: 250, // 兩條溪流（各在對峙線前），渡口在大路與兩翼；對峙線退到 250
   reliefNoise: 0.4,              // 緩坡起伏降到 ±0.7 m（滿幅會讓時間到從 12% 升到 20%）
+  gunHit: 0.4, gunDmg: 4, cannonLam: 2.6, cannonReload: 25, cannonDmg: 12, cannonSplash: 0.6, // 鐵砲／大筒平衡（2026-10-22）：預設值武田 83%，此組 52%
   arrowSplash: 0.5, crowdSlow: 0.25, aiFlankReact: true, // 箭雨濺射、擁擠減速、AI 側擊反應：一團 48%→33%、疊放 50%→27%、鶴翼 38%→57%
   name: 'game',
 });

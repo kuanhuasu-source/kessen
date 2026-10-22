@@ -8,7 +8,7 @@
 
 | 項目 | 位置 |
 | --- | --- |
-| 遊戲（可直接玩） | https://claude.ai/artifact/UjqYxfDUxLHEW3CA6xsy7R （第 12 版，含美術）。更新時發布 `dist/kessen-m1.html` 到同一個 URL |
+| 遊戲（可直接玩） | https://claude.ai/artifact/UjqYxfDUxLHEW3CA6xsy7R （第 22 版：地形高低與溪流、情報 v2、鐵砲／大筒不對稱編制）。更新時發布 `dist/kessen-m1.html` 到同一個 URL |
 | 設計文件（線上，含圖表） | https://claude.ai/artifact/JAXq85B8a3UheAm2xAcFwL |
 | 進度與待辦 | `BACKLOG.md` |
 | 原始碼 | GitHub `kuanhuasu-source/lvv-studio` 的 `kessen/` 子資料夾（與 LVV Studio 配音工具同一個 repo，互不相關） |
@@ -33,7 +33,7 @@
 | M6 | 完成 | 勝負與結算、據點呈現、撤退指令、Gemini 2D 美術 |
 | AI 動作優化 | 完成 | 止抖（aiSteady）＋戰線式指揮（aiLine） |
 | 大名模式 | 完成 | 第一階段：軍議方針、AI 帶兵、軍師建議卡、大名令、接管單隊。第二階段：配置（戰線順序、預備隊、騎兵翼、各翼方針）與將領互換。傳令延遲未做（使用者決定） |
-| M7 | 進行中 | 效能：士兵矩陣更新優化、每幀分段計時（`__kessen.prof`）；跨瀏覽器：es2020／Safari 14 目標、roundRect polyfill；平衡：矩陣與消融量測完成，調整待提案。真機 fps 仍待回報 |
+| M7 | 進行中 | 效能：士兵矩陣更新優化、每幀分段計時（`__kessen.prof`）、模擬每步 0.205→0.066 ms（探索格改外框掃描、擁擠數每步算一次）；跨瀏覽器：es2020／Safari 14 目標、roundRect polyfill；平衡：矩陣與消融量測完成，調整待提案。真機 fps 仍待回報 |
 
 ## 4. 架構與檔案地圖
 
@@ -91,7 +91,7 @@ node tools/shot.mjs "/tmp/phone.html#mode=watch&seed=42" out.png 844 390 2 ./scr
 
 ## 7. 規則現況（遊戲採用）
 
-- 兵種：長槍 60、弓 40、武士 40、騎兵 20、旗本 12、鐵砲 30（120 m、60 m 內 50%、裝填 15 秒、士氣 −3）、大筒 8（260 m、每發 1～3 彈各 10、士氣 −8／30 m 內 −3、裝填 40 秒、60 m 內打不到）。武田 2 槍 1 侍 2 騎 1 弓 1 銃；上杉 2 槍 2 侍 1 騎 1 弓 1 砲。遠程一律用 `isRanged`／`archerRange`。
+- 兵種：長槍 60、弓 40、武士 40、騎兵 20、旗本 12、鐵砲 30（120 m、60 m 內 40%、射程邊緣 20%、每發 4 點、裝填 15 秒、士氣 −3；`gunHit`／`gunDmg`）、大筒 8（260 m、150 m 內期望 2.6 彈、遠處 ×0.72，各 12 點、士氣 −8／30 m 內 −3、20 m 內鄰隊吃 0.6 彈跳彈、裝填 25 秒、60 m 內打不到；`cannonLam`／`cannonSplash`）。預設值（命中 50%／5 點、1.8 彈／10 點／40 秒）武田 83%，調後 52%。武田 2 槍 1 侍 2 騎 1 弓 1 銃；上杉 2 槍 2 侍 1 騎 1 弓 1 砲。遠程一律用 `isRanged`／`archerRange`。
 - 近戰每 4 秒判定、命中 4 點；箭矢 2 點，射程 200 m（50 m 內 35%，到射程邊緣 15%）。箭雨濺射 50%（15 m 內）、擁擠減速 25%（20 m 內 ≥2 友軍）。
 - 情報 v2（`fogV2`）：部隊察覺 130／識別 80 m、忍者 190／110 m（甲賀 ×1.3、小丘 ×1.5、森林 ×0.5）、識別累積 8 秒、洞悉累積 12 秒、識別 40 秒退化、察覺 120 秒遺忘；`S.obs`／`S.mem`／`S.explored` 在 sim.ts `updateVision`；`tools/intel.ts` 量情報曲線。
 - 地形：森林（受箭減半、騎兵 −40%、視野減半、察覺距離 60 m）、稻田（移動 −30%、衝鋒減半）、沼澤秘密（移動 −60%、無法衝鋒）、小丘（視野 +50%、居高 +15%）、水域（規則 `streams`，預設關：涉水 −50%、無法衝鋒、受箭 +30%、半渡而擊 −10；渡口 −20%）。
@@ -112,6 +112,7 @@ node tools/shot.mjs "/tmp/phone.html#mode=watch&seed=42" out.png 844 390 2 ./scr
 - 戰線式 AI 首戰約 100 秒（舊 AI 65 秒）；若試玩覺得開場慢，調 `attackT`（ai.ts setup）或對峙線 295。守勢的錨點目標要用 `Math.max(ayl, 295)`，寫成 min 會卡在半路（已修）。
 - 鶴翼、魚鱗、一團、疊放、斜線陣形都可在 `aiFormation`／軍議選；一團與疊放是量測用。
 - 溪流 `two` 已啟用，AI 會對準最近渡口並收攏隊形過溪；`east` 保留可選。地形起伏 `reliefNoise` 0.4、`reliefHills`。
+- 模擬效能：`updateVision` 每 0.5 秒跑一次，探索格只掃每個觀察者外框內的格子；`crowdN` 在 `moveUnits` 開頭算一次。再慢的話先用 `node --cpu-prof` 看（之前 updateVision 佔 45%）。
 
 ## 9. 踩過的坑
 
