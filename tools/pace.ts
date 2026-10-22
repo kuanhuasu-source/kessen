@@ -15,6 +15,7 @@ const VARIANTS: Record<string, Partial<Rules>> = {
   two: { streams: 'two', aiHoldYl: 250 }, east: { streams: 'east' },
   fog2: { fogV2: true },
   gunWeak: { gunHit: 0.4, gunDmg: 4 }, cannonStrong: { cannonLam: 2.6, cannonReload: 25, cannonDmg: 12, cannonSplash: 0.6 }, gcBoth: { gunHit: 0.4, gunDmg: 4, cannonLam: 2.6, cannonReload: 25, cannonDmg: 12, cannonSplash: 0.6 },
+  g45: { gunHit: 0.45 }, g5: { gunDmg: 5 }, c23: { cannonLam: 2.3 }, g45c23: { gunHit: 0.45, cannonLam: 2.3 },
   noHunt: { aiHunt: false }, wd90: { withdrawEnd: 90 }, wd60: { withdrawEnd: 60 }, noHuntWd90: { aiHunt: false, withdrawEnd: 90 },
   P1: { deployFwd: 50, aiFormRun: true, aiAttackT0: 10, aiAttackTR: 30, aiHoldYl: 280, aiAnchorSpd: 3.8 }, P2: { deployFwd: 50, aiFormRun: true, aiAttackT0: 10, aiAttackTR: 30, aiHoldYl: 280, aiAnchorSpd: 3.8, aiVolleyDur: 12 },
   P3: { deployFwd: 50, aiFormRun: true, aiAttackT0: 10, aiAttackTR: 30, aiHoldYl: 300, aiAnchorSpd: 3.8 }, P4: { deployFwd: 50, aiFormRun: true, aiAttackT0: 10, aiAttackTR: 30, aiHoldYl: 300, aiAnchorSpd: 3.8, aiVolleyDur: 12 },
