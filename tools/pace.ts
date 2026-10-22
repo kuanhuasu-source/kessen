@@ -15,6 +15,7 @@ const VARIANTS: Record<string, Partial<Rules>> = {
   two: { streams: 'two', aiHoldYl: 250 }, east: { streams: 'east' },
   fog2: { fogV2: true },
   gunWeak: { gunHit: 0.4, gunDmg: 4 }, cannonStrong: { cannonLam: 2.6, cannonReload: 25, cannonDmg: 12, cannonSplash: 0.6 }, gcBoth: { gunHit: 0.4, gunDmg: 4, cannonLam: 2.6, cannonReload: 25, cannonDmg: 12, cannonSplash: 0.6 },
+  noHunt: { aiHunt: false }, wd90: { withdrawEnd: 90 }, wd60: { withdrawEnd: 60 }, noHuntWd90: { aiHunt: false, withdrawEnd: 90 },
   P1: { deployFwd: 50, aiFormRun: true, aiAttackT0: 10, aiAttackTR: 30, aiHoldYl: 280, aiAnchorSpd: 3.8 }, P2: { deployFwd: 50, aiFormRun: true, aiAttackT0: 10, aiAttackTR: 30, aiHoldYl: 280, aiAnchorSpd: 3.8, aiVolleyDur: 12 },
   P3: { deployFwd: 50, aiFormRun: true, aiAttackT0: 10, aiAttackTR: 30, aiHoldYl: 300, aiAnchorSpd: 3.8 }, P4: { deployFwd: 50, aiFormRun: true, aiAttackT0: 10, aiAttackTR: 30, aiHoldYl: 300, aiAnchorSpd: 3.8, aiVolleyDur: 12 },
   dep50: { aiAttackT0: 15, aiAttackTR: 50, deployFwd: 50 }, dep80: { aiAttackT0: 15, aiAttackTR: 50, deployFwd: 80 }, frun: { aiAttackT0: 15, aiAttackTR: 50, aiFormRun: true }, dep50run: { aiAttackT0: 15, aiAttackTR: 50, deployFwd: 50, aiFormRun: true },
@@ -87,6 +88,6 @@ for (const name of names) {
   const rs = Array.from({ length: n }, (_, i) => one(R, 1000 + i));
   const avg = (f: (r: typeof rs[0]) => number) => (rs.reduce((a, r) => a + f(r), 0) / rs.length);
   const pct = (f: (r: typeof rs[0]) => boolean) => `${Math.round(rs.filter(f).length / rs.length * 100)}%`;
-  console.log(`${name.padEnd(17)} 時長 ${avg(r => r.t).toFixed(0)}s 首戰 ${avg(r => r.first).toFixed(0)}s 交戰期 ${avg(r => r.t - r.first).toFixed(0)}s | 崩潰 ${pct(r => r.type === 'collapse')} 時間 ${pct(r => r.type === 'time')} 據點 ${pct(r => r.type === 'points')} 全滅 ${pct(r => r.type === 'wipe')} | 武田勝 ${pct(r => r.win === 0)} | 潰走 ${avg(r => r.routs).toFixed(1)} 重整 ${avg(r => r.rallies).toFixed(1)} AI撤退 ${avg(r => r.retreats).toFixed(1)} 再上陣 ${avg(r => r.reengage).toFixed(1)} | 主將接戰 ${avg(r => r.genContact / 2).toFixed(0)}s 騎兵接戰 ${avg(r => r.cavContact / 2).toFixed(0)}s | 速度 騎 ${avg(r => r.cavSpeed).toFixed(1)} 步 ${avg(r => r.infSpeed).toFixed(1)} m/s | 箭命中 ${avg(r => r.arrowHits).toFixed(0)}`);
+  console.log(`${name.padEnd(17)} 時長 ${avg(r => r.t).toFixed(0)}s 首戰 ${avg(r => r.first).toFixed(0)}s 交戰期 ${avg(r => r.t - r.first).toFixed(0)}s | 崩潰 ${pct(r => r.type === 'collapse')} 時間 ${pct(r => r.type === 'time')} 據點 ${pct(r => r.type === 'points')} 全滅 ${pct(r => r.type === 'wipe')} 退卻 ${pct(r => r.type === 'withdraw')} | 武田勝 ${pct(r => r.win === 0)} | 潰走 ${avg(r => r.routs).toFixed(1)} 重整 ${avg(r => r.rallies).toFixed(1)} AI撤退 ${avg(r => r.retreats).toFixed(1)} 再上陣 ${avg(r => r.reengage).toFixed(1)} | 主將接戰 ${avg(r => r.genContact / 2).toFixed(0)}s 騎兵接戰 ${avg(r => r.cavContact / 2).toFixed(0)}s | 速度 騎 ${avg(r => r.cavSpeed).toFixed(1)} 步 ${avg(r => r.infSpeed).toFixed(1)} m/s | 箭命中 ${avg(r => r.arrowHits).toFixed(0)}`);
 }
 

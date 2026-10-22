@@ -1121,7 +1121,7 @@ function director(dt: number) {
   rig.clamp();
 }
 // ---------------- 觀戰：結算 ----------------
-const OVER_TYPE: Record<string, string> = { collapse: '總崩潰', wipe: '全軍覆沒', points: '控制全部據點 60 秒', time: '時間到，軍勢較高者勝' }; // points 只在規則 pointWin 開著時會出現
+const OVER_TYPE: Record<string, string> = { collapse: '總崩潰', wipe: '全軍覆沒', points: '控制全部據點 60 秒', time: '時間到，軍勢較高者勝', withdraw: '敵軍退卻，軍勢較高者勝' }; // points 只在規則 pointWin 開著時會出現
 function showEnd() {
   const o = S.over!; const R = S.rec;
   const w = o.winner;

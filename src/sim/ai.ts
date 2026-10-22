@@ -678,7 +678,13 @@ function lineAI(S: State, s: Side, A: SideAI) {
     .map(E => { const p = seenPos(S, s, E); return { yl: Yl(s, p.y), x: p.x }; }).filter(o => Math.abs(o.x - A.ax) < 320).sort((a, b) => a.yl - b.yl);
   const frontYl = ens.length ? ens[Math.min(1, ens.length - 1)].yl : 999;
   const HL = R.aiHoldYl;
-  let targetYl = A.posture === 'advance' ? HL : A.posture === 'hold' ? Math.max(A.ayl, HL) : 700; // hold：推進到對峙線就停，不再前進（之前寫成 min 會卡在半路）
+  // aiHunt：攻勢的錨點目標是看得到的敵軍（離錨點最近的 3 隊平均，含背後），不是場地盡頭
+  let huntYl = 700;
+  if (R.aiHunt) {
+    const all = S.units.filter(E => E.side === e && onField(E) && active(E) && E.state !== 'rout' && vis(S, s, E) >= 1).map(E => Yl(s, seenPos(S, s, E).y)).sort((a, b) => Math.abs(a - A.ayl) - Math.abs(b - A.ayl)).slice(0, 3);
+    if (all.length) huntYl = clamp(all.reduce((a, b) => a + b, 0) / all.length, 40, 680);
+  }
+  let targetYl = A.posture === 'advance' ? HL : A.posture === 'hold' ? Math.max(A.ayl, HL) : huntYl; // hold：推進到對峙線就停，不再前進（之前寫成 min 會卡在半路）
   if (engaged.length) {
     A.phase = 'melee';
     const m = engaged.reduce((a, u) => a + Yl(s, u.y), 0) / engaged.length;
@@ -768,12 +774,14 @@ function lineInfantry(S: State, u: Unit, A: SideAI) {
   u.aiLockK = '';
   const ahead = (charge ? 220 : A.phase === 'melee' ? 90 : A.posture === 'hold' ? 70 : 60) + (wing === 'press' ? 40 : wing === 'hold' ? -20 : 0);
   const lat = charge ? 160 : wing === 'press' ? 100 : 75;
+  const hunt = S.R.aiHunt && A.posture === 'attack' && S.t - S.lastContactT > 20; // 脫離接戰一陣子：任何方向 250 m 內都迎擊
   let best: Unit | null = null, bd = 1e9;
   for (const E of known(S, s)) {
     if (!active(E) || E.state === 'rout' || E.retreating) continue;
     const p = seenPos(S, s, E);
     const dy = Yl(s, p.y) - sl.yl;
-    if (Math.abs(p.x - sx) > lat || dy < -25 || dy > ahead) continue;
+    if (hunt) { if (Math.hypot(p.x - u.x, p.y - u.y) > 250) continue; }
+    else if (Math.abs(p.x - sx) > lat || dy < -25 || dy > ahead) continue;
     const d = Math.hypot(p.x - u.x, p.y - u.y); if (d < bd) { bd = d; best = E; }
   }
   if (best) { u.aiLockK = 'atk'; u.target = best.id; u.targetT = S.t; attackMove(S, u, best, charge || wing === 'press'); return; }

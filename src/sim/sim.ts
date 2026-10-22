@@ -70,6 +70,7 @@ export type State = {
   obs: [Map<number, { t2: number; t3: number }>, Map<number, { t2: number; t3: number }>];
   mem: [Map<number, { lvl: number; t: number; x: number; y: number }>, Map<number, { lvl: number; t: number; x: number; y: number }>];
   explored: [Uint8Array, Uint8Array];
+  lastContactT: number; // 最後一次有任何接戰的時間
   smokes: { side: Side; x: number; y: number; until: number }[];
   monomi: { side: Side; x: number; y: number; until: number }[];
   phantoms: [{ x: number; y: number; until: number }[], { x: number; y: number; t?: number; until: number }[]];
@@ -206,7 +207,7 @@ export function newState(R: Rules, seed: number, clan: [string, string]): State 
     vis: [new Uint8Array(64), new Uint8Array(64)], noisy: [new Map(), new Map()],
     secrets: { marsh: pick(MAP.marshCand, 2), trailX: MAP.trailCand[Math.floor(rng() * 2)], ambush: pick(MAP.ambushCand, 2) },
     known: [new Set(), new Set()], smokes: [], monomi: [], phantoms: [[], []], pairs: new Map(),
-    obs: [new Map(), new Map()], mem: [new Map(), new Map()], explored: [new Uint8Array(40 * 28), new Uint8Array(40 * 28)],
+    obs: [new Map(), new Map()], mem: [new Map(), new Map()], explored: [new Uint8Array(40 * 28), new Uint8Array(40 * 28)], lastContactT: 0,
     kurumaAct: 0, kurumaHit: new Set(),
     rec: {
       uNeg: [{}, {}], uPos: [{}, {}], aNeg: [{}, {}], aPos: [{}, {}], prevented: {}, routs: [], armyDrops: [],
@@ -1033,6 +1034,10 @@ export function step(S: State) {
       if (!alive) { S.over = { winner: (1 - s) as Side, type: 'wipe', t }; break; }
       if (R.pointWin && S.holdAll[s] >= 60) { S.over = { winner: s, type: 'points', t }; break; }
     }
+  }
+  if (U.some(u => u.contacts.length)) S.lastContactT = t;
+  if (!S.over && R.withdrawEnd > 0 && t > 300 && t - S.lastContactT >= R.withdrawEnd && Math.abs(S.army[0] - S.army[1]) >= 15) {
+    S.over = { winner: S.army[0] > S.army[1] ? 0 : 1, type: 'withdraw', t }; // 退卻：久無接戰且軍勢差距明顯，落後方退出戰場
   }
   if (!S.over && t + dt >= 600) {
     const d = S.army[0] - S.army[1];

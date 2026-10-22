@@ -20,6 +20,7 @@ export const GAME_RULES = makeRules({
   aiHoldYl: 280, deployFwd: 50, aiFormRun: true, aiAttackT0: 10, aiAttackTR: 30, aiAnchorSpd: 3.8, aiVolleyDur: 12, // 回顧（2026-10-22）開場節奏 A：佈陣前移 50、急行軍成線、攻勢 10～40 秒、對峙線 280（溪前）、錨點 3.8 m/s、對射 12 秒 → 首戰 88 → 57 秒
   reliefNoise: 0.4,              // 緩坡起伏降到 ±0.7 m（滿幅會讓時間到從 12% 升到 20%）
   cmdRelieveN: 2, cmdRaidCharge: 12, cmdRaidShock: -10, cmdFocusMorale: -4, cmdFocusHit: 1.3, cmdRegroupMorale: 8, // 大名令加強（2026-10-22 方案一）：全採納建議 48%→52%（不介入 43%）；再加大到 15／−15／−6／1.6／12 也是 52%
+  aiHunt: true,          // 時間到判定（2026-10-22）：時間到的局多半是兩軍互相穿過後各站對方本陣
   pointWin: false,
   clanPassive: true, passiveSakutekiImmune: 30, // 回顧（2026-10-22）：忍術每家只留一主動，另一種改自動特性；防諜暴露後 30 秒免疫（每局被發現 37 → 15 次，甲賀勝率 200 局 40%→37% 在誤差內）       // 回顧（2026-10-22）：據點勝利只佔 5%，拿掉；據點只給增益
   gunHit: 0.4, gunDmg: 4, cannonLam: 2.6, cannonReload: 25, cannonDmg: 12, cannonSplash: 0.6, // 鐵砲／大筒平衡（2026-10-22）：預設值武田 83%，此組 52%

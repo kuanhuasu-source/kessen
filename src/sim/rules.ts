@@ -91,6 +91,8 @@ export const V1 = {
   waterHit: -10,         // 半渡而擊：攻擊水中（非渡口）的部隊，接觸時額外士氣打擊
   aiHoldYl: 295,         // AI 戰線式指揮的對峙線（己方座標）
   aiAttackT0: 30, aiAttackTR: 80, aiAnchorSpd: 3.3, deployFwd: 0, aiFormRun: false, aiVolleyDur: 20,
+  aiHunt: false,         // 戰線式 AI 攻勢時以看得到的敵軍位置為錨點目標（含背後），脫離接戰 20 秒後任何方向都可迎擊；關閉時錨點一路推到 700，兩軍會互相穿過後各自站在對方本陣
+  withdrawEnd: 0,        // 退卻結束（秒）：開戰 300 秒後若這麼久沒有任何接戰且軍勢差 ≥ 15，落後方退卻、領先方勝；0 = 關閉
   daimyoPassive: false,  // 大名模式：玩家方的 AI 只守線，側擊鄰隊對手與騎兵繞後要靠大名令（讓玩家的介入有價值）
   daimyoPassiveCav: false, // 只有騎兵繞後要靠大名令（側擊反應保留） // deployFwd：兩軍佈陣整體前移（m）；aiFormRun：成線階段用跑的 // 戰線式 AI 發起攻勢的時間（秒，aiAttackT0 + 亂數 × aiAttackTR，再除以侵略性）與錨點推進速度（m/s）
   cmdKillChance: 0.05,
