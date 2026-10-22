@@ -31,7 +31,8 @@ export type Unit = {
   filesWanted: number; finalF: number;
 };
 
-export type Ninja = { wp?: number; id: number; side: Side; x: number; y: number; alive: boolean; detUntil: number;
+// Ninja.autoAt：手動指派到期後交回自動偵察
+export type Ninja = { wp?: number; autoAt?: number; id: number; side: Side; x: number; y: number; alive: boolean; detUntil: number;
   immuneUntil: number; nearT: number; role: string; tx: number; ty: number; fleeUntil: number; manual?: boolean };
 
 export type Point = { id: string; x: number; y: number; owner: -1 | Side; prog: number; progSide: -1 | Side;
@@ -785,6 +786,7 @@ function updateVision(S: State) {
   // 忍者被發現
   if (R.ninjaOn) for (const n of S.ninjas) {
     if (!n.alive) continue;
+    if (n.autoAt !== undefined && t >= n.autoAt) { n.manual = false; n.autoAt = undefined; }
     const enemy = (1 - n.side) as Side;
     let r = STEALTH_R[CLANS[S.clan[n.side]].stealth];
     if (S.clan[enemy] === 'nokizaru') r = Math.max(r, 60); // 草

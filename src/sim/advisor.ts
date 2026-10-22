@@ -4,7 +4,14 @@ import type { Side } from './data.ts';
 import { type State, type Unit, active, dist, effM, general, isRanged, archerRange, canSee } from './sim.ts';
 import { type CmdKind, cmdOf } from './ai.ts';
 
-export type Advice = { id: string; text: string; cmd: CmdKind; target?: number };
+export type Advice = { id: string; text: string; cmd?: CmdKind; target?: number; act?: 'scout' }; // cmd：對應的大名令；act：不帶令的動作（派忍者偵察）
+const Yl = (side: Side, y: number) => side === 0 ? y : 700 - y;
+// 派忍者偵察：還活著且沒被發現的忍者分散到敵線前 40 m（己方座標 400），45 秒後交回自動
+export function dispatchScouts(S: State, s: Side) {
+  const xs = [500, 300, 700, 400, 600]; let i = 0, n = 0;
+  for (const nj of S.ninjas) if (nj.side === s && nj.alive && nj.detUntil <= S.t) { nj.manual = true; nj.tx = xs[i++ % xs.length]; nj.ty = Yl(s, 400); nj.autoAt = S.t + 45; n++; }
+  return n;
+}
 export const CMD_CD: Record<CmdKind, number> = { charge: 90, regroup: 60, relieve: 30, focus: 30, commit: 90, raid: 45 }; // 大名令冷卻（秒）
 export const unitName = (u: Unit) => `${u.cmd || '援軍'}隊`;
 // 我方對某敵隊的情報等級：0 未知、1 察覺、2 識別、3 洞悉（忍者洞悉或看破）
@@ -29,13 +36,20 @@ export function cmdBlocked(S: State, s: Side, k: CmdKind, cd: Partial<Record<Cmd
   return '';
 }
 // 評估建議（四類：馳援、騎兵繞後、集中弓火、整頓）。ok(id, cmd)：這條建議沒在冷卻、且對應的大名令目前可下。回傳優先順序最高的一條
-export function adviseSide(S: State, s: Side, ok: (id: string, k: CmdKind) => boolean): Advice | null {
+export function adviseSide(S: State, s: Side, ok: (id: string, k?: CmdKind) => boolean): Advice | null {
   const e = (1 - s) as Side;
   const own = S.units.filter(u => u.side === s && active(u));
   const lvl = (E: Unit) => intelLvl(S, s, E);
   const seen = S.units.filter(u => u.side === e && active(u) && lvl(u) >= 2);
   const cands: Advice[] = [];
   const push = (id: string, text: string, cmd: CmdKind, target?: number) => { if (ok(id, cmd)) cands.push({ id, text, cmd, target }); };
+  // 0. 情報不足（開戰 30～180 秒、識別的敵軍 ≤2 隊、還有 2 個以上可用忍者）：派忍者偵察，不帶大名令
+  if (S.R.fogOn && S.t >= 30 && S.t <= 180 && ok('scout')) {
+    const total = S.units.filter(u => u.side === e && active(u) && !u.reinf).length;
+    const scouts = S.ninjas.filter(n => n.side === s && n.alive && n.detUntil <= S.t).length;
+    if (seen.length <= 2 && scouts >= 2 && !own.some(u => u.contacts.length))
+      cands.push({ id: 'scout', text: `敵方佈陣還看不清（識別 ${seen.length}／${total} 隊）。先派忍者到敵線前偵察，看清楚再動。`, act: 'scout' });
+  }
   const guarded = (E: Unit) => seen.some(X => X.type === 'spear' && !X.contacts.length && dist(X, E) < 60);
   // 1. 友軍動搖且有人能去幫
   const weak = weakestEngaged(S, s);

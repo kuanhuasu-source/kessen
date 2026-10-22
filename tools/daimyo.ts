@@ -4,7 +4,7 @@
 import { CLAN_CHOICES } from '../src/sim/data.ts';
 import { newState, step, mulberry32, type State } from '../src/sim/sim.ts';
 import { setup, issueCommand, DEFAULT_DOCTRINE, DEFAULT_DEPLOY, type CmdKind } from '../src/sim/ai.ts';
-import { adviseSide, cmdBlocked, weakestEngaged, CMD_CD } from '../src/sim/advisor.ts';
+import { adviseSide, cmdBlocked, weakestEngaged, CMD_CD, dispatchScouts } from '../src/sim/advisor.ts';
 import { GAME_RULES, SIM_DT } from '../src/sim/game-rules.ts';
 import { makeRules, type Rules } from '../src/sim/rules.ts';
 
@@ -19,7 +19,7 @@ const R = makeRules({ ...GAME_RULES, ...(RV[rv] ?? {}), name: rv });
 const kindOf = (id: string) => id.split(':')[0];
 console.log(`規則 ${rv}，每組 ${N} 局（武田大名模式預設方針，上杉為預設 AI）${skip.size ? `，略過 ${[...skip].join('、')}` : ''}`);
 for (const p of rates) {
-  let w = 0, t = 0, shown = 0, taken = 0; const byKind: Record<string, { shown: number; taken: number }> = {};
+  let w = 0, t = 0, shown = 0, taken = 0, id120 = 0, id180 = 0; const byKind: Record<string, { shown: number; taken: number }> = {};
   for (let i = 0; i < N; i++) {
     const S: State = newState(R, 21000 + i, [CLAN_CHOICES[0][i % 3], CLAN_CHOICES[1][(i + 1) % 3]]); S.dt = SIM_DT; setup(S); S.fx = [];
     S.meta.doctrine = [{ ...DEFAULT_DOCTRINE, attack: (process.env.ATTACK as 'auto' | 'now' | 'volley') || 'volley', cav: 'raid', retreatAt: 35, formation: 'line' }, { ...DEFAULT_DOCTRINE }]; // 大名模式預設方針（射完箭再攻；ATTACK=now|auto 可改）
@@ -27,22 +27,26 @@ for (const p of rates) {
     S.meta.playerSide = 0;
     const rng = mulberry32(777 + i);
     const cmdCd: Partial<Record<CmdKind, number>> = {}; const adviceCd: Record<string, number> = {}; let adviceT = -99;
+    let s120 = -1, s180 = -1;
+    const idf = () => { const en = S.units.filter(u => u.side === 1 && u.state !== 'gone' && !u.reinf); return en.filter(u => S.vis[0][u.id] >= 2).length / Math.max(1, en.length); };
     while (!S.over) {
       step(S); S.fx!.length = 0;
+      if (s120 < 0 && S.t >= 120) s120 = idf(); if (s180 < 0 && S.t >= 180) s180 = idf();
       if (p > 0 && S.t - adviceT >= 3) {
         adviceT = S.t;
-        const ok = (id: string, k: CmdKind) => !skip.has(kindOf(id)) && !((adviceCd[id] ?? 0) > S.t) && !cmdBlocked(S, 0, k, cmdCd);
+        const ok = (id: string, k?: CmdKind) => !skip.has(kindOf(id)) && !((adviceCd[id] ?? 0) > S.t) && (!k || !cmdBlocked(S, 0, k, cmdCd));
         const a = adviseSide(S, 0, ok); if (!a) continue;
         shown++; const b = byKind[kindOf(a.id)] ??= { shown: 0, taken: 0 }; b.shown++;
         if (rng() < p) {
           const target = a.cmd === 'relieve' && a.target === undefined ? weakestEngaged(S, 0)!.id : a.target;
-          if (issueCommand(S, 0, a.cmd, target)) { cmdCd[a.cmd] = S.t + CMD_CD[a.cmd] * Number(process.env.CD || 1); taken++; b.taken++; } // CD=0.33 可試縮短冷卻
+          if (a.act === 'scout') { dispatchScouts(S, 0); taken++; b.taken++; }
+          else if (a.cmd && issueCommand(S, 0, a.cmd, target)) { cmdCd[a.cmd] = S.t + CMD_CD[a.cmd] * Number(process.env.CD || 1); taken++; b.taken++; } // CD=0.33 可試縮短冷卻
           adviceCd[a.id] = S.t + 120;
         } else adviceCd[a.id] = S.t + 90;
       }
     }
-    if (S.over!.winner === 0) w++; t += S.over!.t;
+    if (S.over!.winner === 0) w++; t += S.over!.t; id120 += s120 < 0 ? idf() : s120; id180 += s180 < 0 ? (s120 < 0 ? idf() : s120) : s180;
   }
   const kinds = Object.entries(byKind).map(([k, v]) => `${k} ${(v.shown / N).toFixed(1)}/${(v.taken / N).toFixed(1)}`).join('、');
-  console.log(`採納 ${String(Math.round(p * 100)).padStart(3)}%  武田勝 ${String(Math.round(w / N * 100)).padStart(3)}%  時長 ${(t / N).toFixed(0)}s  建議 ${(shown / N).toFixed(1)} 張/局、採納 ${(taken / N).toFixed(1)}${kinds ? `  （出現/採納：${kinds}）` : ''}`);
+  console.log(`採納 ${String(Math.round(p * 100)).padStart(3)}%  武田勝 ${String(Math.round(w / N * 100)).padStart(3)}%  時長 ${(t / N).toFixed(0)}s  識別 120s ${(id120 / N * 100).toFixed(0)}% 180s ${(id180 / N * 100).toFixed(0)}%  建議 ${(shown / N).toFixed(1)} 張/局、採納 ${(taken / N).toFixed(1)}${kinds ? `  （出現/採納：${kinds}）` : ''}`);
 }

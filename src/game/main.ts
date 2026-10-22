@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { newState, step, effM, updDims, height, active, dist, cat, general, passiveOn, inForest, inPaddy, inMarsh, inWater, onTrail, isRanged, archerRange, mulberry32, useSkill, useStrategy, battleCry, useJutsu, skillBlocked, canSee, type Unit, type Formation, type Ninja } from '../sim/sim.ts';
 import { MAP, UT } from '../sim/data.ts';
-import { adviseSide, weakestEngaged as weakest, cmdBlocked, CMD_CD } from '../sim/advisor.ts';
+import { adviseSide, weakestEngaged as weakest, cmdBlocked, CMD_CD, dispatchScouts, type Advice as SimAdvice } from '../sim/advisor.ts';
 import { setup, issueCommand, cmdOf, applyDeploy, DEFAULT_DOCTRINE, DEFAULT_DEPLOY, type Doctrine, type CmdKind, type Deploy, type Wing } from '../sim/ai.ts';
 import { ROSTER_T } from '../sim/data.ts';
 import { GAME_RULES, SIM_DT } from '../sim/game-rules.ts';
@@ -473,19 +473,19 @@ function cmdHtml(): string {
     <div class="desc">點方針可切換。對任何部隊直接下令就是接管，AI 不再動它；在該隊面板「交回」即可還給 AI。</div>`;
 }
 // 軍師建議：每 3 秒依我方看得到的情報評估一次，一次一張卡；軍師陣亡就沒有建議
-type Advice = { id: string; text: string; cmd: CmdKind; target?: number; until: number };
+type Advice = SimAdvice & { until: number };
 let advice: Advice | null = null; const adviceCd: Record<string, number> = {}; let adviceT = -99;
 function evalAdvice() {
   if (!started || S.over) return;
   const g = general(S, 0); if (!g.advAlive) { if (advice) { advice = null; hud.hideAdvice(); } return; }
-  if (advice) { if (S.t > advice.until || cmdState(advice.cmd)) { advice = null; hud.hideAdvice(); } return; }
+  if (advice) { if (S.t > advice.until || (advice.cmd && cmdState(advice.cmd))) { advice = null; hud.hideAdvice(); } return; }
   if (S.t - adviceT < 3) return; adviceT = S.t;
-  const ok = (id: string, k: CmdKind) => !((adviceCd[id] ?? 0) > S.t) && !cmdState(k);
+  const ok = (id: string, k?: CmdKind) => !((adviceCd[id] ?? 0) > S.t) && (!k || !cmdState(k));
   const a0 = adviseSide(S, 0, ok); if (!a0) return;
   const a: Advice = { ...a0, until: S.t + 15 };
   advice = a; adviceCd[a.id] = S.t + 60;
   hud.showAdvice(`${img(portraitOf(g.advisor ?? undefined), 'pp')}<div class="tx"><b>${g.advisor}</b>：${a.text}</div>`,
-    () => { if (advice) { doCmd(advice.cmd, advice.target); adviceCd[advice.id] = S.t + 120; } advice = null; hud.hideAdvice(); },
+    () => { if (advice) { if (advice.act === 'scout') { const n = dispatchScouts(S, 0); hud.toast(`${n} 名忍者前往敵線前偵察（45 秒後恢復自動）`); say('忍者出動偵察'); } else if (advice.cmd) doCmd(advice.cmd, advice.target); adviceCd[advice.id] = S.t + 120; } advice = null; hud.hideAdvice(); },
     () => { if (advice) adviceCd[advice.id] = S.t + 90; advice = null; hud.hideAdvice(); });
 }
 
