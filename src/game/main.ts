@@ -1127,7 +1127,7 @@ function showEnd() {
   const w = o.winner;
   const title = WATCH ? (w === -1 ? '平手' : `${SIDE_NAME[w]}軍勝`) : w === -1 ? '平手' : w === 0 ? '勝利' : '敗北';
   const loser = w === -1 ? null : (1 - w) as 0 | 1;
-  const why = o.type === 'collapse' && loser !== null ? `${SIDE_NAME[loser]}軍總崩潰` : OVER_TYPE[o.type] ?? o.type;
+  const why = o.type === 'collapse' && loser !== null ? `${SIDE_NAME[loser]}軍總崩潰` : o.type === 'withdraw' && loser !== null ? `${SIDE_NAME[loser]}軍退卻（久無接戰、軍勢落後）` : OVER_TYPE[o.type] ?? o.type;
   const row = (label: string, f: (s: 0 | 1) => string | number) => `<tr><th>${label}</th><td>${f(0)}</td><td>${f(1)}</td></tr>`;
   const men = (s: 0 | 1) => { const us = S.units.filter(u => u.side === s); return `${us.reduce((a, u) => a + (u.state === 'gone' ? 0 : u.men), 0)}／${us.reduce((a, u) => a + u.men0, 0)}`; };
   const wp = w >= 0 ? img(portraitOf(w === 0 ? '武田信玄' : '上杉謙信'), 'pp') : '';
