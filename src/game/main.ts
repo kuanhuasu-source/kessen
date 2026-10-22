@@ -17,6 +17,8 @@ import { Hud } from './hud.ts';
 import { portraitOf, ninjaPortrait, skillIcon, jutsuIcon, kamon, illus, img, kanBox, unitIcon, uiFrame } from './art.ts';
 { const f = uiFrame(); if (f) { document.documentElement.classList.add('hasframe'); document.documentElement.style.setProperty('--frame', `url(${f})`); } } // 介面框：結算畫面邊框
 import { toWorld, toSim } from './coords.ts';
+import { sfx, unlock as unlockAudio, isMuted, setMuted } from './audio.ts';
+window.addEventListener('pointerdown', unlockAudio, { capture: true }); window.addEventListener('keydown', unlockAudio, { capture: true }); // 手機要在手勢後才能出聲
 
 // ---------------- 場景 ----------------
 const canvas = document.getElementById('view') as HTMLCanvasElement;
@@ -81,6 +83,7 @@ function depBox(id: string, label: string, key: string | null): string {
   const u = unitByKey(key); const r = ROSTER_T.find(x => x.cmd === roster0[key])!;
   return `<button type="button" class="dbox" data-x="box:${id}" aria-pressed="${depSel === id}"><span class="p">${img(unitIcon(u.type), 'ti')}${label}・${TYPE_NAME[u.type]}</span><span class="n">${img(portraitOf(r.cmd), 'pp')}${r.cmd}</span><span class="s">${SKILL[r.skill]?.name ?? ''}</span></button>`;
 }
+let lastClashT = -9;
 let advOpen = false; // 配置的進階區（各翼方針、將領互換）是否展開；收起時只剩調位置、預備隊、騎兵翼
 function depHtml(): string {
   const n = deploy0.line.length; const labels = n === 3 ? ['左翼', '中央', '右翼'] : POS_LABEL;
@@ -219,7 +222,8 @@ function reloadWith(over: Record<string, string | null>) {
   for (const [k, v] of Object.entries(over)) { if (v === null) p.delete(k); else p.set(k, v); }
   location.hash = p.toString(); location.reload();
 }
-function begin() { applyWarCouncil(); started = true; paused = false; hud.toast(WATCH ? '開始觀戰' : '出陣！'); }
+function begin() { applyWarCouncil(); started = true; paused = false; hud.toast(WATCH ? '開始觀戰' : '出陣！'); unlockAudio(); sfx.battleStart(); }
+hud.setSound(!isMuted()); hud.onSound = () => { setMuted(!isMuted()); hud.setSound(!isMuted()); hud.toast(isMuted() ? '音效關閉' : '音效開啟'); if (!isMuted()) sfx.drum(1, 0.4); };
 hud.speeds = SPEEDS;
 hud.setWatch(WATCH, () => { camAuto = !camAuto; manualUntil = 0; hud.toast(camAuto ? '導播鏡頭' : '手動鏡頭'); },
   () => { visMode = visMode === 'all' ? 0 : visMode === 0 ? 1 : 'all'; hud.toast(visMode === 'all' ? '視野：全知' : `視野：${SIDE_NAME[visMode]}軍`); });
@@ -457,6 +461,7 @@ function doCmd(k: CmdKind, target?: number): boolean {
   if (k === 'relieve' && target === undefined) target = weakestEngaged()!.id;
   if (!issueCommand(S, 0, k, target)) { hud.toast(`${CMD_INFO[k].name}：目前無法執行`); return false; }
   cmdCd[k] = S.t + CMD_CD[k];
+  sfx.cmd();
   hud.toast(`大名令：${CMD_INFO[k].name}${target !== undefined ? `（${nameOf(S.units[target])}）` : ''}`);
   if (k === 'charge') say('全軍突擊！'); else if (k === 'regroup') say('全軍整頓');
   infoT = 0; return true;
@@ -484,7 +489,7 @@ function evalAdvice() {
   const ok = (id: string, k?: CmdKind) => !((adviceCd[id] ?? 0) > S.t) && (!k || !cmdState(k));
   const a0 = adviseSide(S, 0, ok); if (!a0) return;
   const a: Advice = { ...a0, until: S.t + 15 };
-  advice = a; adviceCd[a.id] = S.t + 60;
+  advice = a; adviceCd[a.id] = S.t + 60; sfx.advice();
   hud.showAdvice(`${img(portraitOf(g.advisor ?? undefined), 'pp')}<div class="tx"><b>${g.advisor}</b>：${a.text}</div>`,
     () => { if (advice) { if (advice.act === 'scout') { const n = dispatchScouts(S, 0); hud.toast(`${n} 名忍者前往敵線前偵察（45 秒後恢復自動）`); say('忍者出動偵察'); } else if (advice.cmd) doCmd(advice.cmd, advice.target); adviceCd[advice.id] = S.t + 120; } advice = null; hud.hideAdvice(); },
     () => { if (advice) adviceCd[advice.id] = S.t + 90; advice = null; hud.hideAdvice(); });
@@ -1131,6 +1136,7 @@ const OVER_TYPE: Record<string, string> = { collapse: '總崩潰', wipe: '全軍
 function showEnd() {
   const o = S.over!; const R = S.rec;
   const w = o.winner;
+  if (WATCH || w === -1) sfx.drum(3, 0.5); else if (w === 0) sfx.victory(); else sfx.defeat();
   const title = WATCH ? (w === -1 ? '平手' : `${SIDE_NAME[w]}軍勝`) : w === -1 ? '平手' : w === 0 ? '勝利' : '敗北';
   const loser = w === -1 ? null : (1 - w) as 0 | 1;
   const why = o.type === 'collapse' && loser !== null ? `${SIDE_NAME[loser]}軍總崩潰` : o.type === 'withdraw' && loser !== null ? `${SIDE_NAME[loser]}軍退卻（久無接戰、軍勢落後）` : OVER_TYPE[o.type] ?? o.type;
@@ -1184,8 +1190,8 @@ function afterStep() {
   for (const e of S.fx!) {
     const A = S.units[e.a], T = e.b !== undefined ? S.units[e.b] : null;
     switch (e.k) {
-      case 'volley': if (T) { if (e.s === 'gun') { for (let i = 0; i < 6; i++) dust.burst(A!.x + (Math.random() - 0.5) * A!.width, A!.y + Math.cos(A!.f) * 2, 1, 2.2); if (intelOf(A!) >= 2 || mine(A!)) floatText(A!, '放銃', 'hit'); } else if (e.s === 'cannon') { dust.burst(A!.x, A!.y, 14, 6); floatText(T, `轟 ${e.n ? `−${e.n * S.R.cannonDmg / 8 | 0}` : ''}`, 'bad'); } else volleyFx(A, T); } break;
-      case 'charge': if (T) {
+      case 'volley': if (T) { if (e.s === 'gun') sfx.gun(); else if (e.s === 'cannon') sfx.cannon(); else sfx.arrows(e.n ?? 1); if (e.s === 'gun') { for (let i = 0; i < 6; i++) dust.burst(A!.x + (Math.random() - 0.5) * A!.width, A!.y + Math.cos(A!.f) * 2, 1, 2.2); if (intelOf(A!) >= 2 || mine(A!)) floatText(A!, '放銃', 'hit'); } else if (e.s === 'cannon') { dust.burst(A!.x, A!.y, 14, 6); floatText(T, `轟 ${e.n ? `−${e.n * S.R.cannonDmg / 8 | 0}` : ''}`, 'bad'); } else volleyFx(A, T); } break;
+      case 'charge': if (T) { if (e.n) sfx.charge(); else sfx.clash(0.6);
         const d = dist(A, T) || 1, dx = (T.x - A.x) / d, dy = (T.y - A.y) / d;
         const ix = T.x - dx * Math.min(d * 0.5, T.depth / 2 + 2), iy = T.y - dy * Math.min(d * 0.5, T.depth / 2 + 2);
         dust.burst(ix, iy, e.n ? 26 : 12, e.n ? 10 : 6, dx, dy);
@@ -1198,7 +1204,7 @@ function afterStep() {
       case 'chain': if ((e.n ?? 0) <= -0.5) floatText(A, `友軍潰走 ${pct(e.n!)}`, 'bad'); break;
       case 'cheer': floatText(A, `敵潰 ${pct(e.n ?? 0)}`, 'good'); break;
       case 'surround': if ((surroundT.get(A.id) ?? -99) < S.t - 6) { surroundT.set(A.id, S.t); floatText(A, '被包圍', 'bad'); } break;
-      case 'army': if (Math.abs(e.n ?? 0) >= 0.5) hud.armyEvent(e.a as 0 | 1, e.n!, ARMY_SRC[e.s!] || '軍勢'); break;
+      case 'army': if (e.s === 'genDeath' || e.s === 'viceDeath' || e.s === 'advisorDeath') sfx.death(); if (Math.abs(e.n ?? 0) >= 0.5) hud.armyEvent(e.a as 0 | 1, e.n!, ARMY_SRC[e.s!] || '軍勢'); break;
       case 'found': if (e.a === 0) revealSecret(e.s!, true); break;
       case 'skill': {
         const sk = SKILL[e.s!]; if (!sk) break;
@@ -1212,19 +1218,20 @@ function afterStep() {
         const st = STRATEGY[e.s!]; if (!st) break;
         say(mine(A) ? `${A.advisor}獻策「${st.name}」：${st.desc}` : `上杉軍師 ${A.advisor}「${st.name}」：${e.s === 'kanpa' ? '我軍 20 秒內無法施放武將技與軍略' : st.desc}`);
       } break;
-      case 'cry': floatText(A, '鬨聲', mine(A) ? 'good' : 'hit'); if (intelOf(A) >= 2) pulses.add(A.x, A.y, S.R.cryR, mine(A) ? '#efe6d2' : '#7fa3e0', 0.9); break;
-      case 'jutsu': jutsuFx(e.a as 0 | 1, e.s!, e.b, e.n); break;
+      case 'cry': sfx.cry(); floatText(A, '鬨聲', mine(A) ? 'good' : 'hit'); if (intelOf(A) >= 2) pulses.add(A.x, A.y, S.R.cryR, mine(A) ? '#efe6d2' : '#7fa3e0', 0.9); break;
+      case 'jutsu': if (e.a === 0 || e.s === 'rumor' || e.s === 'kirigakure') sfx.jutsu(); jutsuFx(e.a as 0 | 1, e.s!, e.b, e.n); break;
       case 'ninjaDead': {
         const n = S.ninjas[e.a];
         if (n.side === 0) { say(e.s === 'ansatsu' ? '暗殺失敗，忍者陣亡' : '忍者遭敵軍捕殺'); if (selNin === n.id) selNin = -1; }
         else say('討取一名敵方忍者');
       } break;
       case 'rout': case 'shatter':
+        if (mine(A) || intelOf(A) >= 1) sfx.rout();
         floatText(A, e.k === 'shatter' ? '潰滅' : '潰走', 'bad');
         if (intelOf(A) >= 2) pulses.add(A.x, A.y, S.R.friendlyRoutR, '#e0574a');
         if (mine(A) || intelOf(A) >= 2) say(mine(A) ? `${nameOf(A)}${e.k === 'shatter' ? '潰滅' : '潰走'}！` : `敵軍 ${nameOf(A)}${e.k === 'shatter' ? '潰滅' : '潰走'}`);
         break;
-      case 'rally': floatText(A, '重整', 'good'); if (mine(A)) say(`${nameOf(A)}重整完畢，等候命令`); break;
+      case 'rally': sfx.rally(); floatText(A, '重整', 'good'); if (mine(A)) say(`${nameOf(A)}重整完畢，等候命令`); break;
       case 'cmd': say(`${mine(A) ? '' : '敵將 '}${A.cmd} 討死！`); floatText(A, '討死', 'bad'); break;
       case 'adv': say(`${mine(A) ? '' : '敵軍師 '}${A.advisor} 討死！`); break;
     }
@@ -1353,6 +1360,8 @@ function frame(now: number) {
     infoT = 0.25;
     hud.setInfo(cmdOpen ? cmdHtml() : selNin >= 0 ? ninjaHtml(S.ninjas[selNin]) : infoU && infoU.id !== infoClosed ? infoHtml(infoU) : inspectPoint >= 0 ? pointHtml(inspectPoint) : null);
     if (DAIMYO && !paused) evalAdvice();
+    // 接戰環境音：有部隊接戰時每 0.5～0.9 秒一陣兵刃聲，強度看接戰隊數
+    if (!paused && S.t - lastClashT > 0.5 + Math.random() * 0.4) { lastClashT = S.t; let n = 0; for (const u of S.units) if (u.contacts.length && active(u)) n++; if (n > 0) sfx.clash(Math.min(1, n / 8)); }
     if (S.R.pointWin && S.holdAll[0] > 0) hud.setHold(0, 60 - S.holdAll[0]); else if (S.R.pointWin && S.holdAll[1] > 0) hud.setHold(1, 60 - S.holdAll[1]); else hud.setHold(-1, 0);
     // 情報讀數與未探索遮罩（情報 v2）
     if (S.R.fogV2 && S.R.fogOn && !(WATCH && visMode === 'all')) {

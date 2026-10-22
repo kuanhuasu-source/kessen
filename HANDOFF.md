@@ -53,6 +53,7 @@ TypeScript + Vite + Three.js，單一 HTML 輸出（約 1.66 MB，其中美術�
 | `src/game/effects.ts`、`ninja.ts`、`terrain.ts` | 特效、忍者顯示、地形與據點（延伸原野、河、遠山、灌木石頭） |
 | `src/game/ground.ts` | 地表合成貼圖（草地／林地／稻田／土路紋理、山丘、道路、河、溪流與渡口）；`GROUND` 是延伸範圍，`groundH` 是河床下陷（只影響畫面） |
 | `src/game/hud.ts` | 全部介面 |
+| `src/game/audio.ts` | 合成音效（Web Audio）：`sfx.*` 各 cue、`unlock()`（手勢後建立 AudioContext）、`setMuted`。呼叫點在 main.ts 的事件迴圈、`begin`、`doCmd`、`evalAdvice`、`showEnd` 與每幀的接戰環境音 |
 | `src/game/art.ts` | 2D 美術查表：`portraitOf(武將名)`、`ninjaPortrait(忍者眾)`、`skillIcon`、`jutsuIcon`、`kamon(side)`、`illus('title'|'loading')`；沒有圖檔時回傳 undefined，介面退回漢字與色塊 |
 | `src/game/skills.ts` | 武將技／被動／軍略／忍術／忍者眾的名稱與說明 |
 | `art/manifest.json` | 59 張提示詞（風格、尺寸、檔名） |

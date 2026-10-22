@@ -281,6 +281,8 @@ export class Hud {
   private promptEl!: HTMLElement; private skillBtn!: HTMLButtonElement; private ninCard: HTMLButtonElement | null = null;
   private av: HTMLElement[] = []; private bars: HTMLElement[] = [];
   onCmd: () => void = () => {};
+  onSound: () => void = () => {};
+  setSound(on: boolean) { const b = this.root.querySelector('#b-snd')!; b.setAttribute('aria-pressed', String(on)); b.textContent = on ? '音' : '靜'; b.classList.toggle('on', on); }
   setDaimyo(on: boolean) { this.root.classList.toggle('daimyo', on); }
   setCmdOpen(on: boolean) { const b = this.root.querySelector('#b-cmd')!; b.setAttribute('aria-pressed', String(on)); b.classList.toggle('on', on); }
   // 軍師建議卡
@@ -319,6 +321,7 @@ export class Hud {
         <button id="b-cmd" class="c" aria-label="大名令" aria-pressed="false" title="大名令：馳援、集中弓火、騎兵繞後、全軍整頓">令</button>
         <button id="b-cam" class="w" aria-label="導播鏡頭" aria-pressed="true" title="導播鏡頭：自動跟隨戰況">鏡</button>
         <button id="b-vis" class="w" aria-label="視野" title="切換視野：全知／武田／上杉">全</button>
+        <button id="b-snd" class="w" aria-label="音效" aria-pressed="true" title="音效開關">音</button>
       </div>
       <div class="cards" role="toolbar" aria-label="部隊"></div>
       <div class="info" hidden aria-live="polite"></div>
@@ -392,6 +395,7 @@ export class Hud {
     this.root.querySelector<HTMLButtonElement>('#b-cancel')!.onclick = () => this.onCancelPrompt();
     this.skillBtn = this.root.querySelector('#b-skill')!; this.skillBtn.onclick = () => cb.onSkill();
     this.root.querySelector<HTMLButtonElement>('#b-cmd')!.onclick = () => this.onCmd();
+    this.root.querySelector<HTMLButtonElement>('#b-snd')!.onclick = () => this.onSound();
     this.retreatBtn = this.root.querySelector('#b-retreat')!; this.retreatBtn.onclick = () => cb.onRetreat();
     this.holdEl = this.root.querySelector('.hold')!;
     this.toastEl = this.root.querySelector('.toast')!;
