@@ -1,6 +1,6 @@
 // 2D 美術：Gemini 生成的原圖（art/out，不進版控）經 tools/pack-art.mjs 縮成 WebP（art/web，進版控），
 // 建置時由 Vite 內嵌進單一 HTML。沒有圖檔時每個函式回傳 undefined，介面退回漢字與色塊。
-const files = import.meta.glob('../../art/web/{portraits,illus,icons,kamon,textures}/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const files = import.meta.glob('../../art/web/{portraits,illus,icons,kamon,textures,ui}/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const map = new Map<string, string>();
 for (const [p, url] of Object.entries(files)) {
   const m = p.match(/art\/web\/([a-z]+)\/([\w-]+)\.webp$/);
@@ -22,12 +22,15 @@ export const jutsuIcon = (id: string) => art(`icons/jutsu_${id}`);
 export const kamon = (side: number) => art(`kamon/${side === 0 ? 'takeda' : 'uesugi'}`);
 export const illus = (id: 'title' | 'loading') => art(`illus/${id}`);
 export const texture = (id: 'grass' | 'forest' | 'paddy' | 'dirt') => art(`textures/${id}`);
+export const unitIcon = (type: string) => art(`icons/unit_${type}`); // 兵種圖示（槍、弓、侍、騎、旗本、銃、砲）
+export const uiFrame = () => art('ui/frame'); // 介面框（結算畫面邊框）
 
 // 介面小圖的 <img>；沒有圖就回傳空字串
 export const img = (url: string | undefined, cls: string, alt = '') => url ? `<img class="${cls}" src="${url}" alt="${alt}" draggable="false">` : '';
 // 漢字方塊（旗牌與資訊面板）：有肖像時肖像當底、漢字縮成右下角標
-export const kanBox = (cls: string, kanji: string, color: string, pic?: string) =>
-  `<span class="${cls}${pic ? ' pic' : ''}" style="--sc:${color};background-color:${color}${pic ? `;background-image:url(${pic})` : ''}"><i class="kj">${kanji}</i></span>`;
+// 有肖像且有兵種圖示時，右下角標改用圖示（漢字留作無圖時的後備）
+export const kanBox = (cls: string, kanji: string, color: string, pic?: string, icon?: string) =>
+  `<span class="${cls}${pic ? ' pic' : ''}" style="--sc:${color};background-color:${color}${pic ? `;background-image:url(${pic})` : ''}">${pic && icon ? `<i class="kj ico" style="background-image:url(${icon})" title="${kanji}"></i>` : `<i class="kj">${kanji}</i>`}</span>`;
 
 // 旗號（canvas）上的家紋：圖片載入完成後 artVersion +1，旗號會重畫
 export let artVersion = 0;

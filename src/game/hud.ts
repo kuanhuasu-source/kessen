@@ -1,7 +1,7 @@
 // 畫面介面：以戰場為主。上方一條細的軍勢列，右側直排的時間控制，左下角小型部隊旗牌。
 import type { Unit } from '../sim/sim.ts';
 import { KANJI, TYPE_NAME } from './units.ts';
-import { kanBox, portraitOf, ninjaPortrait, kamon, img } from './art.ts';
+import { kanBox, portraitOf, ninjaPortrait, kamon, img, unitIcon } from './art.ts';
 
 const CSS = `
 /* 版面：戰場畫布全螢幕；介面縮成三個小元件，避開畫面四角（手機上四角常被瀏覽器或檢視器的按鈕佔用） */
@@ -233,6 +233,9 @@ body { font-family: var(--ui); -webkit-user-select: none; user-select: none; -we
 .card .kan .kj, .info .k .kj { font-style: normal; }
 .card .kan.pic .kj, .info .k.pic .kj { position: absolute; right: -4px; bottom: -4px; width: 15px; height: 15px; border-radius: 4px; font-size: 10px; line-height: 15px; text-align: center;
   background: var(--sc); color: var(--paper); box-shadow: 0 0 0 1px var(--ink); }
+.card .kan.pic .kj.ico, .info .k.pic .kj.ico { width: 18px; height: 18px; right: -5px; bottom: -5px; border-radius: 50%; background: var(--ink) center/cover no-repeat; box-shadow: 0 0 0 1px var(--gold); }
+.setup .dep .dbox .p img.ti { width: 14px; height: 14px; border-radius: 50%; vertical-align: -3px; margin-right: 3px; }
+:root.hasframe .end .sheet { border: 30px solid transparent; border-image: var(--frame) 125 fill / 30px stretch; border-radius: 0; background: transparent; padding: 8px 14px; }
 .info .k.pic { width: 34px; height: 34px; border-radius: 6px; }
 .info .act .ic { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; flex: none; }
 .setup, .end { background-size: cover; background-position: center; }
@@ -412,7 +415,7 @@ export class Hud {
     const cardsEl = this.root.querySelector('.cards')!;
     const b = document.createElement('button'); b.className = 'card'; b.type = 'button';
     b.setAttribute('aria-label', `${TYPE_NAME[u.type]}・${u.cmd || '援軍'}`); b.title = `${TYPE_NAME[u.type]}・${u.cmd || '援軍'}`;
-    b.innerHTML = `${kanBox('kan', KANJI[u.type], u.side === 0 ? 'var(--takeda)' : 'var(--uesugi)', portraitOf(u.cmd))}
+    b.innerHTML = `${kanBox('kan', KANJI[u.type], u.side === 0 ? 'var(--takeda)' : 'var(--uesugi)', portraitOf(u.cmd), unitIcon(u.type))}
       <span class="men">${u.men}</span><span class="mor"><i></i></span><span class="rdy"></span>
       <span class="txt"><span class="t">${TYPE_NAME[u.type]}</span><span class="c">${u.cmd || '援軍'}</span></span>`;
     let last = 0;
@@ -518,7 +521,7 @@ export class Hud {
   refreshCard(u: Unit) {
     const b = this.cards.get(u.id); if (!b) return;
     b.setAttribute('aria-label', `${TYPE_NAME[u.type]}・${u.cmd || '援軍'}`); b.title = `${TYPE_NAME[u.type]}・${u.cmd || '援軍'}`;
-    b.querySelector('.kan')!.outerHTML = kanBox('kan', KANJI[u.type], u.side === 0 ? 'var(--takeda)' : 'var(--uesugi)', portraitOf(u.cmd));
+    b.querySelector('.kan')!.outerHTML = kanBox('kan', KANJI[u.type], u.side === 0 ? 'var(--takeda)' : 'var(--uesugi)', portraitOf(u.cmd), unitIcon(u.type));
     b.querySelector('.c')!.textContent = u.cmd || '援軍';
   }
   // 出陣畫面（含觀戰模式）

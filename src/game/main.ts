@@ -14,7 +14,8 @@ import { NinjaView, AreaFx } from './ninja.ts';
 import { SKILL, PASSIVE, STRATEGY, ADV_PASSIVE, JUTSU, CLAN_INFO, CLAN_PASSIVE } from './skills.ts';
 import { CameraRig } from './camera.ts';
 import { Hud } from './hud.ts';
-import { portraitOf, ninjaPortrait, skillIcon, jutsuIcon, kamon, illus, img, kanBox } from './art.ts';
+import { portraitOf, ninjaPortrait, skillIcon, jutsuIcon, kamon, illus, img, kanBox, unitIcon, uiFrame } from './art.ts';
+{ const f = uiFrame(); if (f) { document.documentElement.classList.add('hasframe'); document.documentElement.style.setProperty('--frame', `url(${f})`); } } // 介面框：結算畫面邊框
 import { toWorld, toSim } from './coords.ts';
 
 // ---------------- 場景 ----------------
@@ -78,7 +79,7 @@ function unitByKey(k: string) { return S.units.find(u => u.side === 0 && u.key =
 function depBox(id: string, label: string, key: string | null): string {
   if (!key) return `<button type="button" class="dbox empty" data-x="box:${id}" aria-pressed="${depSel === id}"><span class="p">${label}</span><span class="n">（無）</span></button>`;
   const u = unitByKey(key); const r = ROSTER_T.find(x => x.cmd === roster0[key])!;
-  return `<button type="button" class="dbox" data-x="box:${id}" aria-pressed="${depSel === id}"><span class="p">${label}・${TYPE_NAME[u.type]}</span><span class="n">${img(portraitOf(r.cmd), 'pp')}${r.cmd}</span><span class="s">${SKILL[r.skill]?.name ?? ''}</span></button>`;
+  return `<button type="button" class="dbox" data-x="box:${id}" aria-pressed="${depSel === id}"><span class="p">${img(unitIcon(u.type), 'ti')}${label}・${TYPE_NAME[u.type]}</span><span class="n">${img(portraitOf(r.cmd), 'pp')}${r.cmd}</span><span class="s">${SKILL[r.skill]?.name ?? ''}</span></button>`;
 }
 let advOpen = false; // 配置的進階區（各翼方針、將領互換）是否展開；收起時只剩調位置、預備隊、騎兵翼
 function depHtml(): string {
@@ -947,7 +948,7 @@ function infoHtml(u: Unit): string {
   else if (u.retreating) rows.push(`<div class="row"><span>　</span><span>重整後不會主動出擊；下達指令或士氣回到 50 即恢復</span></div>`);
   if (isRanged(u)) rows.push(`<div class="row"><span>${u.type === 'archer' ? '箭矢' : u.type === 'gun' ? '彈藥' : '砲彈'}</span><span class="${u.ammo <= 2 ? 'warn' : ''}">${u.ammo}／${u.ammoMax} 輪${u.reload > 0 && u.type !== 'archer' ? `・裝填 ${Math.ceil(u.reload)} 秒` : ''}${u.type === 'cannon' ? `・${S.R.cannonMin} m 內打不到` : ''}</span></div>`);
   if (u.cmd) rows.push(`<div class="row"><span>武將</span><span>${u.cmd}${u.cmdAlive ? '' : '（討死）'}${u.advisor ? `・軍師 ${u.advisor}${u.advAlive ? '' : '（討死）'}` : ''}</span></div>`);
-  return `<div class="hd">${kanBox('k', KANJI[u.type], side === 0 ? 'var(--takeda)' : 'var(--uesugi)', portraitOf(u.cmd))}
+  return `<div class="hd">${kanBox('k', KANJI[u.type], side === 0 ? 'var(--takeda)' : 'var(--uesugi)', portraitOf(u.cmd), unitIcon(u.type))}
     <div><div class="nm">${WATCH ? `${SIDE_NAME[side]}・` : side === 1 ? '敵・' : ''}${u.cmd || '援軍'}隊</div><div class="sub">${TYPE_NAME[u.type]}${form}・${lvl >= 3 ? `${u.men}／${u.men0} 人` : `約 ${Math.max(5, Math.round(u.men / 5) * 5)} 人`}${side !== viewSide() && !(WATCH && visMode === 'all') ? (lvl >= 3 ? '・<span class="pos">洞悉</span>' : '・識別') : ''}</div></div>
     <button class="x" type="button" aria-label="關閉">×</button></div>
     <div class="mb"><span class="${stCls}">${stName}</span>${lvl >= 3 ? `<span class="bar"><i style="width:${m}%;background:${color}"></i><b style="left:${R.routAt}%"></b><b style="left:${R.waverAt}%"></b><b style="left:${R.highAt}%"></b></span><span class="v">${Math.round(m)}</span>` : '<span class="desc" style="margin:0">確切士氣需洞悉（忍者靠近或物見）</span>'}</div>
