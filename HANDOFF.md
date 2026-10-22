@@ -33,6 +33,7 @@
 | M6 | 完成 | 勝負與結算、據點呈現、撤退指令、Gemini 2D 美術 |
 | AI 動作優化 | 完成 | 止抖（aiSteady）＋戰線式指揮（aiLine） |
 | 大名模式 | 完成 | 第一階段：軍議方針、AI 帶兵、軍師建議卡、大名令、接管單隊。第二階段：配置（戰線順序、預備隊、騎兵翼、各翼方針）與將領互換。傳令延遲未做（使用者決定） |
+| 軍師與情報回路 | 完成 | 建議規則進模擬層（`advisor.ts`）、半渡而擊與大筒現身建議、`tools/daimyo.ts` 量玩家採納建議的勝率：不介入 43%、全採納 64% |
 | M7 | 進行中 | 效能：士兵矩陣更新優化、每幀分段計時（`__kessen.prof`）、模擬每步 0.205→0.066 ms（探索格改外框掃描、擁擠數每步算一次）；跨瀏覽器：es2020／Safari 14 目標、roundRect polyfill；平衡：矩陣與消融量測完成，調整待提案。真機 fps 仍待回報 |
 
 ## 4. 架構與檔案地圖
@@ -45,7 +46,8 @@ TypeScript + Vite + Three.js，單一 HTML 輸出（約 1.66 MB，其中美術�
 | `src/sim/ai.ts` | AI（戰略／戰術／武將技／忍者）；`S.meta.aiSides` 指定 AI 指揮哪一方。`lineAI`／`lineInfantry` 是戰線式指揮（錨點、槽位、階段），`aiSteady` 是各處的決策鎖。大名模式介面：`S.meta.doctrine[side]`（方針）、`S.meta.manual`（接管的部隊 id）、`issueCommand(S, side, kind, target)`（大名令）、`S.meta.playerSide`（忍術由玩家施放）、`S.meta.deployment[side]` ＋ `applyDeploy`（配置：戰線順序、預備隊 `role: 'reserve'`、騎兵翼、各翼方針），`reserveAI` 是預備隊行為 |
 | `src/sim/rules.ts`、`configs.ts`、`game-rules.ts` | 規則參數；遊戲採用 `GAME_RULES` |
 | `src/sim/data.ts` | 兵種數值、武將名單、忍者眾、地圖 |
-| `src/game/main.ts` | 主迴圈、輸入、指令、資訊面板、事件處理、觀戰導播、結算；大名模式的軍議（`DOCTRINE_ROWS`）、大名令（`doCmd`／`cmdHtml`）、軍師建議（`evalAdvice`）、接管（`takeOver`／`handBack`） |
+| `src/game/main.ts` | 主迴圈、輸入、指令、資訊面板、事件處理、觀戰導播、結算；大名模式的軍議（`DOCTRINE_ROWS`）、大名令（`doCmd`／`cmdHtml`）、軍師建議卡（`evalAdvice`，規則在 `src/sim/advisor.ts`）、接管（`takeOver`／`handBack`） |
+| `src/sim/advisor.ts` | 軍師建議規則（`adviseSide`）、大名令冷卻與可否下達（`CMD_CD`／`cmdBlocked`）、情報等級（`intelLvl`）。放模擬層是為了 `tools/daimyo.ts` 能量玩家採納建議的勝率 |
 | `src/game/orders.ts` | 玩家指令層（攻擊追擊、弓兵自由射擊、撤退令） |
 | `src/game/units.ts` | 士兵 InstancedMesh、陣型槽位、接戰動作、陣亡、旗號（含家紋淡印） |
 | `src/game/effects.ts`、`ninja.ts`、`terrain.ts` | 特效、忍者顯示、地形與據點（延伸原野、河、遠山、灌木石頭） |
@@ -59,6 +61,7 @@ TypeScript + Vite + Three.js，單一 HTML 輸出（約 1.66 MB，其中美術�
 | `tools/pace.ts` | AI 對 AI 批次量測節奏（設定 base／steady／line／crane／craneT） |
 | `tools/ai-diag.ts` | AI 行為診斷：目標切換、回頭、落單、戰線散開 |
 | `tools/matrix.ts`、`tools/ablate.ts` | 忍者眾對戰矩陣與逆轉率；單一組合的機制消融 |
+| `tools/strategy.ts`、`tools/daimyo.ts` | 玩家方針（含一團）對預設 AI 的勝率；大名模式玩家依機率採納軍師建議的勝率與各類建議的消融 |
 | `tools/shot.mjs` | 無頭瀏覽器截圖（playwright-core ＋ 工作區預裝的 Chromium） |
 
 ## 5. 建置、測試、發布

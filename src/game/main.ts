@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { newState, step, effM, updDims, height, active, dist, cat, general, passiveOn, inForest, inPaddy, inMarsh, inWater, onTrail, isRanged, archerRange, mulberry32, useSkill, useStrategy, battleCry, useJutsu, skillBlocked, canSee, type Unit, type Formation, type Ninja } from '../sim/sim.ts';
 import { MAP, UT } from '../sim/data.ts';
+import { adviseSide, weakestEngaged as weakest, cmdBlocked, CMD_CD } from '../sim/advisor.ts';
 import { setup, issueCommand, cmdOf, applyDeploy, DEFAULT_DOCTRINE, DEFAULT_DEPLOY, type Doctrine, type CmdKind, type Deploy, type Wing } from '../sim/ai.ts';
 import { ROSTER_T } from '../sim/data.ts';
 import { GAME_RULES, SIM_DT } from '../sim/game-rules.ts';
@@ -428,7 +429,6 @@ function stratState(): string {
 function tryStrat() { const w = stratState(); if (w) { hud.toast(`${STRATEGY[general(S, 0).strategy!].name}：${w}`); return; } useStrategy(S, 0); }
 
 // ---------------- 大名令與軍師建議（大名模式） ----------------
-const CMD_CD: Record<CmdKind, number> = { charge: 90, regroup: 60, relieve: 30, focus: 30, commit: 90, raid: 45 };
 const CMD_INFO: Record<CmdKind, { name: string; desc: string }> = {
   charge: { name: '全軍突擊', desc: '30 秒內全線跑步壓上、騎兵自由獵殺' },
   regroup: { name: '全軍整頓', desc: '戰線後退 60 m，動搖的部隊脫離接戰，20 秒守勢' },
@@ -442,21 +442,8 @@ const cmdCd: Partial<Record<CmdKind, number>> = {};
 let pendingPick: CmdKind | null = null;
 let cmdOpen = false;
 hud.onCmd = () => { cmdOpen = !cmdOpen; hud.setCmdOpen(cmdOpen); infoT = 0; };
-function weakestEngaged(): Unit | null {
-  let w: Unit | null = null, wm = 101;
-  for (const u of S.units) if (u.side === 0 && active(u) && u.contacts.length && u.type !== 'general') { const m = effM(S, u); if (m < wm) { wm = m; w = u; } }
-  return w;
-}
-function cmdState(k: CmdKind): string {
-  if (!started) return '尚未出陣';
-  if ((cmdCd[k] ?? 0) > S.t) return `冷卻中（${Math.ceil(cmdCd[k]! - S.t)} 秒）`;
-  const c = cmdOf(S, 0); if (c && c.kind === k) return `執行中（${Math.ceil(c.until - S.t)} 秒）`;
-  const g = general(S, 0);
-  if (k === 'commit' && (!g.cmdAlive || !active(g))) return '主將不在';
-  if (k === 'relieve' && !weakestEngaged()) return '沒有接戰中的友軍';
-  if (k === 'raid' && !S.units.some(u => u.side === 0 && u.type === 'cav' && active(u))) return '騎兵不在';
-  return '';
-}
+const weakestEngaged = () => weakest(S, 0);
+function cmdState(k: CmdKind): string { return started ? cmdBlocked(S, 0, k, cmdCd) : '尚未出陣'; }
 function doCmd(k: CmdKind, target?: number): boolean {
   const w = cmdState(k); if (w) { hud.toast(`${CMD_INFO[k].name}：${w}`); return false; }
   if ((k === 'focus' || k === 'raid') && target === undefined) { pendingPick = k; jutsu = null; hud.prompt(`${CMD_INFO[k].name}：點選目標敵軍`); cmdOpen = false; hud.setCmdOpen(false); return true; }
@@ -488,32 +475,8 @@ function evalAdvice() {
   if (advice) { if (S.t > advice.until || cmdState(advice.cmd)) { advice = null; hud.hideAdvice(); } return; }
   if (S.t - adviceT < 3) return; adviceT = S.t;
   const ok = (id: string, k: CmdKind) => !((adviceCd[id] ?? 0) > S.t) && !cmdState(k);
-  const own = S.units.filter(u => u.side === 0 && active(u));
-  const seen = S.units.filter(u => u.side === 1 && active(u) && intelOf(u) >= 2);
-  const cands: Advice[] = [];
-  const push = (id: string, text: string, cmd: CmdKind, target?: number) => { if (ok(id, cmd)) cands.push({ id, text, cmd, target, until: S.t + 15 }); };
-  // 友軍動搖且有人能去幫
-  const weak = weakestEngaged();
-  if (weak && effM(S, weak) < 50 && own.some(u => u !== weak && !u.contacts.length && !u.retreating && (u.type === 'spear' || u.type === 'samurai' || u.type === 'cav')))
-    push('relieve:' + weak.id, `${nameOf(weak)}動搖了，派空手的部隊從側背打它的對手。`, 'relieve', weak.id);
-  // 敵弓兵沒有長槍掩護
-  const cav = own.find(u => u.type === 'cav' && !u.contacts.length);
-  if (cav) {
-    const ea = seen.filter(E => isRanged(E) && dist(cav, E) < 260 && !seen.some(X => X.type === 'spear' && !X.contacts.length && dist(X, E) < 60)).sort((a, b) => dist(a, cav) - dist(b, cav))[0];
-    if (ea) push('raid:' + ea.id, `敵${nameOf(ea)}弓兵沒有長槍掩護，讓騎兵繞到背後衝鋒。`, 'raid', ea.id);
-  }
-  // 敵軍動搖：集中弓火
-  const wav = seen.filter(E => (E.state === 'waver' || intelOf(E) >= 3 && effM(S, E) < 50) && own.some(u => isRanged(u) && active(u) && dist(u, E) <= archerRange(S, u, E))).sort((a, b) => effM(S, a) - effM(S, b))[0];
-  if (wav) push('focus:' + wav.id, `敵${nameOf(wav)}士氣動搖，弓兵集火就能逼它潰走。`, 'focus', wav.id);
-  // 敵主將孤立
-  const eg = general(S, 1);
-  if (eg.cmdAlive && active(eg) && intelOf(eg) >= 2 && g.cmdAlive && active(g) && effM(S, g) >= 60 && dist(g, eg) < 200 && !seen.some(X => X.type === 'spear' && !X.contacts.length && dist(X, eg) < 60))
-    push('commit', `敵主將${eg.cmd}身邊沒有長槍，主公可親率旗本直取。`, 'commit');
-  // 敵軍勢低：全軍突擊；我方軍勢不利：整頓
-  const routing = seen.filter(E => E.state === 'rout').length;
-  if (S.army[1] < 40 || routing >= 2) push('charge', S.army[1] < 40 ? `敵軍勢只剩 ${Math.round(S.army[1])}，全軍壓上可一舉擊潰。` : `敵軍已有 ${routing} 隊潰走，趁勢全軍突擊。`, 'charge');
-  if (S.army[0] < 50 && S.army[1] > S.army[0] + 15 && own.filter(u => u.contacts.length).length >= 2) push('regroup', `我軍軍勢 ${Math.round(S.army[0])} 落後，先整頓戰線，別讓潰走連鎖。`, 'regroup');
-  const a = cands[0]; if (!a) return;
+  const a0 = adviseSide(S, 0, ok); if (!a0) return;
+  const a: Advice = { ...a0, until: S.t + 15 };
   advice = a; adviceCd[a.id] = S.t + 60;
   hud.showAdvice(`${img(portraitOf(g.advisor ?? undefined), 'pp')}<div class="tx"><b>${g.advisor}</b>：${a.text}</div>`,
     () => { if (advice) { doCmd(advice.cmd, advice.target); adviceCd[advice.id] = S.t + 120; } advice = null; hud.hideAdvice(); },
