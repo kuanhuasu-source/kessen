@@ -20,6 +20,7 @@ export type Unit = {
   primary: number; contacts: number[];
   ammo: number; ammoMax: number; reload: number; supplyAcc: number; fireTarget: number;
   skillCd: number; cryCd: number; eff: Effect[]; noRegenUntil: number;
+  merit: number; lastHitBy: number; // 戰場功績、最後打到我的敵隊（功績歸屬）
   retreating: boolean; disUntil: number;
   recent: Ev[]; effHist: number[];
   maxDrop5: number; maxDrop5Srcs: string; maxShock5: number;
@@ -84,7 +85,7 @@ export type State = {
 };
 
 // ---------------- 工具 ----------------
-export type FxEv = { k: 'volley' | 'charge' | 'blocked' | 'flank' | 'rear' | 'water' | 'rout' | 'shatter' | 'rally' | 'cmd' | 'adv' | 'chain' | 'cheer' | 'army' | 'surround' | 'found' | 'skill' | 'strat' | 'cry' | 'jutsu' | 'ninjaDead'; a: number; b?: number; n?: number; s?: string };
+export type FxEv = { k: 'volley' | 'charge' | 'blocked' | 'flank' | 'rear' | 'water' | 'rout' | 'shatter' | 'rally' | 'cmd' | 'adv' | 'chain' | 'cheer' | 'army' | 'surround' | 'found' | 'skill' | 'strat' | 'cry' | 'jutsu' | 'ninjaDead' | 'merit'; a: number; b?: number; n?: number; s?: string };
 const fx = (S: State, e: FxEv) => { S.fx?.push(e); };
 
 export function mulberry32(a: number) {
@@ -180,7 +181,7 @@ export function makeUnit(S: State, side: Side, r: RosterEntry | null, type: UTyp
     lastDmgT: -99, lastArrowT: -99, lossSteps: 0, lastFriendRoutT: -999,
     destX: x, destY: y, hasDest: false, run: false, runDist: 0, chargeUntil: -1,
     primary: -1, contacts: [], ammo: T.ammo, ammoMax: T.ammo, reload: 0, supplyAcc: 0, fireTarget: -1,
-    skillCd: 0, cryCd: 0, eff: [], noRegenUntil: -1, retreating: false, disUntil: -1,
+    skillCd: 0, cryCd: 0, eff: [], noRegenUntil: -1, merit: 0, lastHitBy: -1, retreating: false, disUntil: -1,
     recent: [], effHist: [], maxDrop5: 0, maxDrop5Srcs: '', maxShock5: 0,
     role: '', target: -1, targetT: -99, holdX: x, holdY: y, ambush: false,
     cavPhase: 'idle', cavPhaseT: 0, huntNinja: -1, fakeType: null, fakeUntil: -1,
@@ -335,6 +336,7 @@ export function rout(S: State, u: Unit, wipe = false) {
   if (S.rec.firstRoutT[u.side] < 0) S.rec.firstRoutT[u.side] = t;
   u.state = shatter ? 'shattered' : 'rout';
   fx(S, { k: shatter ? 'shatter' : 'rout', a: u.id });
+  if (R.meritOn && !wipe) { const K = S.units[u.lastHitBy]; if (K && K.side !== u.side && active(K)) addMerit(S, K, 1, 'rout'); }
   u.retreating = false; u.primary = -1;
   if (!(u.type === 'general' && R.bannerReplaces)) aHit(S, u.side, R.aRout, 'unitRout');
   if (shatter) aHit(S, u.side, R.aShatter, 'unitShatter');
@@ -364,7 +366,14 @@ export function cmdDeath(S: State, u: Unit, who: 'cmd' | 'adv', how: string, kil
   fx(S, { k: who, a: u.id });
   S.rec.cmdDeaths.push({ t: S.t, side: u.side, who: who === 'cmd' ? (u.type === 'general' ? 'general' : 'vice') : 'advisor', how });
   if (killer && active(killer)) mHit(S, killer, R.killCmd, 'killCmd');
+  if (R.meritOn && who === 'cmd' && killer && active(killer)) addMerit(S, killer, u.type === 'general' ? 3 : 2, u.type === 'general' ? 'gen' : 'cmd');
 }
+// 戰場功績：擊潰敵隊或討取武將的部隊得功；每得功士氣提升，攻擊依功績加成（見 meleeAttack／volley）
+export function addMerit(S: State, u: Unit, n: number, why: string) {
+  u.merit += n; mHit(S, u, S.R.meritMorale, 'merit');
+  fx(S, { k: 'merit', a: u.id, n: u.merit, s: why });
+}
+export const meritMul = (S: State, u: Unit) => S.R.meritOn ? 1 + S.R.meritAtk * Math.min(S.R.meritMax, u.merit) : 1;
 
 // ---------------- 技能 ----------------
 export function skillBlocked(S: State, side: Side) { return S.R.kanpaOn && S.kanpaUntil[side] > S.t; }
@@ -473,6 +482,7 @@ const dmgAcc: number[] = []; const atkBy: number[][] = []; const shinsaAcc: numb
 
 export function damage(S: State, tg: Unit, dmg: number, src: Unit) {
   if (dmg <= 0) return;
+  if (src.side !== tg.side) tg.lastHitBy = src.id;
   let m = 1;
   if (has(S, tg, 'dmg50')) m *= 0.5;
   if (tg.type === 'general' && passiveOn(tg, 'bishamon')) m *= 0.8;
@@ -516,7 +526,7 @@ function meleeAttack(S: State, A: Unit, T: Unit, nShare: number) {
   n *= cT === 0 ? 1 : cT === 1 ? 0.5 : 0.25;
   if (n <= 0) return;
   const BT = UT[A.type];
-  let atk = BT.atk;
+  let atk = BT.atk * meritMul(S, A);
   if (passiveOn(A, 'atk2')) atk += 2;
   if (A.chargeUntil > t && chargeOK(S, A, T, cA)) atk += chargeBonus(S, A);
   if (A.type === 'spear' && isCav(T)) atk += 12;
@@ -569,7 +579,7 @@ function volley(S: State, A: Unit, T: Unit) {
   if (T.form === 'loose') p *= 0.6; else if (T.form === 'dense') p *= 1.3;
   if (S.smokes.some(s => s.until > S.t && Math.hypot(T.x - s.x, T.y - s.y) <= 60)) p *= 0.5;
   if (S.R.cmdFocusHit !== 1 && activeCmd(S, A.side, 'focus', T.id)) p *= S.R.cmdFocusHit; // 集火令：齊射更密
-  const hits = poisson(S.rng, A.men * p);
+  const hits = poisson(S.rng, A.men * p * meritMul(S, A));
   fx(S, { k: 'volley', a: A.id, b: T.id, n: hits });
   damage(S, T, hits * S.R.arrowDmg, A);
   mHit(S, T, S.R.volley, 'volley');
@@ -589,7 +599,7 @@ function gunVolley(S: State, A: Unit, T: Unit) {
   if (inForest(T.x, T.y)) p *= 0.5;
   if (T.form === 'loose') p *= 0.6; else if (T.form === 'dense') p *= 1.3;
   if (S.smokes.some(s => s.until > S.t && Math.hypot(T.x - s.x, T.y - s.y) <= 60)) p *= 0.5;
-  const hits = poisson(S.rng, A.men * p);
+  const hits = poisson(S.rng, A.men * p * meritMul(S, A));
   fx(S, { k: 'volley', a: A.id, b: T.id, n: hits, s: 'gun' });
   damage(S, T, hits * R.gunDmg, A);
   mHit(S, T, R.gunVolley, 'gun');

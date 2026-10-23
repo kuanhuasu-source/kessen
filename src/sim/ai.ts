@@ -137,8 +137,8 @@ export function setup(S: State) {
     if (!S.R.ninjaSides[s]) continue;
     const c = CLANS[S.clan[s]];
     const roles = ['scoutW', 'scoutE', 'shadow', 'rear', 'shadow'];
-    for (let i = 0; i < c.n; i++) S.ninjas.push({ id: S.ninjas.length, side: s, x: 500 + (i - 2) * 10, y: Yl(s, 30), alive: true,
-      detUntil: -1, immuneUntil: -1, nearT: 0, role: roles[i], tx: 500, ty: Yl(s, 30), fleeUntil: -1 });
+    for (let i = 0; i < c.n; i++) S.ninjas.push({ id: S.ninjas.length, side: s, x: 500 + (i - 2) * 10, y: Yl(s, 30 + S.R.ninjaFwd), alive: true,
+      detUntil: -1, immuneUntil: -1, nearT: 0, role: roles[i], tx: 500, ty: Yl(s, 30 + S.R.ninjaFwd), fleeUntil: -1 });
   }
   S.ai = tick;
 }

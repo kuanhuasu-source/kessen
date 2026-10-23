@@ -835,7 +835,7 @@ function terrainNotes(u: Unit): string[] {
   return n;
 }
 const MORALE_SRC: Record<string, string> = {
-  losses: '傷亡', flank: '側擊', rear: '背襲', chargeHit: '騎兵衝鋒', volley: '箭雨', friendRout: '友軍潰走', cmdDeath: '武將討死',
+  merit: '功績', killCmd: '討取武將', losses: '傷亡', flank: '側擊', rear: '背襲', chargeHit: '騎兵衝鋒', volley: '箭雨', friendRout: '友軍潰走', cmdDeath: '武將討死',
   kuruma: '車懸', akazonae: '赤備', kesshiEnd: '決死結束', rumor: '流言', toseki: '投石', enemyCry: '敵方鬨聲', _drain: '持續消耗', water: '半渡而擊', gun: '鐵砲', cannon: '大筒', commit: '主公親征', charge: '全軍突擊', raid: '繞後令', focus: '集火令', regroup: '整頓令',
 };
 const ARMY_SRC: Record<string, string> = {
@@ -916,6 +916,7 @@ function infoUnit(): Unit | null {
   if (inspect >= 0) return S.units[inspect];
   return selected.size === 1 ? S.units[[...selected][0]] : null;
 }
+const MERIT_NAME: Record<number, string> = { 1: '一番槍', 2: '武功', 3: '武名' }; // 功績 1／2／3+ 的稱號
 function infoHtml(u: Unit): string {
   const lvl = intelOf(u);
   if (lvl <= 1) return fogHtml(u);
@@ -952,6 +953,7 @@ function infoHtml(u: Unit): string {
   } else if (u.state === 'shattered') rows.push(`<div class="row"><span>　</span><span class="neg">已第 ${u.routCount} 次潰逃，無法再重整</span></div>`);
   else if (u.retreating) rows.push(`<div class="row"><span>　</span><span>重整後不會主動出擊；下達指令或士氣回到 50 即恢復</span></div>`);
   if (isRanged(u)) rows.push(`<div class="row"><span>${u.type === 'archer' ? '箭矢' : u.type === 'gun' ? '彈藥' : '砲彈'}</span><span class="${u.ammo <= 2 ? 'warn' : ''}">${u.ammo}／${u.ammoMax} 輪${u.reload > 0 && u.type !== 'archer' ? `・裝填 ${Math.ceil(u.reload)} 秒` : ''}${u.type === 'cannon' ? `・${S.R.cannonMin} m 內打不到` : ''}</span></div>`);
+  if (u.merit > 0) rows.push(`<div class="row"><span>功績</span><span class="pos">${'★'.repeat(Math.min(3, u.merit))} ${MERIT_NAME[Math.min(3, u.merit)]}・攻擊 +${Math.round(S.R.meritAtk * Math.min(S.R.meritMax, u.merit) * 100)}%</span></div>`);
   if (u.cmd) rows.push(`<div class="row"><span>武將</span><span>${u.cmd}${u.cmdAlive ? '' : '（討死）'}${u.advisor ? `・軍師 ${u.advisor}${u.advAlive ? '' : '（討死）'}` : ''}</span></div>`);
   return `<div class="hd">${kanBox('k', KANJI[u.type], side === 0 ? 'var(--takeda)' : 'var(--uesugi)', portraitOf(u.cmd), unitIcon(u.type))}
     <div><div class="nm">${WATCH ? `${SIDE_NAME[side]}・` : side === 1 ? '敵・' : ''}${u.cmd || '援軍'}隊</div><div class="sub">${TYPE_NAME[u.type]}${form}・${lvl >= 3 ? `${u.men}／${u.men0} 人` : `約 ${Math.max(5, Math.round(u.men / 5) * 5)} 人`}${side !== viewSide() && !(WATCH && visMode === 'all') ? (lvl >= 3 ? '・<span class="pos">洞悉</span>' : '・識別') : ''}</div></div>
@@ -1151,6 +1153,7 @@ function showEnd() {
     ${row('全滅（隊）', s => R.wipes.filter(r => r.side === s).length)}
     ${row('武將討死', s => R.cmdDeaths.filter(r => r.side === s && r.who !== 'advisor').length)}
     ${row('據點', s => S.points.filter(p => p.owner === s).length)}
+    ${row('勳功第一', s => { const u = S.units.filter(u => u.side === s && u.merit > 0).sort((a, b) => b.merit - a.merit)[0]; return u ? `${u.cmd || '援軍'}（${u.merit} 功）` : '—'; })}
     ${row('忍者存活', s => `${S.ninjas.filter(n => n.side === s && n.alive).length}／${S.ninjas.filter(n => n.side === s).length}`)}
     ${row('暗殺成功', s => `${R.nin[s].assKill}／${R.nin[s].assTry}`)}
     </table>`;
@@ -1231,6 +1234,7 @@ function afterStep() {
         if (intelOf(A) >= 2) pulses.add(A.x, A.y, S.R.friendlyRoutR, '#e0574a');
         if (mine(A) || intelOf(A) >= 2) say(mine(A) ? `${nameOf(A)}${e.k === 'shatter' ? '潰滅' : '潰走'}！` : `敵軍 ${nameOf(A)}${e.k === 'shatter' ? '潰滅' : '潰走'}`);
         break;
+      case 'merit': if (mine(A) || intelOf(A) >= 2) { floatText(A, `功績 ${'★'.repeat(Math.min(3, e.n ?? 1))}`, 'good'); if (mine(A)) { say(`${nameOf(A)}${e.s === 'gen' ? '討取敵大將' : e.s === 'cmd' ? '討取敵將' : '擊潰敵隊'}，功績 ${e.n}${(e.n ?? 0) <= 3 ? `・${MERIT_NAME[e.n ?? 1]}` : ''}`); sfx.drum(1, 0.45); } } break;
       case 'rally': sfx.rally(); floatText(A, '重整', 'good'); if (mine(A)) say(`${nameOf(A)}重整完畢，等候命令`); break;
       case 'cmd': say(`${mine(A) ? '' : '敵將 '}${A.cmd} 討死！`); floatText(A, '討死', 'bad'); break;
       case 'adv': say(`${mine(A) ? '' : '敵軍師 '}${A.advisor} 討死！`); break;

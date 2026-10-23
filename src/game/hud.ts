@@ -185,6 +185,7 @@ body { font-family: var(--ui); -webkit-user-select: none; user-select: none; -we
 .card.rout { opacity: 0.5; }
 .card.sel { border-color: var(--paper); box-shadow: 0 0 0 1px var(--paper) inset; background: var(--ink-b); }
 .card .kan { width: 34px; height: 34px; border-radius: 6px; display: grid; place-items: center; font-family: var(--display); font-size: 20px; color: var(--paper); }
+.card .mrt { position: absolute; right: 2px; top: -7px; font-size: 9px; line-height: 13px; color: var(--gold); letter-spacing: -1px; text-shadow: 0 0 2px var(--ink); }
 .card .men { position: absolute; left: 25px; top: -6px; min-width: 18px; padding: 0 4px; font-size: 9.5px; line-height: 14px; border-radius: 7px;
   background: var(--ink); border: 1px solid var(--line); font-variant-numeric: tabular-nums; text-align: center; }
 .cards { padding-top: 8px; padding-right: 12px; }
@@ -420,7 +421,7 @@ export class Hud {
     const b = document.createElement('button'); b.className = 'card'; b.type = 'button';
     b.setAttribute('aria-label', `${TYPE_NAME[u.type]}・${u.cmd || '援軍'}`); b.title = `${TYPE_NAME[u.type]}・${u.cmd || '援軍'}`;
     b.innerHTML = `${kanBox('kan', KANJI[u.type], u.side === 0 ? 'var(--takeda)' : 'var(--uesugi)', portraitOf(u.cmd), unitIcon(u.type))}
-      <span class="men">${u.men}</span><span class="mor"><i></i></span><span class="rdy"></span>
+      <span class="men">${u.men}</span><span class="mrt" hidden></span><span class="mor"><i></i></span><span class="rdy"></span>
       <span class="txt"><span class="t">${TYPE_NAME[u.type]}</span><span class="c">${u.cmd || '援軍'}</span></span>`;
     let last = 0;
     b.addEventListener('click', e => {
@@ -466,6 +467,7 @@ export class Hud {
       c.hidden = u.state === 'gone' || u.state === 'shattered';
       c.classList.toggle('rout', u.state === 'rout');
       c.querySelector('.men')!.textContent = String(u.men);
+      const mr = c.querySelector<HTMLElement>('.mrt')!; if (u.merit > 0) { mr.hidden = false; mr.textContent = '★'.repeat(Math.min(3, u.merit)); mr.title = `功績 ${u.merit}`; } else mr.hidden = true;
       const m = morale(u);
       const bar = c.querySelector<HTMLElement>('.mor i')!;
       bar.style.width = `${m}%`;
