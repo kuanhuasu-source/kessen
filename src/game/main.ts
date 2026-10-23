@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { newState, step, effM, updDims, height, active, dist, cat, general, passiveOn, inForest, inPaddy, inMarsh, inWater, onTrail, isRanged, archerRange, mulberry32, useSkill, useStrategy, battleCry, useJutsu, skillBlocked, canSee, type Unit, type Formation, type Ninja } from '../sim/sim.ts';
 import { MAP, UT } from '../sim/data.ts';
 import { adviseSide, weakestEngaged as weakest, cmdBlocked, CMD_CD, dispatchScouts, type Advice as SimAdvice } from '../sim/advisor.ts';
+import { evalDecision, applyDecision, tickDecisions, type Decision } from '../sim/decisions.ts';
 import { setup, issueCommand, cmdOf, applyDeploy, DEFAULT_DOCTRINE, DEFAULT_DEPLOY, type Doctrine, type CmdKind, type Deploy, type Wing } from '../sim/ai.ts';
 import { ROSTER_T } from '../sim/data.ts';
 import { GAME_RULES, SIM_DT } from '../sim/game-rules.ts';
@@ -189,6 +190,7 @@ const nameOf = (u: Unit) => `${u.cmd || '援軍'}隊`;
 const mine = (u: Unit) => u.side === 0;
 const selected = new Set<number>();
 let paused = true, speed = 1, started = false;
+let decision: Decision | null = null; // 決策卡顯示中：戰場暫停等玩家選
 const SPEEDS = WATCH ? [0.5, 1, 2, 3, 5] : [0.5, 1, 2, 3];
 
 const setSel = (ids: number[], add: boolean) => {
@@ -223,6 +225,7 @@ function reloadWith(over: Record<string, string | null>) {
   location.hash = p.toString(); location.reload();
 }
 function begin() { applyWarCouncil(); started = true; paused = false; hud.toast(WATCH ? '開始觀戰' : '出陣！'); unlockAudio(); sfx.battleStart(); }
+if (DAIMYO) { const b = document.querySelector<HTMLElement>('#b-cmd'); if (b) b.style.display = 'none'; } // 大名令併入決策卡
 hud.setSound(!isMuted()); hud.onSound = () => { setMuted(!isMuted()); hud.setSound(!isMuted()); hud.toast(isMuted() ? '音效關閉' : '音效開啟'); if (!isMuted()) sfx.drum(1, 0.4); };
 hud.speeds = SPEEDS;
 hud.setWatch(WATCH, () => { camAuto = !camAuto; manualUntil = 0; hud.toast(camAuto ? '導播鏡頭' : '手動鏡頭'); },
@@ -481,6 +484,19 @@ function cmdHtml(): string {
 // 軍師建議：每 3 秒依我方看得到的情報評估一次，一次一張卡；軍師陣亡就沒有建議
 type Advice = SimAdvice & { until: number };
 let advice: Advice | null = null; const adviceCd: Record<string, number> = {}; let adviceT = -99;
+// 決策卡（取代舊的建議卡與大名令面板）：每 0.5 秒評估一次；出現時暫停模擬，選完才繼續
+let decT = -9;
+function evalDecisionCard() {
+  if (!started || S.over || S.t - decT < 0.5) return; decT = S.t;
+  const d = evalDecision(S, 0); if (!d) return;
+  decision = d;
+  const sp = d.unit !== undefined ? S.units[d.unit] : null; if (sp) { rig.tx = sp.x; rig.ty = sp.y - 10; }
+  const pic = d.advisor ? portraitOf(general(S, 0).advisor ?? undefined) : portraitOf(d.speaker);
+  sfx.advice();
+  hud.showDecision(`<div class="hd2">${d.kind === 'doctrine' ? '軍師提案' : '請示'}・戰場暫停</div><div style="display:flex;gap:8px;align-items:center">${img(pic, 'pp')}<div class="tx"><b>${d.speaker}</b>：${d.text}</div></div>`,
+    d.options.map(o => ({ label: o.label, hint: o.hint, rec: o.rec })),
+    i => { const o = d.options[i]; const msg = applyDecision(S, 0, d, o.id); decision = null; hud.hideDecision(); hud.toast(msg); say(msg); sfx.cmd(); if (o.id === 'charge' || o.id === 'allin') say('全軍突擊！'); });
+}
 function evalAdvice() {
   if (!started || S.over) return;
   const g = general(S, 0); if (!g.advAlive) { if (advice) { advice = null; hud.hideAdvice(); } return; }
@@ -1288,7 +1304,7 @@ const prof = { frames: 0, sim: 0, units: 0, fx: 0, hud: 0, render: 0 };
 function frame(now: number) {
   const t0 = performance.now();
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
-  if (!paused) {
+  if (!paused && !decision) {
     acc += dt * speed;
     let n = 0;
     while (acc >= SIM_DT && n < 12) {
@@ -1300,11 +1316,11 @@ function frame(now: number) {
       if (S.over && !ended) { ended = true; paused = true; showEnd(); break; }
     }
   }
-  const alpha = paused ? 1 : Math.min(1, acc / SIM_DT);
+  const alpha = paused || decision ? 1 : Math.min(1, acc / SIM_DT);
   prof.sim += performance.now() - t0; let tp = performance.now();
   keyboardCamera(dt);
   rig.apply(dt);
-  const gdt = paused ? 0 : dt * speed;
+  const gdt = paused || decision ? 0 : dt * speed;
   for (const v of views) {
     const lvl = intelOf(v.u);
     v.update(gdt, alpha, effM(S, v.u), S.t, S.units, sink, lvl, lvl === 1 ? seenPos(S, viewSide(), v.u) ?? undefined : undefined);
@@ -1363,7 +1379,7 @@ function frame(now: number) {
   if (infoT <= 0) {
     infoT = 0.25;
     hud.setInfo(cmdOpen ? cmdHtml() : selNin >= 0 ? ninjaHtml(S.ninjas[selNin]) : infoU && infoU.id !== infoClosed ? infoHtml(infoU) : inspectPoint >= 0 ? pointHtml(inspectPoint) : null);
-    if (DAIMYO && !paused) evalAdvice();
+    if (DAIMYO && !paused && !decision) { for (const line of tickDecisions(S, 0)) say(line); evalDecisionCard(); }
     // 接戰環境音：有部隊接戰時每 0.5～0.9 秒一陣兵刃聲，強度看接戰隊數
     if (!paused && S.t - lastClashT > 0.5 + Math.random() * 0.4) { lastClashT = S.t; let n = 0; for (const u of S.units) if (u.contacts.length && active(u)) n++; if (n > 0) sfx.clash(Math.min(1, n / 8)); }
     if (S.R.pointWin && S.holdAll[0] > 0) hud.setHold(0, 60 - S.holdAll[0]); else if (S.R.pointWin && S.holdAll[1] > 0) hud.setHold(1, 60 - S.holdAll[1]); else hud.setHold(-1, 0);

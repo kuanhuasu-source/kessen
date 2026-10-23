@@ -5,6 +5,7 @@ import { CLAN_CHOICES } from '../src/sim/data.ts';
 import { newState, step, mulberry32, type State } from '../src/sim/sim.ts';
 import { setup, issueCommand, DEFAULT_DOCTRINE, DEFAULT_DEPLOY, type CmdKind } from '../src/sim/ai.ts';
 import { adviseSide, cmdBlocked, weakestEngaged, CMD_CD, dispatchScouts } from '../src/sim/advisor.ts';
+import { evalDecision, applyDecision, tickDecisions } from '../src/sim/decisions.ts';
 import { GAME_RULES, SIM_DT } from '../src/sim/game-rules.ts';
 import { makeRules, type Rules } from '../src/sim/rules.ts';
 
@@ -13,10 +14,11 @@ const RV: Record<string, Partial<Rules>> = { base: {}, passive: { daimyoPassive:
   midB: { cmdRelieveN: 2, cmdRaidCharge: 12, cmdRaidShock: -10, cmdFocusMorale: -4, cmdFocusHit: 1.3, cmdRegroupMorale: 8 }, strongB: { cmdRelieveN: 2, cmdRaidCharge: 15, cmdRaidShock: -15, cmdFocusMorale: -6, cmdFocusHit: 1.6, cmdRegroupMorale: 12 }, c8: { cmdCommitMorale: 8 }, ch5: { cmdChargeMorale: 5 }, both: { cmdCommitMorale: 8, cmdChargeMorale: 5 }, c12: { cmdCommitMorale: 12 }, ch8: { cmdChargeMorale: 8 } };
 const N = Number(process.argv[2] || 60);
 const rates = (process.argv[3] || '0,0.5,1').split(',').map(Number);
+const MODE = process.env.MODE || 'dec'; // dec＝決策卡（p＝選軍師建議的機率，其餘隨機；p<0 不問）；adv＝舊建議卡
 const rv = process.argv[4] || 'base';
 const skip = new Set((process.argv[5] || '').split(',').filter(Boolean)); // 這些類型的建議不出現（消融用）
 const R = makeRules({ ...GAME_RULES, ...(RV[rv] ?? {}), name: rv });
-const kindOf = (id: string) => id.split(':')[0];
+const kindOf = (id: string) => id.startsWith('doc:') || id.startsWith('ev:') ? id.split(':').slice(0, 2).join(':') : id.split(':')[0];
 console.log(`規則 ${rv}，每組 ${N} 局（武田大名模式預設方針，上杉為預設 AI）${skip.size ? `，略過 ${[...skip].join('、')}` : ''}`);
 for (const p of rates) {
   let w = 0, t = 0, shown = 0, taken = 0, id120 = 0, id180 = 0; const byKind: Record<string, { shown: number; taken: number }> = {};
@@ -32,6 +34,10 @@ for (const p of rates) {
     while (!S.over) {
       step(S); S.fx!.length = 0;
       if (s120 < 0 && S.t >= 120) s120 = idf(); if (s180 < 0 && S.t >= 180) s180 = idf();
+      if (MODE === 'dec') {
+        if (p >= 0 && S.t - adviceT >= 0.5) { adviceT = S.t; tickDecisions(S, 0); const d = evalDecision(S, 0); if (d) { shown++; const b = byKind[kindOf(d.id)] ??= { shown: 0, taken: 0 }; b.shown++; const rec = d.options.find(o => o.rec) ?? d.options[0]; const o = rng() < p ? rec : d.options[Math.floor(rng() * d.options.length)]; if (o === rec) { taken++; b.taken++; } applyDecision(S, 0, d, o.id); } }
+        continue;
+      }
       if (p > 0 && S.t - adviceT >= 3) {
         adviceT = S.t;
         const ok = (id: string, k?: CmdKind) => !skip.has(kindOf(id)) && !((adviceCd[id] ?? 0) > S.t) && (!k || !cmdBlocked(S, 0, k, cmdCd));

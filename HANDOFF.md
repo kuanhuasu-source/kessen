@@ -33,6 +33,7 @@
 | M6 | 完成 | 勝負與結算、據點呈現、撤退指令、Gemini 2D 美術 |
 | AI 動作優化 | 完成 | 止抖（aiSteady）＋戰線式指揮（aiLine） |
 | 大名模式 | 完成 | 第一階段：軍議方針、AI 帶兵、軍師建議卡、大名令、接管單隊。第二階段：配置（戰線順序、預備隊、騎兵翼、各翼方針）與將領互換。傳令延遲未做（使用者決定） |
+| 決策卡 | 進行中 | 第一里程碑完成：引擎、13 種卡、暫停制介面、戰報；240 局 不問 50%／選建議 62%／隨機 61%。待做：選項取捨、將領性格、結算一覽 |
 | 軍師與情報回路 | 完成 | 建議規則進模擬層（`advisor.ts`）、半渡而擊與大筒現身建議、`tools/daimyo.ts` 量玩家採納建議的勝率（240 局）：不介入 43%、全採納 53%；繞後與集火最有價值，親征／突擊／整頓量不出效果 |
 | M7 | 進行中 | 效能：士兵矩陣更新優化、每幀分段計時（`__kessen.prof`）、模擬每步 0.205→0.066 ms（探索格改外框掃描、擁擠數每步算一次）；跨瀏覽器：es2020／Safari 14 目標、roundRect polyfill；平衡：矩陣與消融量測完成，調整待提案。真機 fps 仍待回報 |
 
@@ -47,6 +48,7 @@ TypeScript + Vite + Three.js，單一 HTML 輸出（約 1.66 MB，其中美術�
 | `src/sim/rules.ts`、`configs.ts`、`game-rules.ts` | 規則參數；遊戲採用 `GAME_RULES` |
 | `src/sim/data.ts` | 兵種數值、武將名單、忍者眾、地圖 |
 | `src/game/main.ts` | 主迴圈、輸入、指令、資訊面板、事件處理、觀戰導播、結算；大名模式的軍議（`DOCTRINE_ROWS`）、大名令（`doCmd`／`cmdHtml`）、軍師建議卡（`evalAdvice`，規則在 `src/sim/advisor.ts`）、接管（`takeOver`／`handBack`） |
+| `src/sim/decisions.ts` | 決策卡引擎（大名模式主迴圈，2026-10-23）：`evalDecision(S, side)` 回傳該問的卡（方針卡／事件卡、發言人、選項、建議）、`applyDecision` 套用選項（大名令、方針、翼方針、部隊狀態）並排程 40 秒後的戰報、`tickDecisions` 吐戰報與還原翼方針。狀態在 `S.meta.dec`。遊戲層 `evalDecisionCard`（main.ts）每 0.5 秒評估，卡片出現時 `decision` 旗標讓模擬暫停 |
 | `src/sim/advisor.ts` | 軍師建議規則（`adviseSide`，含不帶令的「派忍者偵察」提示 `act: 'scout'` 與 `dispatchScouts`）、大名令冷卻與可否下達（`CMD_CD`／`cmdBlocked`）、情報等級（`intelLvl`）。放模擬層是為了 `tools/daimyo.ts` 能量玩家採納建議的勝率 |
 | `src/game/orders.ts` | 玩家指令層（攻擊追擊、弓兵自由射擊、撤退令） |
 | `src/game/units.ts` | 士兵 InstancedMesh、陣型槽位、接戰動作、陣亡、旗號（含家紋淡印） |
@@ -108,6 +110,7 @@ node tools/shot.mjs "/tmp/phone.html#mode=watch&seed=42" out.png 844 390 2 ./scr
 - AI：不做有序撤退；主將站戰線後 40 m 並追擊附近動搖或潰走敵軍。戰線式指揮（aiLine）：佈陣整體前移 50 m（`deployFwd`，戰線起點 160）、成線階段急行軍（`aiFormRun`）、對峙線在己方 280 m（溪前）、攻勢發起時間 10～40 秒÷侵略性（`aiAttackT0`／`aiAttackTR`）、錨點 3.8 m/s 推進（`aiAnchorSpd`）、對射 12 秒（`aiVolleyDur`）、攻勢錨點以看得到的敵軍為目標（`aiHunt`，否則兩軍會互相穿過各站對方本陣，時間到 25%）；回顧前是 110／走路／250／30～110 秒／3.3／20 秒，首戰 88 秒；回顧後 150 局：首戰 56 秒、時長 292 秒、崩潰 84%、時間到 16%、武田 45%；加 aiHunt 與退卻後 150 局：時長 280 秒、崩潰 87%、時間到 3%、退卻 10%、武田 45%；鐵砲命中 0.45 後 150 局：時長 268 秒、崩潰 87%、時間到 2%、退卻 11%、武田 52%；功績與忍者前出後 150 局：時長 258 秒、崩潰 88%、武田 54%、逆轉率 13%；大名模式 240 局 不介入 51%／全採納 60%；接戰後空手部隊在 120 m（240 秒後 180 m）內側擊鄰隊對手。AI 對 AI 150 場（2026-10-22，含溪流、起伏、鐵砲／大筒）：時長 335 秒、首戰 84 秒、交戰期 251 秒、總崩潰結束 79%、時間到 16%、據點 5%、武田勝 51%。策略模擬（`tools/strategy.ts`，武田對預設 AI 80 局）：auto 43%、橫陣＋射完箭再攻 29%、橫陣＋開戰即攻 48%、一團 53%、魚鱗 50%
 - 測試：網址 `#ai=legacy|steady|line|crane` 切換 AI 變體；`node tools/ai-diag.ts 20 line` 看抖動指標。`#cmd=manual` 全手動模式。`window.__kessen.doCmd('charge')`、`evalAdvice()`、`manualSet` 給腳本用。
 - 軍議配置：預設只顯示戰線順序／預備隊／騎兵翼；各翼方針與將領互換在「進階 ▸」（`advOpen`，depHtml）。
+- 大名模式主迴圈（2026-10-23）：決策卡。設計決定：暫停制；方針卡只在前提被推翻時由軍師提、事件卡由現場將領請示；選項 2～4、一個標軍師建議、依情報等級增減；大名令併入卡片（「令」鈕隱藏）；依令結果 40 秒後戰報回報；敵方 AI 立即執行。
 - 大名令只留四道：馳援（兩隊，`cmdRelieveN`）、集中弓火（命中 ×1.3、每輪 −4，`cmdFocusHit`／`cmdFocusMorale`）、騎兵繞後（衝鋒 +12、接觸 −10，`cmdRaidCharge`／`cmdRaidShock`）、全軍整頓（接戰中與動搖者 +8，`cmdRegroupMorale`）。全軍突擊與主將親征 240 局量不出效果，2026-10-22 回顧砍掉（`issueCommand` 仍支援給工具用）。軍師建議也只剩對應的四類。大名模式 240 局：不介入 43%、全採納建議 52%。
 - 大名模式的預設方針：射完箭再攻（240 局：不介入 43%／全採納建議 48%；軍師裁量 40／39%、開戰即攻 30／40%，開戰即攻在新節奏下會先渡溪挨半渡而擊）、騎兵接戰後繞後、撤退線 35、橫陣。`daimyoPassive`／`daimyoPassiveCav`（玩家方 AI 等令才側擊／繞後）量測結果 18／27%，保留為關閉；`playerOrders`（orders.ts）只處理接管的部隊。將領互換在 `applyWarCouncil`（main.ts）於出陣時套用：改 `cmd/skill/passive`、箭矢 ±5、`S.meta.tenkyu` 跟著典廄走、`hud.refreshCard`。localStorage 鍵：`kessen.doctrine`、`kessen.deploy`、`kessen.roster`。
 

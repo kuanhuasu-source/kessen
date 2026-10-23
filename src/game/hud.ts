@@ -117,6 +117,14 @@ body { font-family: var(--ui); -webkit-user-select: none; user-select: none; -we
 .advice .pp { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; object-position: center 18%; border: 1px solid var(--gold); flex: none; }
 .advice .tx b { color: var(--gold); font-family: var(--display); }
 .advice .bt { display: flex; flex-direction: column; gap: 4px; flex: none; }
+.advice.dec { max-width: min(520px, 86vw); flex-direction: column; align-items: stretch; }
+.advice.dec .bt { flex-direction: column; margin-top: 6px; }
+.advice.dec .bt button { min-height: 36px; text-align: left; padding: 4px 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; border-radius: 8px; }
+.advice.dec .bt button:first-child { background: transparent !important; color: var(--paper) !important; border-color: var(--line); font-weight: 400; }
+.advice.dec .bt button.rec { border-color: var(--gold); background: rgba(212,175,55,0.12) !important; }
+.advice.dec .bt button small { font-size: 10px; color: var(--gold); border: 1px solid var(--gold); border-radius: 4px; padding: 0 4px; }
+.advice.dec .bt button em { font-style: normal; font-size: 11px; color: var(--paper-dim); flex-basis: 100%; }
+.advice.dec .hd2 { font-size: 11px; color: var(--paper-dim); margin-bottom: 2px; }
 .advice .bt button { min-height: 26px; min-width: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line); background: transparent !important; font-family: var(--display) !important; font-size: 13px; }
 .advice .bt button:first-child { background: var(--gold) !important; color: var(--ink) !important; border-color: var(--gold); font-weight: 700; }
 .setup .war { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
@@ -294,6 +302,14 @@ export class Hud {
     el.hidden = false;
   }
   hideAdvice() { this.root.querySelector<HTMLElement>('.advice')!.hidden = true; }
+  // 決策卡：發言人＋情境＋2～4 個選項（rec＝軍師建議）
+  showDecision(html: string, opts: { label: string; hint?: string; rec?: boolean }[], onPick: (i: number) => void) {
+    const el = this.root.querySelector<HTMLElement>('.advice')!; el.classList.add('dec');
+    el.innerHTML = `${html}<div class="bt">${opts.map((o, i) => `<button type="button" class="${o.rec ? 'rec' : ''}" data-i="${i}">${o.label}${o.rec ? '<small>軍師建議</small>' : ''}${o.hint ? `<em>${o.hint}</em>` : ''}</button>`).join('')}</div>`;
+    el.querySelectorAll<HTMLButtonElement>('button').forEach(b => { b.onclick = () => onPick(+b.dataset.i!); });
+    el.hidden = false;
+  }
+  hideDecision() { const el = this.root.querySelector<HTMLElement>('.advice')!; el.hidden = true; el.classList.remove('dec'); }
   // 情報讀數（情報 v2）：察覺／識別／洞悉的敵軍數與已知地形秘密
   setIntel(html: string | null) { const el = this.root.querySelector<HTMLElement>('.intel')!; if (html === null) { el.hidden = true; return; } el.hidden = false; if (el.innerHTML !== html) el.innerHTML = html; }
   private formBtn!: HTMLButtonElement; private haltBtn!: HTMLButtonElement; private boxBtn!: HTMLButtonElement;
