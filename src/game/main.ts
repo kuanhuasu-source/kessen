@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { newState, step, effM, updDims, height, active, dist, cat, general, passiveOn, inForest, inPaddy, inMarsh, inWater, onTrail, isRanged, archerRange, mulberry32, useSkill, useStrategy, battleCry, useJutsu, skillBlocked, canSee, type Unit, type Formation, type Ninja } from '../sim/sim.ts';
 import { MAP, UT } from '../sim/data.ts';
 import { adviseSide, weakestEngaged as weakest, cmdBlocked, CMD_CD, dispatchScouts, type Advice as SimAdvice } from '../sim/advisor.ts';
-import { evalDecision, applyDecision, tickDecisions, type Decision } from '../sim/decisions.ts';
+import { evalDecision, applyDecision, tickDecisions, decState, type Decision } from '../sim/decisions.ts';
 import { setup, issueCommand, cmdOf, applyDeploy, DEFAULT_DOCTRINE, DEFAULT_DEPLOY, type Doctrine, type CmdKind, type Deploy, type Wing } from '../sim/ai.ts';
 import { ROSTER_T } from '../sim/data.ts';
 import { GAME_RULES, SIM_DT } from '../sim/game-rules.ts';
@@ -1172,6 +1172,7 @@ function showEnd() {
     ${row('全滅（隊）', s => R.wipes.filter(r => r.side === s).length)}
     ${row('武將討死', s => R.cmdDeaths.filter(r => r.side === s && r.who !== 'advisor').length)}
     ${row('據點', s => S.points.filter(p => p.owner === s).length)}
+    ${(() => { const L = decState(S).log; return DAIMYO && L.length ? `<tr><th colspan="3" style="padding-top:8px">決策一覽（${L.length} 次）</th></tr>${L.map(l => `<tr><td colspan="3" style="font-size:12px;color:var(--paper-dim)">${Math.floor(l.t / 60)}:${String(Math.floor(l.t % 60)).padStart(2, '0')} ${l.who}：${l.text.slice(0, 28)}${l.text.length > 28 ? '…' : ''} → <b style="color:var(--paper)">${l.label}</b></td></tr>`).join('')}` : ''; })()}
     ${row('勳功第一', s => { const u = S.units.filter(u => u.side === s && u.merit > 0).sort((a, b) => b.merit - a.merit)[0]; return u ? `${u.cmd || '援軍'}（${u.merit} 功）` : '—'; })}
     ${row('忍者存活', s => `${S.ninjas.filter(n => n.side === s && n.alive).length}／${S.ninjas.filter(n => n.side === s).length}`)}
     ${row('暗殺成功', s => `${R.nin[s].assKill}／${R.nin[s].assTry}`)}

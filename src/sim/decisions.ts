@@ -9,7 +9,7 @@ import { intelLvl, weakestEngaged, dispatchScouts, cmdBlocked, CMD_CD, unitName 
 export type DOption = { id: string; label: string; hint?: string; rec?: boolean };
 export type Decision = { id: string; kind: 'doctrine' | 'event'; speaker: string; advisor: boolean; text: string; options: DOption[]; unit?: number; target?: number; cd: number };
 type Pending = { at: number; text: string; unit?: number; men0?: number; mor0?: number };
-export type DecState = { last: Record<string, number>; lastKind: Record<string, number>; nDoc: number; nEv: number; cmdCd: Partial<Record<CmdKind, number>>; pending: Pending[]; wingRestore: { at: number; w: 'L' | 'C' | 'R'; prev: Wing }[]; log: { t: number; id: string; opt: string }[] };
+export type DecState = { last: Record<string, number>; lastKind: Record<string, number>; nDoc: number; nEv: number; cmdCd: Partial<Record<CmdKind, number>>; pending: Pending[]; wingRestore: { at: number; w: 'L' | 'C' | 'R'; prev: Wing }[]; log: { t: number; id: string; opt: string; who: string; text: string; label: string }[] };
 export function decState(S: State): DecState {
   let d = S.meta.dec as DecState | undefined;
   if (!d) { d = { last: {}, lastKind: {}, nDoc: 0, nEv: 0, cmdCd: {}, pending: [], wingRestore: [], log: [] }; S.meta.dec = d; }
@@ -146,7 +146,7 @@ export function evalDecision(S: State, s: Side): Decision | null {
 export function applyDecision(S: State, s: Side, d: Decision, optId: string): string {
   const D = decState(S), t = S.t;
   D.last[d.id] = t; D.lastKind[d.kind] = t; if (d.kind === 'doctrine') D.nDoc++; else D.nEv++;
-  D.log.push({ t, id: d.id, opt: optId });
+  D.log.push({ t, id: d.id, opt: optId, who: d.speaker, text: d.text, label: d.options.find(o => o.id === optId)?.label ?? optId });
   const doc = (S.meta.doctrine as Doctrine[] | undefined)?.[s];
   const dep = deployOf(S, s);
   const U = d.unit !== undefined ? S.units[d.unit] : null, T = d.target !== undefined ? S.units[d.target] : null;
