@@ -1,533 +1,581 @@
 {
- "style": "Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge.",
- "items": [
-  {
-   "id": "portrait_t_gen",
-   "group": "武將肖像・武田信玄",
-   "file": "portraits/t_gen.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Takeda Shingen, stout daimyo in his forties with a thick beard, wearing a white-haired kabuto helmet and a monk's robe over armor, holding a war fan (gunbai), calm and commanding. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_t_adv",
-   "group": "武將肖像・山本勘助",
-   "file": "portraits/t_adv.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Yamamoto Kansuke, aged one-eyed strategist with an eyepatch, scholarly robes over light armor, holding a scroll of battle plans. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_t_baba",
-   "group": "武將肖像・馬場信春",
-   "file": "portraits/t_baba.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Baba Nobuharu, scarred veteran general, unshakable expression, heavy armor, holding a spear upright. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_t_naito",
-   "group": "武將肖像・內藤昌豐",
-   "file": "portraits/t_naito.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Naito Masatoyo, steady disciplined commander of spearmen, square jaw, iron helmet. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_t_kosaka",
-   "group": "武將肖像・高坂昌信",
-   "file": "portraits/t_kosaka.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Kosaka Masanobu, handsome young general, alert eyes, bow in hand. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_t_oyamada",
-   "group": "武將肖像・小山田信茂",
-   "file": "portraits/t_oyamada.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Oyamada Nobushige, wiry commander of stone-throwers and archers, cunning look. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_t_nobushige",
-   "group": "武將肖像・武田信繁",
-   "file": "portraits/t_nobushige.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Takeda Nobushige, Shingen's loyal younger brother, noble and resolute, drawn katana, ready to die. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_t_obu",
-   "group": "武將肖像・飯富虎昌",
-   "file": "portraits/t_obu.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Obu Toramasa, fierce elderly warrior with grey beard, all-red armor, terrifying glare. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_t_yamagata",
-   "group": "武將肖像・山縣昌景",
-   "file": "portraits/t_yamagata.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Yamagata Masakage, small but ferocious cavalry general of the red unit, red armor, on horseback, charging spear. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_u_gen",
-   "group": "武將肖像・上杉謙信",
-   "file": "portraits/u_gen.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Uesugi Kenshin, devout warrior-monk daimyo with a white monk's hood (zukin) over armor, holding a sword and a Buddhist rosary, serene but fierce. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_u_adv",
-   "group": "武將肖像・宇佐美定滿",
-   "file": "portraits/u_adv.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Usami Sadamitsu, elderly strategist with a long white beard, insightful eyes, holding a closed war fan. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_u_naoe",
-   "group": "武將肖像・直江景綱",
-   "file": "portraits/u_naoe.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Naoe Kagetsuna, dependable senior retainer, steady defender, heavy blue armor, spear grounded. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_u_nakajo",
-   "group": "武將肖像・中條藤資",
-   "file": "portraits/u_nakajo.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Nakajo Fujisuke, rugged commander rallying his spearmen with a raised hand. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_u_irobe",
-   "group": "武將肖像・色部勝長",
-   "file": "portraits/u_irobe.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Irobe Katsunaga, veteran archer commander, drawing a longbow. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_u_yasuda",
-   "group": "武將肖像・安田長秀",
-   "file": "portraits/u_yasuda.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Yasuda Nagahide, sharp-eyed archer general aiming at long range. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_u_kakizaki",
-   "group": "武將肖像・柿崎景家",
-   "file": "portraits/u_kakizaki.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Kakizaki Kageie, the fiercest vanguard of Echigo, wild expression, large nodachi sword. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_u_amakasu",
-   "group": "武將肖像・甘粕景持",
-   "file": "portraits/u_amakasu.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Amakasu Kagemochi, calm rearguard commander, shield-like stance, guarding a retreat. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_u_saito",
-   "group": "武將肖像・齋藤朝信",
-   "file": "portraits/u_saito.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Saito Tomonobu, cavalry general compared to the demon-queller Shoki, fierce bearded face, on horseback. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_nin_mitsumono",
-   "group": "忍者眾頭領・三ツ者",
-   "file": "portraits/nin_mitsumono.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Takeda's intelligence network leader disguised as a traveling monk, sharp eyes, hidden blade. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_nin_nokizaru",
-   "group": "忍者眾頭領・軒猿",
-   "file": "portraits/nin_nokizaru.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Uesugi's shinobi chief crouching on a roof beam at night, dark clothing, mask. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_nin_iga",
-   "group": "忍者眾頭領・伊賀眾",
-   "file": "portraits/nin_iga.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Iga ninja master with a hooded black outfit, holding a short blade and a fuse, smoke behind. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "portrait_nin_koga",
-   "group": "忍者眾頭領・甲賀眾",
-   "file": "portraits/nin_koga.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Bust portrait of Koga ninja leader in mountain clothing, a group of scouts silhouetted behind on a ridge. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "title",
-   "group": "標題插畫",
-   "file": "title.png",
-   "aspect": "16:9",
-   "size": "2K",
-   "prompt": "Wide panoramic scene of two Sengoku armies, red Takeda and blue Uesugi, facing each other across the misty Kawanakajima plain at dawn, banners (sashimono) everywhere, a temple on a low hill in the center, dramatic morning fog. Leave the upper third calm sky for a title. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "loading",
-   "group": "載入插畫",
-   "file": "loading.png",
-   "aspect": "16:9",
-   "size": "2K",
-   "prompt": "Uesugi Kenshin on a white horse charging into Takeda Shingen's camp, Shingen parrying the sword with his iron war fan, legendary duel at Kawanakajima, dynamic diagonal composition. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "kamon_takeda",
-   "group": "家紋・武田菱",
-   "file": "kamon/takeda.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "A single Japanese family crest (kamon): the Takeda-bishi, four diamonds arranged in a larger diamond, solid black on plain cream background, perfectly centered, flat vector-like emblem. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "kamon_uesugi",
-   "group": "家紋・竹雀",
-   "file": "kamon/uesugi.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "A single Japanese family crest (kamon): Uesugi bamboo-and-two-sparrows (take ni suzume) inside a circle of bamboo leaves, solid black on plain cream background, perfectly centered, flat vector-like emblem. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "banner_takeda",
-   "group": "旗指物・武田",
-   "file": "banners/takeda.png",
-   "aspect": "9:16",
-   "size": "1K",
-   "prompt": "A vertical sashimono war banner design, vermilion red cloth with the black Takeda-bishi crest near the top, flat front view filling the whole image, fabric texture. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "banner_uesugi",
-   "group": "旗指物・上杉",
-   "file": "banners/uesugi.png",
-   "aspect": "9:16",
-   "size": "1K",
-   "prompt": "A vertical sashimono war banner design, deep indigo cloth with a white 'bamboo and sparrows' crest near the top, flat front view filling the whole image, fabric texture. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "tex_grass",
-   "group": "地形紋理・草地",
-   "file": "textures/grass.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Seamless tileable ground texture of short summer grass and clover, seen straight from above, even lighting, no shadows, no objects, photographic detail with a slightly painted look, edges must tile seamlessly."
-  },
-  {
-   "id": "tex_forest",
-   "group": "地形紋理・林地",
-   "file": "textures/forest.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Seamless tileable ground texture of forest floor with pine needles, moss and roots, seen straight from above, even lighting, no shadows, no objects, photographic detail with a slightly painted look, edges must tile seamlessly."
-  },
-  {
-   "id": "tex_paddy",
-   "group": "地形紋理・稻田",
-   "file": "textures/paddy.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Seamless tileable ground texture of flooded rice paddy with young rice seedlings in rows, seen straight from above, even lighting, no shadows, no objects, photographic detail with a slightly painted look, edges must tile seamlessly."
-  },
-  {
-   "id": "tex_dirt",
-   "group": "地形紋理・泥土",
-   "file": "textures/dirt.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Seamless tileable ground texture of packed dirt road with pebbles and wheel ruts, seen straight from above, even lighting, no shadows, no objects, photographic detail with a slightly painted look, edges must tile seamlessly."
-  },
-  {
-   "id": "icon_furin",
-   "group": "技能圖示・furin",
-   "file": "icons/skill_furin.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: the four-character banner 'Furin Kazan' (wind, forest, fire, mountain) symbolized as wind swirl, pine tree, flame and mountain in a circle. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "icon_fujimi",
-   "group": "技能圖示・fujimi",
-   "file": "icons/skill_fujimi.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: an unbroken warrior standing firm while arrows bounce off. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "icon_teppeki",
-   "group": "技能圖示・teppeki",
-   "file": "icons/skill_teppeki.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: a wall of interlocked spears like an iron wall. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "icon_koshu",
-   "group": "技能圖示・koshu",
-   "file": "icons/skill_koshu.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: a fortified wooden palisade with a shield. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "icon_kyusha",
-   "group": "技能圖示・kyusha",
-   "file": "icons/skill_kyusha.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: three arrows in flight at once. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "icon_toseki",
-   "group": "技能圖示・toseki",
-   "file": "icons/skill_toseki.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: a hand throwing a stone. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "icon_assei",
-   "group": "技能圖示・assei",
-   "file": "icons/skill_assei.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: a heavy weight pressing down on running legs. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "icon_kesshi",
-   "group": "技能圖示・kesshi",
-   "file": "icons/skill_kesshi.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: a white headband of a warrior ready to die and a drawn katana. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "icon_senpo",
-   "group": "技能圖示・senpo",
-   "file": "icons/skill_senpo.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: a vanguard spearhead arrow pointing forward with flames. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "icon_shinsa",
-   "group": "技能圖示・shinsa",
-   "file": "icons/skill_shinsa.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: a demon mask radiating fear. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "icon_akazonae",
-   "group": "技能圖示・akazonae",
-   "file": "icons/skill_akazonae.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: a red-armored horseman charging. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "icon_shoki",
-   "group": "技能圖示・shoki",
-   "file": "icons/skill_shoki.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: the demon queller Shoki's fierce face. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "icon_kobu",
-   "group": "技能圖示・kobu",
-   "file": "icons/skill_kobu.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: a war drum (taiko) being struck. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "icon_shingari",
-   "group": "技能圖示・shingari",
-   "file": "icons/skill_shingari.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: a rearguard samurai facing backward with raised sword. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "icon_kuruma",
-   "group": "技能圖示・kuruma",
-   "file": "icons/skill_kuruma.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: a wheel of rotating horsemen (kuruma-gakari formation). Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "icon_kitsutsuki",
-   "group": "技能圖示・kitsutsuki",
-   "file": "icons/skill_kitsutsuki.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: a woodpecker striking a tree trunk from behind. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "icon_kanpa",
-   "group": "技能圖示・kanpa",
-   "file": "icons/skill_kanpa.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: an all-seeing eye on a war fan. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "icon_cry",
-   "group": "技能圖示・cry",
-   "file": "icons/skill_cry.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon: warriors shouting a war cry with open mouths. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "jutsu_rumor",
-   "group": "忍術圖示・rumor",
-   "file": "icons/jutsu_rumor.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon for a ninja technique: whispering mouths and a torn letter. Bold simple silhouette readable at 48 pixels, silver and ink on deep purple-black background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "jutsu_monomi",
-   "group": "忍術圖示・monomi",
-   "file": "icons/jutsu_monomi.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon for a ninja technique: a scout looking through a gap in a bamboo screen. Bold simple silhouette readable at 48 pixels, silver and ink on deep purple-black background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "jutsu_ansatsu",
-   "group": "忍術圖示・ansatsu",
-   "file": "icons/jutsu_ansatsu.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon for a ninja technique: a kunai dagger in moonlight. Bold simple silhouette readable at 48 pixels, silver and ink on deep purple-black background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "jutsu_houka",
-   "group": "忍術圖示・houka",
-   "file": "icons/jutsu_houka.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon for a ninja technique: a torch setting a thatched roof on fire. Bold simple silhouette readable at 48 pixels, silver and ink on deep purple-black background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "jutsu_kirigakure",
-   "group": "忍術圖示・kirigakure",
-   "file": "icons/jutsu_kirigakure.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon for a ninja technique: a ninja vanishing into a cloud of smoke. Bold simple silhouette readable at 48 pixels, silver and ink on deep purple-black background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "jutsu_sahou",
-   "group": "忍術圖示・sahou",
-   "file": "icons/jutsu_sahou.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon for a ninja technique: a false map with fake troop markers. Bold simple silhouette readable at 48 pixels, silver and ink on deep purple-black background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "jutsu_sakuteki",
-   "group": "忍術圖示・sakuteki",
-   "file": "icons/jutsu_sakuteki.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon for a ninja technique: a lantern revealing a hidden shadow. Bold simple silhouette readable at 48 pixels, silver and ink on deep purple-black background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "jutsu_sennyu",
-   "group": "忍術圖示・sennyu",
-   "file": "icons/jutsu_sennyu.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game ability icon for a ninja technique: a shadow slipping through a castle gate. Bold simple silhouette readable at 48 pixels, silver and ink on deep purple-black background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "ui_frame",
-   "group": "介面框",
-   "file": "ui/frame.png",
-   "aspect": "4:3",
-   "size": "1K",
-   "prompt": "An ornamental rectangular frame border for a game dialog: dark lacquered wood with gold maki-e corner ornaments, empty plain dark center. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "unit_spear",
-   "group": "兵種圖示・spear",
-   "file": "icons/unit_spear.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game unit-type icon: a single long yari spear crossed over a conical jingasa helmet (ashigaru spearman). Bold simple silhouette readable at 32 pixels, gold and ink on dark lacquer background, same style as a set of ability icons. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "unit_archer",
-   "group": "兵種圖示・archer",
-   "file": "icons/unit_archer.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game unit-type icon: a Japanese longbow (yumi) with one nocked arrow. Bold simple silhouette readable at 32 pixels, gold and ink on dark lacquer background, same style as a set of ability icons. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "unit_samurai",
-   "group": "兵種圖示・samurai",
-   "file": "icons/unit_samurai.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game unit-type icon: a drawn katana over a crested kabuto helmet. Bold simple silhouette readable at 32 pixels, gold and ink on dark lacquer background, same style as a set of ability icons. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "unit_cav",
-   "group": "兵種圖示・cav",
-   "file": "icons/unit_cav.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game unit-type icon: a galloping warhorse head with flying mane and a sashimono banner. Bold simple silhouette readable at 32 pixels, gold and ink on dark lacquer background, same style as a set of ability icons. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "unit_general",
-   "group": "兵種圖示・general",
-   "file": "icons/unit_general.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game unit-type icon: a commander's iron war fan (gunbai) with a tassel. Bold simple silhouette readable at 32 pixels, gold and ink on dark lacquer background, same style as a set of ability icons. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "unit_gun",
-   "group": "兵種圖示・gun",
-   "file": "icons/unit_gun.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game unit-type icon: a matchlock arquebus (tanegashima) with a lit match cord and a puff of smoke. Bold simple silhouette readable at 32 pixels, gold and ink on dark lacquer background, same style as a set of ability icons. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  },
-  {
-   "id": "unit_cannon",
-   "group": "兵種圖示・cannon",
-   "file": "icons/unit_cannon.png",
-   "aspect": "1:1",
-   "size": "1K",
-   "prompt": "Circular game unit-type icon: a short bronze cannon (ozutsu) on a wooden block with a cannonball. Bold simple silhouette readable at 32 pixels, gold and ink on dark lacquer background, same style as a set of ability icons. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
-  }
- ]
+  "style": "Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge.",
+  "items": [
+    {
+      "id": "portrait_t_gen",
+      "group": "武將肖像・武田信玄",
+      "file": "portraits/t_gen.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Takeda Shingen, stout daimyo in his forties with a thick beard, wearing a white-haired kabuto helmet and a monk's robe over armor, holding a war fan (gunbai), calm and commanding. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_t_adv",
+      "group": "武將肖像・山本勘助",
+      "file": "portraits/t_adv.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Yamamoto Kansuke, aged one-eyed strategist with an eyepatch, scholarly robes over light armor, holding a scroll of battle plans. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_t_baba",
+      "group": "武將肖像・馬場信春",
+      "file": "portraits/t_baba.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Baba Nobuharu, scarred veteran general, unshakable expression, heavy armor, holding a spear upright. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_t_naito",
+      "group": "武將肖像・內藤昌豐",
+      "file": "portraits/t_naito.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Naito Masatoyo, steady disciplined commander of spearmen, square jaw, iron helmet. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_t_kosaka",
+      "group": "武將肖像・高坂昌信",
+      "file": "portraits/t_kosaka.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Kosaka Masanobu, handsome young general, alert eyes, bow in hand. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_t_oyamada",
+      "group": "武將肖像・小山田信茂",
+      "file": "portraits/t_oyamada.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Oyamada Nobushige, wiry commander of stone-throwers and archers, cunning look. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_t_nobushige",
+      "group": "武將肖像・武田信繁",
+      "file": "portraits/t_nobushige.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Takeda Nobushige, Shingen's loyal younger brother, noble and resolute, drawn katana, ready to die. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_t_obu",
+      "group": "武將肖像・飯富虎昌",
+      "file": "portraits/t_obu.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Obu Toramasa, fierce elderly warrior with grey beard, all-red armor, terrifying glare. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_t_yamagata",
+      "group": "武將肖像・山縣昌景",
+      "file": "portraits/t_yamagata.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Yamagata Masakage, small but ferocious cavalry general of the red unit, red armor, on horseback, charging spear. Takeda clan: deep vermilion-red lacquered armor (akazonae), Takeda-bishi diamond crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_u_gen",
+      "group": "武將肖像・上杉謙信",
+      "file": "portraits/u_gen.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Uesugi Kenshin, devout warrior-monk daimyo with a white monk's hood (zukin) over armor, holding a sword and a Buddhist rosary, serene but fierce. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_u_adv",
+      "group": "武將肖像・宇佐美定滿",
+      "file": "portraits/u_adv.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Usami Sadamitsu, elderly strategist with a long white beard, insightful eyes, holding a closed war fan. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_u_naoe",
+      "group": "武將肖像・直江景綱",
+      "file": "portraits/u_naoe.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Naoe Kagetsuna, dependable senior retainer, steady defender, heavy blue armor, spear grounded. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_u_nakajo",
+      "group": "武將肖像・中條藤資",
+      "file": "portraits/u_nakajo.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Nakajo Fujisuke, rugged commander rallying his spearmen with a raised hand. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_u_irobe",
+      "group": "武將肖像・色部勝長",
+      "file": "portraits/u_irobe.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Irobe Katsunaga, veteran archer commander, drawing a longbow. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_u_yasuda",
+      "group": "武將肖像・安田長秀",
+      "file": "portraits/u_yasuda.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Yasuda Nagahide, sharp-eyed archer general aiming at long range. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_u_kakizaki",
+      "group": "武將肖像・柿崎景家",
+      "file": "portraits/u_kakizaki.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Kakizaki Kageie, the fiercest vanguard of Echigo, wild expression, large nodachi sword. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_u_amakasu",
+      "group": "武將肖像・甘粕景持",
+      "file": "portraits/u_amakasu.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Amakasu Kagemochi, calm rearguard commander, shield-like stance, guarding a retreat. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_u_saito",
+      "group": "武將肖像・齋藤朝信",
+      "file": "portraits/u_saito.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Saito Tomonobu, cavalry general compared to the demon-queller Shoki, fierce bearded face, on horseback. Uesugi clan: indigo-blue lacquered armor, bamboo-and-sparrows crest. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_nin_mitsumono",
+      "group": "忍者眾頭領・三ツ者",
+      "file": "portraits/nin_mitsumono.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Takeda's intelligence network leader disguised as a traveling monk, sharp eyes, hidden blade. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_nin_nokizaru",
+      "group": "忍者眾頭領・軒猿",
+      "file": "portraits/nin_nokizaru.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Uesugi's shinobi chief crouching on a roof beam at night, dark clothing, mask. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_nin_iga",
+      "group": "忍者眾頭領・伊賀眾",
+      "file": "portraits/nin_iga.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Iga ninja master with a hooded black outfit, holding a short blade and a fuse, smoke behind. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "portrait_nin_koga",
+      "group": "忍者眾頭領・甲賀眾",
+      "file": "portraits/nin_koga.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Bust portrait of Koga ninja leader in mountain clothing, a group of scouts silhouetted behind on a ridge. Plain muted background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "title",
+      "group": "標題插畫",
+      "file": "title.png",
+      "aspect": "16:9",
+      "size": "2K",
+      "prompt": "Wide panoramic scene of two Sengoku armies, red Takeda and blue Uesugi, facing each other across the misty Kawanakajima plain at dawn, banners (sashimono) everywhere, a temple on a low hill in the center, dramatic morning fog. Leave the upper third calm sky for a title. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "loading",
+      "group": "載入插畫",
+      "file": "loading.png",
+      "aspect": "16:9",
+      "size": "2K",
+      "prompt": "Uesugi Kenshin on a white horse charging into Takeda Shingen's camp, Shingen parrying the sword with his iron war fan, legendary duel at Kawanakajima, dynamic diagonal composition. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "kamon_takeda",
+      "group": "家紋・武田菱",
+      "file": "kamon/takeda.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "A single Japanese family crest (kamon): the Takeda-bishi, four diamonds arranged in a larger diamond, solid black on plain cream background, perfectly centered, flat vector-like emblem. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "kamon_uesugi",
+      "group": "家紋・竹雀",
+      "file": "kamon/uesugi.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "A single Japanese family crest (kamon): Uesugi bamboo-and-two-sparrows (take ni suzume) inside a circle of bamboo leaves, solid black on plain cream background, perfectly centered, flat vector-like emblem. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "banner_takeda",
+      "group": "旗指物・武田",
+      "file": "banners/takeda.png",
+      "aspect": "9:16",
+      "size": "1K",
+      "prompt": "A vertical sashimono war banner design, vermilion red cloth with the black Takeda-bishi crest near the top, flat front view filling the whole image, fabric texture. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "banner_uesugi",
+      "group": "旗指物・上杉",
+      "file": "banners/uesugi.png",
+      "aspect": "9:16",
+      "size": "1K",
+      "prompt": "A vertical sashimono war banner design, deep indigo cloth with a white 'bamboo and sparrows' crest near the top, flat front view filling the whole image, fabric texture. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "tex_grass",
+      "group": "地形紋理・草地",
+      "file": "textures/grass.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Seamless tileable ground texture of short summer grass and clover, seen straight from above, even lighting, no shadows, no objects, photographic detail with a slightly painted look, edges must tile seamlessly."
+    },
+    {
+      "id": "tex_forest",
+      "group": "地形紋理・林地",
+      "file": "textures/forest.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Seamless tileable ground texture of forest floor with pine needles, moss and roots, seen straight from above, even lighting, no shadows, no objects, photographic detail with a slightly painted look, edges must tile seamlessly."
+    },
+    {
+      "id": "tex_paddy",
+      "group": "地形紋理・稻田",
+      "file": "textures/paddy.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Seamless tileable ground texture of flooded rice paddy with young rice seedlings in rows, seen straight from above, even lighting, no shadows, no objects, photographic detail with a slightly painted look, edges must tile seamlessly."
+    },
+    {
+      "id": "tex_dirt",
+      "group": "地形紋理・泥土",
+      "file": "textures/dirt.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Seamless tileable ground texture of packed dirt road with pebbles and wheel ruts, seen straight from above, even lighting, no shadows, no objects, photographic detail with a slightly painted look, edges must tile seamlessly."
+    },
+    {
+      "id": "icon_furin",
+      "group": "技能圖示・furin",
+      "file": "icons/skill_furin.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: the four-character banner 'Furin Kazan' (wind, forest, fire, mountain) symbolized as wind swirl, pine tree, flame and mountain in a circle. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "icon_fujimi",
+      "group": "技能圖示・fujimi",
+      "file": "icons/skill_fujimi.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: an unbroken warrior standing firm while arrows bounce off. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "icon_teppeki",
+      "group": "技能圖示・teppeki",
+      "file": "icons/skill_teppeki.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: a wall of interlocked spears like an iron wall. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "icon_koshu",
+      "group": "技能圖示・koshu",
+      "file": "icons/skill_koshu.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: a fortified wooden palisade with a shield. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "icon_kyusha",
+      "group": "技能圖示・kyusha",
+      "file": "icons/skill_kyusha.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: three arrows in flight at once. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "icon_toseki",
+      "group": "技能圖示・toseki",
+      "file": "icons/skill_toseki.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: a hand throwing a stone. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "icon_assei",
+      "group": "技能圖示・assei",
+      "file": "icons/skill_assei.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: a heavy weight pressing down on running legs. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "icon_kesshi",
+      "group": "技能圖示・kesshi",
+      "file": "icons/skill_kesshi.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: a white headband of a warrior ready to die and a drawn katana. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "icon_senpo",
+      "group": "技能圖示・senpo",
+      "file": "icons/skill_senpo.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: a vanguard spearhead arrow pointing forward with flames. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "icon_shinsa",
+      "group": "技能圖示・shinsa",
+      "file": "icons/skill_shinsa.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: a demon mask radiating fear. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "icon_akazonae",
+      "group": "技能圖示・akazonae",
+      "file": "icons/skill_akazonae.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: a red-armored horseman charging. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "icon_shoki",
+      "group": "技能圖示・shoki",
+      "file": "icons/skill_shoki.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: the demon queller Shoki's fierce face. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "icon_kobu",
+      "group": "技能圖示・kobu",
+      "file": "icons/skill_kobu.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: a war drum (taiko) being struck. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "icon_shingari",
+      "group": "技能圖示・shingari",
+      "file": "icons/skill_shingari.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: a rearguard samurai facing backward with raised sword. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "icon_kuruma",
+      "group": "技能圖示・kuruma",
+      "file": "icons/skill_kuruma.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: a wheel of rotating horsemen (kuruma-gakari formation). Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "icon_kitsutsuki",
+      "group": "技能圖示・kitsutsuki",
+      "file": "icons/skill_kitsutsuki.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: a woodpecker striking a tree trunk from behind. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "icon_kanpa",
+      "group": "技能圖示・kanpa",
+      "file": "icons/skill_kanpa.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: an all-seeing eye on a war fan. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "icon_cry",
+      "group": "技能圖示・cry",
+      "file": "icons/skill_cry.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon: warriors shouting a war cry with open mouths. Bold simple silhouette readable at 48 pixels, gold and ink on dark lacquer background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "jutsu_rumor",
+      "group": "忍術圖示・rumor",
+      "file": "icons/jutsu_rumor.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon for a ninja technique: whispering mouths and a torn letter. Bold simple silhouette readable at 48 pixels, silver and ink on deep purple-black background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "jutsu_monomi",
+      "group": "忍術圖示・monomi",
+      "file": "icons/jutsu_monomi.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon for a ninja technique: a scout looking through a gap in a bamboo screen. Bold simple silhouette readable at 48 pixels, silver and ink on deep purple-black background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "jutsu_ansatsu",
+      "group": "忍術圖示・ansatsu",
+      "file": "icons/jutsu_ansatsu.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon for a ninja technique: a kunai dagger in moonlight. Bold simple silhouette readable at 48 pixels, silver and ink on deep purple-black background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "jutsu_houka",
+      "group": "忍術圖示・houka",
+      "file": "icons/jutsu_houka.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon for a ninja technique: a torch setting a thatched roof on fire. Bold simple silhouette readable at 48 pixels, silver and ink on deep purple-black background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "jutsu_kirigakure",
+      "group": "忍術圖示・kirigakure",
+      "file": "icons/jutsu_kirigakure.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon for a ninja technique: a ninja vanishing into a cloud of smoke. Bold simple silhouette readable at 48 pixels, silver and ink on deep purple-black background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "jutsu_sahou",
+      "group": "忍術圖示・sahou",
+      "file": "icons/jutsu_sahou.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon for a ninja technique: a false map with fake troop markers. Bold simple silhouette readable at 48 pixels, silver and ink on deep purple-black background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "jutsu_sakuteki",
+      "group": "忍術圖示・sakuteki",
+      "file": "icons/jutsu_sakuteki.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon for a ninja technique: a lantern revealing a hidden shadow. Bold simple silhouette readable at 48 pixels, silver and ink on deep purple-black background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "jutsu_sennyu",
+      "group": "忍術圖示・sennyu",
+      "file": "icons/jutsu_sennyu.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game ability icon for a ninja technique: a shadow slipping through a castle gate. Bold simple silhouette readable at 48 pixels, silver and ink on deep purple-black background. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "ui_frame",
+      "group": "介面框",
+      "file": "ui/frame.png",
+      "aspect": "4:3",
+      "size": "1K",
+      "prompt": "An ornamental rectangular frame border for a game dialog: dark lacquered wood with gold maki-e corner ornaments, empty plain dark center. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "unit_spear",
+      "group": "兵種圖示・spear",
+      "file": "icons/unit_spear.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game unit-type icon: a single long yari spear crossed over a conical jingasa helmet (ashigaru spearman). Bold simple silhouette readable at 32 pixels, gold and ink on dark lacquer background, same style as a set of ability icons. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "unit_archer",
+      "group": "兵種圖示・archer",
+      "file": "icons/unit_archer.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game unit-type icon: a Japanese longbow (yumi) with one nocked arrow. Bold simple silhouette readable at 32 pixels, gold and ink on dark lacquer background, same style as a set of ability icons. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "unit_samurai",
+      "group": "兵種圖示・samurai",
+      "file": "icons/unit_samurai.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game unit-type icon: a drawn katana over a crested kabuto helmet. Bold simple silhouette readable at 32 pixels, gold and ink on dark lacquer background, same style as a set of ability icons. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "unit_cav",
+      "group": "兵種圖示・cav",
+      "file": "icons/unit_cav.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game unit-type icon: a galloping warhorse head with flying mane and a sashimono banner. Bold simple silhouette readable at 32 pixels, gold and ink on dark lacquer background, same style as a set of ability icons. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "unit_general",
+      "group": "兵種圖示・general",
+      "file": "icons/unit_general.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game unit-type icon: a commander's iron war fan (gunbai) with a tassel. Bold simple silhouette readable at 32 pixels, gold and ink on dark lacquer background, same style as a set of ability icons. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "unit_gun",
+      "group": "兵種圖示・gun",
+      "file": "icons/unit_gun.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game unit-type icon: a matchlock arquebus (tanegashima) with a lit match cord and a puff of smoke. Bold simple silhouette readable at 32 pixels, gold and ink on dark lacquer background, same style as a set of ability icons. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "unit_cannon",
+      "group": "兵種圖示・cannon",
+      "file": "icons/unit_cannon.png",
+      "aspect": "1:1",
+      "size": "1K",
+      "prompt": "Circular game unit-type icon: a short bronze cannon (ozutsu) on a wooden block with a cannonball. Bold simple silhouette readable at 32 pixels, gold and ink on dark lacquer background, same style as a set of ability icons. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "intro_s1",
+      "group": "導入插畫",
+      "file": "intro/intro_s1.png",
+      "aspect": "16:9",
+      "size": "1K",
+      "prompt": "Two rival daimyo shown as a divided composition: on the left Takeda Shingen in vermilion-red armor with a war fan before the mountains of Kai, on the right Uesugi Kenshin in white monk hood and dark blue armor before the snowy mountains of Echigo, a river valley (Shinano) between them. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "intro_s2",
+      "group": "導入插畫",
+      "file": "intro/intro_s2.png",
+      "aspect": "16:9",
+      "size": "1K",
+      "prompt": "Night scene: Uesugi army camp with blue banners on top of a forested mountain (Saijoyama) overlooking a river plain; across the river a small castle (Kaizu) with many cooking fires and smoke columns rising under a crescent moon. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "intro_s3",
+      "group": "導入插畫",
+      "file": "intro/intro_s3.png",
+      "aspect": "16:9",
+      "size": "1K",
+      "prompt": "A one-eyed, limping old strategist (Yamamoto Kansuke) presenting a plan on a map scroll to Takeda Shingen inside a war camp at night, red Takeda-bishi banners, lanterns; in the background a column of red-armored troops marching into the dark mountains. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "intro_s4",
+      "group": "導入插畫",
+      "file": "intro/intro_s4.png",
+      "aspect": "16:9",
+      "size": "1K",
+      "prompt": "Uesugi army crossing the wide Chikuma river at a ford before dawn in thick morning fog, blue banners and horses wading in the water, faint pale moon, silent and tense, seen from the riverbank. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "intro_s7",
+      "group": "導入插畫",
+      "file": "intro/intro_s7.png",
+      "aspect": "16:9",
+      "size": "1K",
+      "prompt": "Red-armored Takeda cavalry detachment with many banners charging across a river ford at full gallop into the rear of the blue Uesugi army on a plain, midday light, dust and spray, dramatic reinforcement arriving. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    },
+    {
+      "id": "intro_s8",
+      "group": "導入插畫",
+      "file": "intro/intro_s8.png",
+      "aspect": "16:9",
+      "size": "1K",
+      "prompt": "Aftermath at dusk on the Kawanakajima plain: fallen banners of both red and blue, two armies withdrawing in opposite directions across the river, a lone war fan on the ground, quiet orange sky, somber mood. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+    }
+  ]
 }

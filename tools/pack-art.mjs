@@ -55,6 +55,7 @@ const jobs = {
       .webp({ quality: 90 }).toFile(dst(it.file.replace(/\.png$/, '.webp')));
   },
   banners: (it) => sharp(src(it.file)).resize(128, 256, { fit: 'cover' }).webp({ quality: 78 }).toFile(dst(it.file.replace(/\.png$/, '.webp'))),
+  intro: async (it) => sharp(await (await trimMargin(sharp(src(it.file)), 0.08)).toBuffer()).resize(1152, 648, { fit: 'cover' }).webp({ quality: 62 }).toFile(dst(it.file.replace(/\.png$/, '.webp'))), // 導入插畫：全螢幕但要省空間
   textures: (it) => sharp(src(it.file)).resize(512, 512, { fit: 'cover' }).webp({ quality: 70 }).toFile(dst(it.file.replace(/\.png$/, '.webp'))),
   ui: (it) => sharp(src(it.file)).resize(640, null).webp({ quality: 75 }).toFile(dst(it.file.replace(/\.png$/, '.webp'))),
 };

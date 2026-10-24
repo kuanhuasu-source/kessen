@@ -579,7 +579,7 @@ export class Hud {
   // 出陣畫面（含觀戰模式）
   showSetup2(o: {
     mode: 'play' | 'watch'; clans0: { id: string; html: string; short: string }[]; clan0: string; clans1: { id: string; short: string }[]; clan1: string;
-    onMode: (m: 'play' | 'watch') => void; onPick0: (id: string) => void; onPick1: (id: string) => void; onGo: () => void; onHelp: () => void; onNew: () => void;
+    onMode: (m: 'play' | 'watch') => void; onPick0: (id: string) => void; onPick1: (id: string) => void; onGo: () => void; onHelp: () => void; onNew: () => void; onIntro?: () => void;
     bg?: string; // 背景插畫
     war?: { rows: { key: string; label: string; opts: { id: string; label: string }[]; cur: string; note?: string }[]; onPick: (key: string, id: string) => void;
       extra?: string; onExtra?: (act: string) => void }; // 軍議（大名模式）；extra 是配置與將領區塊（data-x 按鈕）
@@ -593,7 +593,7 @@ export class Hud {
         : `<div class="pick"><span style="color:#e3a39c">武田忍者眾</span>${o.clans0.map(c => `<button type="button" class="chip" data-c0="${c.id}" aria-pressed="${c.id === o.clan0}">${c.short}</button>`).join('')}</div>
            <div class="pick"><span style="color:#a9bde0">上杉忍者眾</span>${o.clans1.map(c => `<button type="button" class="chip" data-c1="${c.id}" aria-pressed="${c.id === o.clan1}">${c.short}</button>`).join('')}</div>
            <p class="lead" style="display:block">雙方都由 AI 指揮。導播鏡頭會跟著戰況走，拖曳或縮放就改手動，10 秒後交回導播；點任一部隊可查看並跟隨。右側「視」切換全知或單方視野。</p>`}
-      <div class="row2"><button type="button" class="go">${play ? '出陣' : '開始觀戰'}</button><button type="button" class="ghost" data-help>操作說明</button>${play ? '' : '<button type="button" class="ghost" data-new>換一場佈陣</button>'}<span class="foe">${play ? '敵方忍者眾：開戰後才知道' : ''}</span></div></div>`;
+      <div class="row2"><button type="button" class="go">${play ? '出陣' : '開始觀戰'}</button><button type="button" class="ghost" data-help>操作說明</button>${o.onIntro ? '<button type="button" class="ghost" data-intro>川中島の戦い</button>' : ''}${play ? '' : '<button type="button" class="ghost" data-new>換一場佈陣</button>'}<span class="foe">${play ? '敵方忍者眾：開戰後才知道' : ''}</span></div></div>`;
     el.style.backgroundImage = o.bg ? `linear-gradient(rgba(10,9,7,0.45), rgba(10,9,7,0.7)), url(${o.bg})` : '';
     el.hidden = false;
     el.querySelectorAll<HTMLButtonElement>('[data-m]').forEach(b => b.onclick = () => { if (b.dataset.m !== o.mode) o.onMode(b.dataset.m as 'play' | 'watch'); });
@@ -607,6 +607,7 @@ export class Hud {
     el.querySelector<HTMLButtonElement>('.go')!.onclick = () => { el.hidden = true; o.onGo(); };
     el.querySelector<HTMLButtonElement>('[data-help]')!.onclick = () => o.onHelp();
     el.querySelector<HTMLButtonElement>('[data-new]')?.addEventListener('click', () => o.onNew());
+    el.querySelector<HTMLButtonElement>('[data-intro]')?.addEventListener('click', () => o.onIntro?.());
   }
   setWatch(on: boolean, onCam: () => void, onVis: () => void) {
     this.root.classList.toggle('watch', on);

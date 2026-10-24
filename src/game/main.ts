@@ -20,6 +20,7 @@ import { portraitOf, ninjaPortrait, skillIcon, jutsuIcon, kamon, illus, img, kan
 import { toWorld, toSim } from './coords.ts';
 import { sfx, unlock as unlockAudio, isMuted, setMuted } from './audio.ts';
 import { music } from './music.ts';
+import { showIntro, INTRO_KEY } from './intro.ts';
 window.addEventListener('pointerdown', () => { unlockAudio(); music.unlock(); }, { capture: true }); window.addEventListener('keydown', () => { unlockAudio(); music.unlock(); }, { capture: true }); // 手機要在手勢後才能出聲
 
 // ---------------- 場景 ----------------
@@ -243,7 +244,7 @@ hud.setWatch(WATCH, () => { camAuto = !camAuto; manualUntil = 0; hud.toast(camAu
   () => { visMode = visMode === 'all' ? 0 : visMode === 0 ? 1 : 'all'; hud.toast(visMode === 'all' ? '視野：全知' : `視野：${SIDE_NAME[visMode]}軍`); });
 if (params.get('go') === '1') {
   params.delete('go'); history.replaceState(null, '', '#' + params.toString()); begin();
-} else { music.play('council'); hud.showSetup2({
+} else { music.play('council'); const introSeen = (() => { try { return localStorage.getItem(INTRO_KEY) === '1'; } catch { return true; } })(); if (!WATCH && !introSeen) showIntro(() => undefined); hud.showSetup2({
   mode: WATCH ? 'watch' : 'play', bg: illus('title'),
   war: {
     rows: [
@@ -263,7 +264,7 @@ if (params.get('go') === '1') {
   onMode: m => reloadWith({ mode: m === 'watch' ? 'watch' : null }),
   onPick0: id => { if (id !== clan0) reloadWith({ clan: id }); },
   onPick1: id => { if (id !== clan1) reloadWith({ foe: id }); },
-  onGo: begin, onHelp: () => hud.showHelp(true),
+  onGo: begin, onHelp: () => hud.showHelp(true), onIntro: () => showIntro(() => undefined),
   onNew: () => reloadWith({ seed: String((Math.random() * 1e9) | 0) }),
 }); }
 
