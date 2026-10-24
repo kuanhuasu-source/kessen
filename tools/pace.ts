@@ -36,6 +36,11 @@ const VARIANTS: Record<string, Partial<Rules>> = {
   pkg: { rallyCap: 50, aiRetreat: false, archerRange: 200, aiGenBack: 40, aiGenCommit: true },
   rallyGen: { rallyNearGen: 90, aiRetreat: false, archerRange: 200, aiGenBack: 40, aiGenCommit: true },
   pkgNoRally: { maxRouts: 1, aiRetreat: false, archerRange: 200, aiGenBack: 40, aiGenCommit: true },
+  // 八幡原第二里程碑：別働隊時機 × 朝霧時長
+  m1: { detachOn: false, fogDur: 0 }, noFog: { fogDur: 0 }, noDet: { detachOn: false },
+  d150: { detachT0: 150 }, d120: { detachT0: 120 }, d90: { detachT0: 90, detachTR: 40 },
+  f90: { fogDur: 90 }, f60: { fogDur: 60 },
+  d150f90: { detachT0: 150, fogDur: 90 }, d120f90: { detachT0: 120, fogDur: 90 }, d120f60: { detachT0: 120, fogDur: 60 }, d150f60: { detachT0: 150, fogDur: 60 },
 };
 
 function one(R: Rules, seed: number) {

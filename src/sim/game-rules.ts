@@ -20,7 +20,7 @@ export const GAME_RULES = makeRules({
   aiHoldYl: 280, deployFwd: 0, ninjaFwd: 40, aiFormRun: true, aiAttackT0: 10, aiAttackTR: 30, aiAnchorSpd: 3.8, aiVolleyDur: 12, // 回顧（2026-10-22）開場節奏 A：佈陣前移 50、急行軍成線、攻勢 10～40 秒、對峙線 280（溪前）、錨點 3.8 m/s、對射 12 秒 → 首戰 88 → 57 秒
   reliefNoise: 0.4,              // 緩坡起伏降到 ±0.7 m（滿幅會讓時間到從 12% 升到 20%）
   cmdRelieveN: 2, cmdRaidCharge: 12, cmdRaidShock: -10, cmdFocusMorale: -4, cmdFocusHit: 1.3, cmdRegroupMorale: 8, // 大名令加強（2026-10-22 方案一）：全採納建議 48%→52%（不介入 43%）；再加大到 15／−15／−6／1.6／12 也是 52%
-  detachOn: true, fogDur: 150, // 八幡原第二里程碑（2026-10-24）：別働隊第 190～230 秒抵達、朝霧 150 秒
+  detachOn: true, detachT0: 150, fogDur: 90, // 八幡原第二里程碑（2026-10-24）：別働隊第 150～190 秒抵達、朝霧 90 秒（量測：190 秒／150 秒 → 武田 40%、大名不介入 39%；150／90 → 55%、48%）
   meritOn: true, v2NinSpeed: 6, // 2026-10-23：戰場功績；忍者 4.5→6 m/s（起點在 ninjaFwd）
   aiHunt: true, withdrawEnd: 90, // 時間到判定（2026-10-22）：時間到的局多半是兩軍互相穿過後各站對方本陣；aiHunt 讓攻勢追著敵軍走（時間到 25%→9%），退卻結束再降到 4%（退卻 11%）
   pointWin: false,

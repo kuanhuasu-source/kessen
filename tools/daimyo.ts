@@ -11,7 +11,8 @@ import { makeRules, type Rules } from '../src/sim/rules.ts';
 
 const RV: Record<string, Partial<Rules>> = { base: {}, passive: { daimyoPassive: true }, passiveCav: { daimyoPassiveCav: true },
   r2: { cmdRelieveN: 2 }, raidB: { cmdRaidCharge: 10, cmdRaidShock: -6 }, focusB: { cmdFocusMorale: -2 }, regroupB: { cmdRegroupMorale: 8 }, allB: { cmdRelieveN: 2, cmdRaidCharge: 10, cmdRaidShock: -6, cmdFocusMorale: -2, cmdRegroupMorale: 8 },
-  midB: { cmdRelieveN: 2, cmdRaidCharge: 12, cmdRaidShock: -10, cmdFocusMorale: -4, cmdFocusHit: 1.3, cmdRegroupMorale: 8 }, strongB: { cmdRelieveN: 2, cmdRaidCharge: 15, cmdRaidShock: -15, cmdFocusMorale: -6, cmdFocusHit: 1.6, cmdRegroupMorale: 12 }, c8: { cmdCommitMorale: 8 }, ch5: { cmdChargeMorale: 5 }, both: { cmdCommitMorale: 8, cmdChargeMorale: 5 }, c12: { cmdCommitMorale: 12 }, ch8: { cmdChargeMorale: 8 } };
+  midB: { cmdRelieveN: 2, cmdRaidCharge: 12, cmdRaidShock: -10, cmdFocusMorale: -4, cmdFocusHit: 1.3, cmdRegroupMorale: 8 }, strongB: { cmdRelieveN: 2, cmdRaidCharge: 15, cmdRaidShock: -15, cmdFocusMorale: -6, cmdFocusHit: 1.6, cmdRegroupMorale: 12 }, c8: { cmdCommitMorale: 8 }, ch5: { cmdChargeMorale: 5 }, both: { cmdCommitMorale: 8, cmdChargeMorale: 5 }, c12: { cmdCommitMorale: 12 }, ch8: { cmdChargeMorale: 8 },
+  m1: { detachOn: false, fogDur: 0 }, noFog: { fogDur: 0 }, noDet: { detachOn: false }, d150: { detachT0: 150 }, d120: { detachT0: 120 }, f90: { fogDur: 90 }, f60: { fogDur: 60 }, d150f90: { detachT0: 150, fogDur: 90 }, d120f90: { detachT0: 120, fogDur: 90 }, d120f60: { detachT0: 120, fogDur: 60 }, d150f60: { detachT0: 150, fogDur: 60 } };
 const N = Number(process.argv[2] || 60);
 const rates = (process.argv[3] || '0,0.5,1').split(',').map(Number);
 const MODE = process.env.MODE || 'dec';
