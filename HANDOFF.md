@@ -8,7 +8,7 @@
 
 | 項目 | 位置 |
 | --- | --- |
-| 遊戲（可直接玩） | https://claude.ai/artifact/UjqYxfDUxLHEW3CA6xsy7R （第 42 版：八幡原地圖＋別働隊＋朝霧＋歷史比例兵數）。更新時發布 `dist/kessen-m1.html` 到同一個 URL |
+| 遊戲（可直接玩） | https://claude.ai/artifact/UjqYxfDUxLHEW3CA6xsy7R （第 43 版：八幡原地圖＋別働隊抵達卡＋歷史比例兵數）。更新時發布 `dist/kessen-m1.html` 到同一個 URL |
 | GitHub Pages（公開可玩） | https://kuanhuasu-source.github.io/kessen/ ，倉庫 `kuanhuasu-source/kessen`（只放遊戲，公開）。發布流程：在 LVV-Studio 的 `kessen/` 開發，`git subtree push --prefix=kessen https://github.com/kuanhuasu-source/kessen main` 推過去，Actions（`kessen/.github/workflows/pages.yml`）自動建置部署 |
 | 設計文件（線上，含圖表） | https://claude.ai/artifact/JAXq85B8a3UheAm2xAcFwL |
 | 進度與待辦 | `BACKLOG.md` |
@@ -34,7 +34,7 @@
 | M6 | 完成 | 勝負與結算、據點呈現、撤退指令、Gemini 2D 美術 |
 | AI 動作優化 | 完成 | 止抖（aiSteady）＋戰線式指揮（aiLine） |
 | 大名模式 | 完成 | 第一階段：軍議方針、AI 帶兵、軍師建議卡、大名令、接管單隊。第二階段：配置（戰線順序、預備隊、騎兵翼、各翼方針）與將領互換。傳令延遲未做（使用者決定） |
-| 決策卡 | 進行中 | 第一里程碑：引擎、暫停制介面、戰報、結算決策一覽。第二里程碑：選項依統計重整、將領性格與「交給他判斷」、渡河卡改開戰時問；240 局 不問 50%／選建議 68%／隨機 60%、每局 8.2 張。待做：第三里程碑（視角模式入口、舊程式移除） |
+| 決策卡 | 進行中 | 第一里程碑：引擎、暫停制介面、戰報、結算決策一覽。第二里程碑：選項依統計重整、將領性格與「交給他判斷」、渡河卡改開戰時問；對稱地圖 240 局 不問 50%／選建議 68%／隨機 60%、每局 8.2 張。八幡原（2026-10-24）：別働隊抵達卡、朝霧偵察卡「趁霧前推」、友軍動搖卡全域 60 秒（`decRelieveGap`）、間隔與建議改規則（`decGap*`／`decDetachRec`／`decBehindRec`）；240 局 不問 48%／全採納 60%、每局 11.6 張。待做：第三里程碑（視角模式入口、舊程式移除） |
 | 軍師與情報回路 | 完成 | 建議規則進模擬層（`advisor.ts`）、半渡而擊與大筒現身建議、`tools/daimyo.ts` 量玩家採納建議的勝率（240 局）：不介入 43%、全採納 53%；繞後與集火最有價值，親征／突擊／整頓量不出效果 |
 | M7 | 進行中 | 效能：士兵矩陣更新優化、每幀分段計時（`__kessen.prof`）、模擬每步 0.205→0.066 ms（探索格改外框掃描、擁擠數每步算一次）；跨瀏覽器：es2020／Safari 14 目標、roundRect polyfill；平衡：矩陣與消融量測完成，調整待提案。真機 fps 仍待回報 |
 
