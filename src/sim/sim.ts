@@ -177,11 +177,12 @@ export function updDims(u: Unit) {
 // ---------------- 建立對局 ----------------
 export function makeUnit(S: State, side: Side, r: RosterEntry | null, type: UType, key: string, x: number, y: number): Unit {
   const T = UT[type];
+  const men = r ? Math.max(1, Math.round(T.men * S.R.menMul[side] * (side === MAP.detach.side && MAP.detach.keys.includes(key) ? S.R.menMulDetach : 1))) : T.men;
   const u: Unit = {
     id: S.units.length, side, key, type, cmd: r ? r.cmd : '', cmdAlive: !!r,
     skill: r ? r.skill : null, passive: r ? r.passive : null, strategy: r?.strategy ?? null,
     advPassive: r?.advisorPassive ?? null, advisor: r?.advisor ?? null, advAlive: !!r?.advisor, reinf: !r, away: false,
-    men0: T.men, men: T.men, hpPer: T.hp, hp: T.men * T.hp,
+    men0: men, men, hpPer: T.hp, hp: men * T.hp,
     x, y, f: side === 0 ? Math.PI / 2 : -Math.PI / 2, form: 'line', ranks: 4, sp: 1.8, width: 0, depth: 0, rad: 0,
     morale: 0, moraleStart: 0, state: 'steady', routCount: 0,
     lastDmgT: -99, lastArrowT: -99, lossSteps: 0, lastFriendRoutT: -999,
