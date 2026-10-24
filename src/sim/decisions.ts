@@ -106,7 +106,7 @@ export function evalDecision(S: State, s: Side): Decision | null {
   }
   // 友軍動搖
   const weak = weakestEngaged(S, s);
-  if (weak && effM(S, weak) < 50 && okId('ev:relieve:' + weak.id, 60)) {
+  if (weak && effM(S, weak) < 50 && okId('ev:relieve:' + weak.id, 60) && okId('ev:relieve', R.decRelieveGap ?? 0)) {
     const foe = weak.primary >= 0 && weak.contacts.includes(weak.primary) ? S.units[weak.primary] : S.units[weak.contacts[0]];
     const opts: DOption[] = [];
     if (can('relieve') && own.some(u => u !== weak && !u.contacts.length && !u.retreating && (u.type === 'spear' || u.type === 'samurai' || u.type === 'cav'))) opts.push({ id: 'relieve', label: '派兩隊空手部隊側擊', hint: `打${unitName(foe)}的側背`, rec: true });
@@ -150,7 +150,7 @@ export function evalDecision(S: State, s: Side): Decision | null {
   // 據點在前
   if (t > 30) for (const u of own) {
     if ((u.role !== 'line' && u.role !== 'reserve') || u.contacts.length || u.retreating) continue;
-    const p = S.points.find(p => p.owner !== s && dist(u, p) < 90 && !spotted.some(E => dist(E, p) < 120) && okId('ev:point:' + p.id, 180));
+    const p = S.points.find(p => p.owner !== s && dist(u, p) < 90 && !spotted.some(E => dist(E, p) < 120) && okId('ev:point:' + p.id, 180) && okId('ev:point', R.decPointGap ?? 0));
     if (p) return mk({ id: 'ev:point:' + p.id, kind: 'event', speaker: u.cmd || unitName(u), advisor: false, unit: u.id, cd: 180, text: `前方 ${Math.round(dist(u, p))} m 是${p.id === 'village' ? '村落（援軍）' : p.id === 'temple' ? '寺廟（士氣 +10）' : '補給點（箭矢）'}，附近沒看到敵軍。`,
       options: [{ id: 'cap', label: '順路佔領', hint: '站進圓圈 20 秒', rec: true }, { id: 'pass', label: '不停留' }] });
   }
@@ -172,7 +172,7 @@ export function applyDecision(S: State, s: Side, d: Decision, optId: string): st
     const L = D.log[D.log.length - 1]; if (L) { L.opt = 'delegate:' + o.id; L.label = `交給${d.speaker}判斷 → ${o.label}`; }
     return `${d.speaker}自行判斷：${o.label}。${msg}`;
   }
-  D.last[d.id] = t; D.lastKind[d.kind] = t; if (d.kind === 'doctrine') D.nDoc++; else D.nEv++;
+  D.last[d.id] = t; D.lastKind[d.kind] = t; if (d.id.startsWith('ev:relieve:')) D.last['ev:relieve'] = t; if (d.id.startsWith('ev:point:')) D.last['ev:point'] = t; if (d.kind === 'doctrine') D.nDoc++; else D.nEv++;
   D.log.push({ t, id: d.id, opt: optId, who: d.speaker, text: d.text, label: d.options.find(o => o.id === optId)?.label ?? optId });
   const doc = (S.meta.doctrine as Doctrine[] | undefined)?.[s];
   const dep = deployOf(S, s);
