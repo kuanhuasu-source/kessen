@@ -43,7 +43,8 @@ export function evalDecision(S: State, s: Side): Decision | null {
   const D = decState(S), t = S.t, e = (1 - s) as Side, R = S.R;
   if (t < 10 || S.over) return null;
   const okId = (id: string, cd: number) => (D.last[id] ?? -1e9) + cd <= t;
-  const okKind = (k: 'doctrine' | 'event') => (D.lastKind[k] ?? -1e9) + GAP_KIND[k] <= t;
+  const gap = { doctrine: R.decGapDoctrine ?? GAP_KIND.doctrine, event: R.decGapEvent ?? GAP_KIND.event };
+  const okKind = (k: 'doctrine' | 'event') => (D.lastKind[k] ?? -1e9) + gap[k] <= t;
   const can = (k: CmdKind) => !cmdBlocked(S, s, k, D.cmdCd);
   const lvl = (E: Unit) => intelLvl(S, s, E);
   const own = S.units.filter(u => u.side === s && active(u));
@@ -55,7 +56,7 @@ export function evalDecision(S: State, s: Side): Decision | null {
   const cavFree = own.find(u => u.type === 'cav' && !u.contacts.length && !u.retreating);
   const rangedReady = own.some(u => isRanged(u) && u.ammo > 0);
   const doc = doctrineOf(S, s);
-  const mk = (d: Omit<Decision, 'cd'> & { cd?: number }): Decision => withVoice({ cd: 90, ...d }, Math.floor(t));
+  const mk = (d: Omit<Decision, 'cd'> & { cd?: number }): Decision => { const cd0 = d.cd ?? 90; return withVoice({ ...d, cd: d.kind === 'event' && cd0 < 1e8 ? cd0 * (R.decCdMul ?? 1) : cd0 }, Math.floor(t)); };
   // 視角模式：只有主將旗本與騎兵將領能親自帶隊；視角中、或 30 秒內剛退出的部隊不給選項
   const lock = (S.meta.leadLock as Record<number, number> | undefined) ?? {};
   const canLead = (u: Unit | undefined | null) => !!u && ((S.meta.lead as number | undefined) ?? -1) < 0 && (u.type === 'cav' || u.type === 'general') && active(u) && !u.contacts.length && (lock[u.id] ?? -1) <= t;
