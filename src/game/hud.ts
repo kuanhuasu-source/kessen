@@ -99,7 +99,7 @@ body { font-family: var(--ui); -webkit-user-select: none; user-select: none; -we
 .rail .w { display: none !important; }
 #hud.watch .rail .w { display: grid !important; }
 .rail .c { display: none !important; }
-#hud.daimyo .rail .c { display: grid !important; }
+#hud.daimyo .rail .c:not(.gone) { display: grid !important; } /* 大名令鈕已併入決策卡：加 gone 就不顯示 */
 #hud .rail #b-cmd { font-family: var(--display); font-size: 16px; }
 #hud .rail #b-cmd.on { background: var(--gold); color: var(--ink); border-color: var(--gold); }
 /* 情報讀數 */
