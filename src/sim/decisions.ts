@@ -87,7 +87,7 @@ export function evalDecision(S: State, s: Side): Decision | null {
     if (okId('doc:behind', 150) && t > 60 && S.army[s] + 15 <= S.army[e]) {
       const bad = S.army[s] < 45;
       return mk({ id: 'doc:behind', kind: 'doctrine', speaker: adv, advisor: true, cd: 150, text: `我軍軍勢 ${Math.round(S.army[s])}，落後敵軍 ${Math.round(S.army[e] - S.army[s])}。再拖下去會連鎖潰逃。`,
-        options: [{ id: 'regroup', label: '整頓固守', hint: '戰線後退 60 m，動搖者脫離，守住再說', rec: true }, { id: 'ret45', label: '撤退線提高到 45', hint: '保存兵力，等敵軍露出破綻' }, { id: 'allin', label: '全軍壓上', hint: '賭一把；量測多半更糟' }] });
+        options: [{ id: 'regroup', label: '整頓固守', hint: '戰線後退 60 m，動搖者脫離，守住再說', rec: R.decBehindRec === 'regroup' }, { id: 'ret45', label: '撤退線提高到 45', hint: '保存兵力，等敵軍露出破綻' }, { id: 'allin', label: '全軍壓上', hint: R.decBehindRec === 'allin' ? '別働隊快到了，正面壓上配合夾擊' : '賭一把；量測多半更糟', rec: R.decBehindRec === 'allin' }] });
       void bad;
     }
     // 敵主將暴露
@@ -105,8 +105,9 @@ export function evalDecision(S: State, s: Side): Decision | null {
         ?? spotted.sort((a, b) => Math.hypot(a.x - entry.x, a.y - entry.y) - Math.hypot(b.x - entry.x, b.y - entry.y))[0];
       const detCav = det.find(u => u.type === 'cav');
       const opts: DOption[] = [];
-      if (can('charge')) opts.push({ id: 'pincer', label: '全軍壓上，前後夾擊', hint: '本隊全線突擊，別働隊從背後打', rec: true });
-      if (rearT && detCav && can('raid')) opts.push({ id: 'rear', label: `別働隊先打敵${unitName(rearT)}`, hint: '騎兵繞到敵背後的遠程部隊，本隊照常', rec: !can('charge') });
+      const rearOk = !!(rearT && detCav && can('raid'));
+      if (can('charge')) opts.push({ id: 'pincer', label: '全軍壓上，前後夾擊', hint: '本隊全線突擊，別働隊從背後打', rec: R.decDetachRec === 'pincer' || !rearOk });
+      if (rearOk) opts.push({ id: 'rear', label: `別働隊先打敵${unitName(rearT!)}`, hint: '騎兵繞到敵背後的遠程部隊，本隊照常', rec: R.decDetachRec === 'rear' || !can('charge') });
       if (detCav) opts.push(...leadOpt(detCav, `我親自帶${detCav.cmd}隊從背後衝`));
       opts.push({ id: 'hold', label: '本隊維持，別働隊自行推進' });
       return mk({ id: 'ev:detach', kind: 'event', speaker: leader.cmd || unitName(leader), advisor: false, unit: leader.id, target: rearT?.id, cd: 1e9, lead: detCav?.id,

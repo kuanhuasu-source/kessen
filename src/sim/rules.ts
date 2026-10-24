@@ -95,6 +95,7 @@ export const V1 = {
   detachOn: false, detachT0: 190, detachTR: 40, // 別働隊（八幡原地圖）：抵達時間 T0 + 亂數 × TR 秒
   fogDur: 0, fogFade: 30,                       // 朝霧：前 fogDur 秒視野減半，之後 fogFade 秒內散去（0＝沒有霧）
   decGapDoctrine: 45, decGapEvent: 20, decCdMul: 1, // 決策卡：同層最短間隔（秒）、事件卡各自冷卻的倍率
+  decDetachRec: 'pincer' as 'pincer' | 'rear', decBehindRec: 'regroup' as 'regroup' | 'allin', // 別働隊抵達卡與軍勢落後卡的軍師建議
   decRelieveGap: 0, decPointGap: 0, // 友軍動搖卡不分部隊的最短間隔、據點卡不分據點的最短間隔（秒；0＝不限）
   cavEscape: false,      // 騎兵被包圍（兩隊以上接戰、遭側背攻擊）、動搖、或士氣低於 60 且損員三成時立刻脫離，士氣回到 60 前不再出擊，往所有接戰者的反方向退；關閉時只有「10 秒打不穿」與「正面撞長槍」會退
   menMul: [1, 1] as [number, number], menMulDetach: 1, // 兵數倍率：各方編制人數 × N（援軍不受影響）；別働隊再 × menMulDetach
