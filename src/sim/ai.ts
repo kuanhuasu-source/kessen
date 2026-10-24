@@ -74,7 +74,7 @@ export function issueCommand(S: State, s: Side, kind: CmdKind, target?: number):
 
 const Yl = (side: Side, y: number) => side === 0 ? y : 700 - y; // 己方座標 → 絕對座標
 // 各方對峙線（己方座標）：武田用規則 aiHoldYl（量測工具可調），上杉用地圖預設
-export const holdYlOf = (S: State, s: Side) => s === 0 ? S.R.aiHoldYl : MAP.holdYl[1];
+export const holdYlOf = (S: State, s: Side) => (s === 0 ? S.R.aiHoldYl : MAP.holdYl[1]) + ((S.meta.holdShift as number[] | undefined)?.[s] ?? 0); // holdShift：決策卡「趁霧前推」暫時前移對峙線
 const fwd = (side: Side) => side === 0 ? 1 : -1;
 const Q: Record<UType, number> = { spear: 1, archer: 0.8, samurai: 2.2, cav: 2.2, general: 2.5, gun: 1.0, cannon: 1.6 };
 const CLS = (t: UType): 'spear' | 'archer' | 'samurai' | 'cav' | 'general' => isRangedType(t) ? 'archer' : t as 'spear' | 'samurai' | 'cav' | 'general'; // 目標偏好表：遠程兵種視同弓兵

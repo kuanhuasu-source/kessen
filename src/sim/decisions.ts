@@ -1,7 +1,7 @@
 // 決策卡引擎（大名模式主迴圈，2026-10-23 設計）：佈陣後部隊自走，遇到狀況由現場將領請示（事件卡）或軍師提案（方針卡），
 // 戰場暫停等玩家選；選項 2～4 個、一個標「軍師建議」、依情報等級增減；執行交給部隊 AI，40 秒後以戰報回報結果。
 // 放在模擬層讓 tools/daimyo.ts 能模擬「總是選建議／隨機選／不問」三種玩家。
-import { TRAIT, type Side, type Trait } from './data.ts';
+import { TRAIT, MAP, type Side, type Trait } from './data.ts';
 import { type State, type Unit, active, dist, effM, general, isRanged, archerRange, inWater, onField, mHit, streamYAt } from './sim.ts';
 import { type CmdKind, type Doctrine, type Wing, issueCommand, doctrineOf, deployOf } from './ai.ts';
 import { intelLvl, weakestEngaged, dispatchScouts, cmdBlocked, CMD_CD, unitName } from './advisor.ts';
@@ -95,6 +95,24 @@ export function evalDecision(S: State, s: Side): Decision | null {
       return mk({ id: 'doc:gen', kind: 'doctrine', speaker: adv, advisor: true, cd: 120, target: eg.id, text: `敵主將${eg.cmd}身邊沒有長槍掩護，離我方本陣 ${Math.round(dist(g, eg))} m。`,
         lead: g.id, options: [...(can('commit') ? [{ id: 'commit', label: '主公親率旗本直取', hint: '旗本 30 秒內攻擊附近敵軍（AI 操作）', rec: true }] : []), ...leadOpt(g, '我親自帶旗本直取敵將'), ...(cavFree && can('raid') ? [{ id: 'raid', label: '騎兵繞後直取敵將', rec: !can('commit') }] : []), { id: 'ignore', label: '不理會' }] });
   }
+  // 別働隊抵達（關鍵時刻：不受事件層間隔限制，抵達後 25 秒內問一次）
+  if (R.detachOn && S.meta.detachDone && okId('ev:detach', 1e9) && t - (S.meta.detachAt as number) < 25 && MAP.detach.side === s) {
+    const det = own.filter(u => MAP.detach.keys.includes(u.key) && onField(u));
+    const leader = det[0];
+    if (leader) {
+      const entry = MAP.detach.entry;
+      const rearT = spotted.filter(E => isRanged(E)).sort((a, b) => Math.hypot(a.x - entry.x, a.y - entry.y) - Math.hypot(b.x - entry.x, b.y - entry.y))[0]
+        ?? spotted.sort((a, b) => Math.hypot(a.x - entry.x, a.y - entry.y) - Math.hypot(b.x - entry.x, b.y - entry.y))[0];
+      const detCav = det.find(u => u.type === 'cav');
+      const opts: DOption[] = [];
+      if (can('charge')) opts.push({ id: 'pincer', label: '全軍壓上，前後夾擊', hint: '本隊全線突擊，別働隊從背後打', rec: true });
+      if (rearT && detCav && can('raid')) opts.push({ id: 'rear', label: `別働隊先打敵${unitName(rearT)}`, hint: '騎兵繞到敵背後的遠程部隊，本隊照常', rec: !can('charge') });
+      if (detCav) opts.push(...leadOpt(detCav, `我親自帶${detCav.cmd}隊從背後衝`));
+      opts.push({ id: 'hold', label: '本隊維持，別働隊自行推進' });
+      return mk({ id: 'ev:detach', kind: 'event', speaker: leader.cmd || unitName(leader), advisor: false, unit: leader.id, target: rearT?.id, cd: 1e9, lead: detCav?.id,
+        text: `別働隊 ${det.length} 隊、${det.reduce((a, u) => a + u.men, 0)} 人已渡河，到了上杉背後${rearT ? `，前方 ${Math.round(Math.hypot(rearT.x - leader.x, rearT.y - leader.y))} m 是敵${unitName(rearT)}` : ''}。`, options: opts });
+    }
+  }
   if (!okKind('event')) return null;
   // ---- 事件卡（現場將領請示）----
   // 敵軍半渡
@@ -159,6 +177,8 @@ export function evalDecision(S: State, s: Side): Decision | null {
     const scouts = S.ninjas.filter(n => n.side === s && n.alive && n.detUntil <= t).length;
     const total = S.units.filter(u => u.side === e && active(u) && !u.reinf).length;
     if (seen.length <= 2 && scouts >= 2 && !own.some(u => u.contacts.length))
+      if (R.fogDur && t < R.fogDur) return mk({ id: 'ev:scout', kind: 'event', speaker: adv, advisor: true, cd: 1e9, text: `朝霧未散，敵方佈陣看不清（識別 ${seen.length}／${total} 隊）。霧還有約 ${Math.round((R.fogDur - t) / 10) * 10} 秒。`,
+        options: [{ id: 'scout', label: '派忍者到敵線前偵察', hint: '45 秒後自動歸隊', rec: true }, { id: 'push', label: '趁霧前推到河岸', hint: '戰線前移 40 m，霧散時已在岸邊等敵軍涉水' }, { id: 'wait', label: '守在八幡原等霧散' }] });
       return mk({ id: 'ev:scout', kind: 'event', speaker: adv, advisor: true, cd: 1e9, text: `敵方佈陣還看不清（識別 ${seen.length}／${total} 隊）。`, options: [{ id: 'scout', label: '派忍者到敵線前偵察', hint: '45 秒後自動歸隊', rec: true }, { id: 'wait', label: '先不動' }] });
   }
   return null;
@@ -206,6 +226,9 @@ export function applyDecision(S: State, s: Side, d: Decision, optId: string): st
     case 'bank': if (doc) { D.docRestore = { at: t + 90, attack: doc.attack }; doc.attack = 'hold'; report('岸上列陣等敵軍渡河', U); return '依令：全線在岸上列陣固守 90 秒'; } return `${who}：列陣`;
     case 'cap': if (U) { const p = S.points.find(p => p.owner !== s && dist(U, p) < 90); if (p) { U.role = 'cap:' + p.id; return `依令：${unitName(U)}去佔領據點`; } } return '據點不在附近';
     case 'scout': { const n = dispatchScouts(S, s); return `依令：${n} 名忍者前往敵線前偵察`; }
+    case 'push': { const hs = (S.meta.holdShift as number[] | undefined) ?? [0, 0]; hs[s] = 40; S.meta.holdShift = hs; S.meta.holdShiftUntil = S.R.fogDur + S.R.fogFade + 60; report('趁霧前推到河岸'); return '依令：趁霧前推，戰線前移到河岸'; }
+    case 'pincer': if (cmd('charge')) { if (doc) doc.attack = 'now'; report('前後夾擊', U); return '依令：全軍壓上，前後夾擊！'; } return '突擊令冷卻中';
+    case 'rear': if (T && cmd('raid', T.id)) { report(`別働隊打${unitName(T)}`, T); return `依令：別働隊先打敵${unitName(T)}`; } return `${who}：騎兵現在動不了`;
   }
   return `${who}：遵命`;
 }
@@ -213,6 +236,7 @@ export function applyDecision(S: State, s: Side, d: Decision, optId: string): st
 export function tickDecisions(S: State, s: Side): string[] {
   const D = decState(S), t = S.t, out: string[] = [];
   const dep = deployOf(S, s);
+  if (S.meta.holdShiftUntil && t >= (S.meta.holdShiftUntil as number)) { S.meta.holdShift = undefined; S.meta.holdShiftUntil = 0; out.push('戰報・霧已散，戰線回到原對峙線'); }
   D.wingRestore = D.wingRestore.filter(r => { if (t >= r.at) { if (dep) dep.wings[r.w] = r.prev; return false; } return true; });
   if (D.docRestore && t >= D.docRestore.at) { const doc = (S.meta.doctrine as Doctrine[] | undefined)?.[s]; if (doc && doc.attack === 'hold') doc.attack = D.docRestore.attack; D.docRestore = undefined; out.push('戰報・岸上列陣期滿，恢復原方針'); }
   D.pending = D.pending.filter(p => {
