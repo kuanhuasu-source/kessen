@@ -2,12 +2,12 @@
 // 戰場暫停等玩家選；選項 2～4 個、一個標「軍師建議」、依情報等級增減；執行交給部隊 AI，40 秒後以戰報回報結果。
 // 放在模擬層讓 tools/daimyo.ts 能模擬「總是選建議／隨機選／不問」三種玩家。
 import { TRAIT, type Side, type Trait } from './data.ts';
-import { type State, type Unit, active, dist, effM, general, isRanged, archerRange, inWater, onField } from './sim.ts';
+import { type State, type Unit, active, dist, effM, general, isRanged, archerRange, inWater, onField, mHit } from './sim.ts';
 import { type CmdKind, type Doctrine, type Wing, issueCommand, doctrineOf, deployOf } from './ai.ts';
 import { intelLvl, weakestEngaged, dispatchScouts, cmdBlocked, CMD_CD, unitName } from './advisor.ts';
 
 export type DOption = { id: string; label: string; hint?: string; rec?: boolean };
-export type Decision = { id: string; kind: 'doctrine' | 'event'; speaker: string; advisor: boolean; text: string; options: DOption[]; unit?: number; target?: number; cd: number };
+export type Decision = { id: string; kind: 'doctrine' | 'event'; speaker: string; advisor: boolean; text: string; options: DOption[]; unit?: number; target?: number; cd: number; lead?: number }; // lead：「我親自帶隊」要切視角的部隊
 type Pending = { at: number; text: string; unit?: number; men0?: number; mor0?: number };
 export type DecState = { last: Record<string, number>; lastKind: Record<string, number>; nDoc: number; nEv: number; cmdCd: Partial<Record<CmdKind, number>>; pending: Pending[]; wingRestore: { at: number; w: 'L' | 'C' | 'R'; prev: Wing }[]; docRestore?: { at: number; attack: Doctrine['attack'] }; log: { t: number; id: string; opt: string; who: string; text: string; label: string }[] };
 export function decState(S: State): DecState {
@@ -56,6 +56,11 @@ export function evalDecision(S: State, s: Side): Decision | null {
   const rangedReady = own.some(u => isRanged(u) && u.ammo > 0);
   const doc = doctrineOf(S, s);
   const mk = (d: Omit<Decision, 'cd'> & { cd?: number }): Decision => withVoice({ cd: 90, ...d }, Math.floor(t));
+  // 視角模式：只有主將旗本與騎兵將領能親自帶隊；視角中、或 30 秒內剛退出的部隊不給選項
+  const lock = (S.meta.leadLock as Record<number, number> | undefined) ?? {};
+  const canLead = (u: Unit | undefined | null) => !!u && ((S.meta.lead as number | undefined) ?? -1) < 0 && (u.type === 'cav' || u.type === 'general') && active(u) && !u.contacts.length && (lock[u.id] ?? -1) <= t;
+  const LEAD_HINT = '切到該隊視角親自操作：士氣 +10、功績加倍；大將若討死軍勢再 −30';
+  const leadOpt = (u: Unit, label: string): DOption[] => canLead(u) ? [{ id: 'lead', label, hint: LEAD_HINT }] : [];
   // ---- 方針卡（軍師提案，只在前提被推翻時）----
   if (okKind('doctrine') && adv) {
     // 敵主力位置偏向一翼
@@ -75,7 +80,7 @@ export function evalDecision(S: State, s: Side): Decision | null {
     if (okId('doc:cannon', 1e9) && doc.attack !== 'now' && !own.some(u => u.contacts.length)) {
       const can_ = seen.find(E => E.type === 'cannon');
       if (can_) return mk({ id: 'doc:cannon', kind: 'doctrine', speaker: adv, advisor: true, cd: 1e9, target: can_.id, text: `敵大筒${unitName(can_)}現身，射程 260 m。守著等射完箭會先挨轟。`,
-        options: [...(cavFree && can('raid') ? [{ id: 'raid', label: '騎兵先打大筒', hint: '大筒 60 m 內打不到人', rec: true }] : []), { id: 'keep', label: '維持方針，照計畫推進', hint: '量測：倉促進攻反而吃虧', rec: !(cavFree && can('raid')) }] });
+        lead: cavFree?.id, options: [...(cavFree && can('raid') ? [{ id: 'raid', label: '騎兵先打大筒', hint: '大筒 60 m 內打不到人', rec: true }] : []), ...(cavFree ? leadOpt(cavFree, `我親自帶${cavFree.cmd}隊去打大筒`) : []), { id: 'keep', label: '維持方針，照計畫推進', hint: '量測：倉促進攻反而吃虧', rec: !(cavFree && can('raid')) }] });
     }
     // 軍勢落後
     if (okId('doc:behind', 150) && t > 60 && S.army[s] + 15 <= S.army[e]) {
@@ -87,7 +92,7 @@ export function evalDecision(S: State, s: Side): Decision | null {
     // 敵主將暴露
     if (okId('doc:gen', 120) && eg.cmdAlive && active(eg) && lvl(eg) >= 2 && !guarded(eg) && g.cmdAlive && active(g) && effM(S, g) >= 60 && dist(g, eg) < 220)
       return mk({ id: 'doc:gen', kind: 'doctrine', speaker: adv, advisor: true, cd: 120, target: eg.id, text: `敵主將${eg.cmd}身邊沒有長槍掩護，離我方本陣 ${Math.round(dist(g, eg))} m。`,
-        options: [...(can('commit') ? [{ id: 'commit', label: '主公親率旗本直取', hint: '旗本 30 秒內攻擊附近敵軍', rec: true }] : []), ...(cavFree && can('raid') ? [{ id: 'raid', label: '騎兵繞後直取敵將', rec: !can('commit') }] : []), { id: 'ignore', label: '不理會' }] });
+        lead: g.id, options: [...(can('commit') ? [{ id: 'commit', label: '主公親率旗本直取', hint: '旗本 30 秒內攻擊附近敵軍（AI 操作）', rec: true }] : []), ...leadOpt(g, '我親自帶旗本直取敵將'), ...(cavFree && can('raid') ? [{ id: 'raid', label: '騎兵繞後直取敵將', rec: !can('commit') }] : []), { id: 'ignore', label: '不理會' }] });
   }
   if (!okKind('event')) return null;
   // ---- 事件卡（現場將領請示）----
@@ -106,7 +111,8 @@ export function evalDecision(S: State, s: Side): Decision | null {
     if (can('relieve') && own.some(u => u !== weak && !u.contacts.length && !u.retreating && (u.type === 'spear' || u.type === 'samurai' || u.type === 'cav'))) opts.push({ id: 'relieve', label: '派兩隊空手部隊側擊', hint: `打${unitName(foe)}的側背`, rec: true });
     if (can('focus') && rangedReady && own.some(u => isRanged(u) && dist(u, foe) <= archerRange(S, u, foe))) opts.push({ id: 'focus', label: '弓兵集火它的對手', rec: !opts.length });
     opts.push({ id: 'retreat', label: '先退到主將旁整頓', hint: '脫離接戰，不連累友軍', rec: !opts.length });
-    if (opts.length >= 2) return mk({ id: 'ev:relieve:' + weak.id, kind: 'event', speaker: weak.cmd || unitName(weak), advisor: false, unit: weak.id, target: foe.id, cd: 60, text: `${unitName(weak)}士氣只剩 ${Math.round(effM(S, weak))}，頂不住${unitName(foe)}了！`, options: opts });
+    if (g.cmdAlive && effM(S, g) >= 50 && dist(g, weak) < 200) opts.push(...leadOpt(g, '我親率旗本馳援'));
+    if (opts.length >= 2) return mk({ id: 'ev:relieve:' + weak.id, kind: 'event', speaker: weak.cmd || unitName(weak), advisor: false, unit: weak.id, target: foe.id, cd: 60, lead: g.id, text: `${unitName(weak)}士氣只剩 ${Math.round(effM(S, weak))}，頂不住${unitName(foe)}了！`, options: opts });
   }
   // 敵隊動搖：集火／騎兵衝
   const wavE = seen.filter(E => E.state === 'waver' && E.contacts.length).sort((a, b) => effM(S, a) - effM(S, b))[0];
@@ -114,7 +120,7 @@ export function evalDecision(S: State, s: Side): Decision | null {
     const shooter = own.filter(u => isRanged(u) && u.ammo > 0 && dist(u, wavE) <= archerRange(S, u, wavE))[0];
     const opts: DOption[] = [];
     if (cavFree && can('raid')) opts.push({ id: 'raid', label: '騎兵繞到它背後衝鋒', hint: '動搖的部隊挨衝鋒多半直接潰走', rec: true });
-    if (opts.length) { if (shooter && can('focus')) opts.push({ id: 'focus', label: '集中箭火', hint: '弓兵本來就會優先射動搖的敵軍，效果有限' }); opts.push({ id: 'ignore', label: '不理會' }); const sp = cavFree!; return mk({ id: 'ev:focus:' + wavE.id, kind: 'event', speaker: sp.cmd || unitName(sp), advisor: false, unit: sp.id, target: wavE.id, cd: 60, text: `敵${unitName(wavE)}已經動搖（士氣約 ${Math.round(effM(S, wavE))}）。`, options: opts }); }
+    if (opts.length) { opts.push(...leadOpt(cavFree!, `我親自帶${cavFree!.cmd}隊衝`)); if (shooter && can('focus')) opts.push({ id: 'focus', label: '集中箭火', hint: '弓兵本來就會優先射動搖的敵軍，效果有限' }); opts.push({ id: 'ignore', label: '不理會' }); const sp = cavFree!; return mk({ id: 'ev:focus:' + wavE.id, kind: 'event', speaker: sp.cmd || unitName(sp), advisor: false, unit: sp.id, target: wavE.id, cd: 60, lead: sp.id, text: `敵${unitName(wavE)}已經動搖（士氣約 ${Math.round(effM(S, wavE))}）。`, options: opts }); }
   }
   // 敵遠程部隊沒有掩護
   if (cavFree && can('raid')) {
@@ -122,7 +128,7 @@ export function evalDecision(S: State, s: Side): Decision | null {
     const ea = cavFree.men >= cavFree.men0 * 0.7 ? seen.filter(E => isRanged(E) && dist(cavFree, E) < 260 && !guarded(E) && isolated(E)).sort((a, b) => (a.type === 'cannon' ? -1 : 0) - (b.type === 'cannon' ? -1 : 0) || dist(a, cavFree) - dist(b, cavFree))[0] : undefined;
     if (ea && okId('ev:raid:' + ea.id, 150)) return mk({ id: 'ev:raid:' + ea.id, kind: 'event', speaker: cavFree.cmd || unitName(cavFree), advisor: false, unit: cavFree.id, target: ea.id, cd: 150,
       text: `敵${unitName(ea)}${ea.type === 'cannon' ? '的大筒' : ea.type === 'gun' ? '的鐵砲' : '的弓兵'}落單了，80 m 內沒有敵步兵，離我 ${Math.round(dist(cavFree, ea))} m。`,
-      options: [{ id: 'raid', label: '繞到背後衝鋒', rec: true }, { id: 'ignore', label: '按兵不動' }] });
+      lead: cavFree.id, options: [{ id: 'raid', label: '繞到背後衝鋒', rec: true }, ...leadOpt(cavFree, '我親自帶隊繞後'), { id: 'ignore', label: '按兵不動' }] });
   }
   // 渡河：發起攻勢時戰線還在溪的己方側、對岸有識別的敵軍 → 問一次（渡河進攻／岸上等敵軍渡河）
   if (R.streams !== 'none' && okId('ev:ford', 1e9) && doc.attack !== 'hold') {
@@ -159,6 +165,11 @@ export function evalDecision(S: State, s: Side): Decision | null {
 // 套用選項，回傳一行戰報。會把對應的大名令、方針或部隊狀態寫進模擬。
 export function applyDecision(S: State, s: Side, d: Decision, optId: string): string {
   const D = decState(S), t = S.t;
+  if (optId === 'delegate') { // 交給將領判斷：依性格挑一個既有選項，紀錄合併成一筆
+    const o = delegatePick(d); const msg = applyDecision(S, s, d, o.id);
+    const L = D.log[D.log.length - 1]; if (L) { L.opt = 'delegate:' + o.id; L.label = `交給${d.speaker}判斷 → ${o.label}`; }
+    return `${d.speaker}自行判斷：${o.label}。${msg}`;
+  }
   D.last[d.id] = t; D.lastKind[d.kind] = t; if (d.kind === 'doctrine') D.nDoc++; else D.nEv++;
   D.log.push({ t, id: d.id, opt: optId, who: d.speaker, text: d.text, label: d.options.find(o => o.id === optId)?.label ?? optId });
   const doc = (S.meta.doctrine as Doctrine[] | undefined)?.[s];
@@ -167,7 +178,14 @@ export function applyDecision(S: State, s: Side, d: Decision, optId: string): st
   const cmd = (k: CmdKind, target?: number) => { if (issueCommand(S, s, k, target)) { D.cmdCd[k] = t + CMD_CD[k]; return true; } return false; };
   const report = (text: string, u?: Unit | null) => { D.pending.push({ at: t + 40, text, unit: u?.id, men0: u?.men, mor0: u ? effM(S, u) : undefined }); };
   const who = d.speaker;
-  if (optId === 'delegate') { const o = delegatePick(d); const msg = applyDecision(S, s, d, o.id); D.log.pop(); D.log.push({ t, id: d.id, opt: 'delegate:' + o.id, who, text: d.text, label: `交給${who}判斷 → ${o.label}` }); return `${who}自行判斷：${o.label}。${msg}`; }
+  if (optId === 'lead' && d.lead !== undefined) {
+    const L = S.units[d.lead];
+    S.meta.leadReq = { unit: d.lead, target: d.target }; // 遊戲層讀到後切視角
+    mHit(S, L, S.R.leadMorale, 'lead');
+    if (d.id.startsWith('ev:relieve') && U) cmd('relieve', U.id); // 旗本去馳援時，空手部隊也一起上
+    report(`${unitName(L)}親自出擊`, L);
+    return `主公親自帶${unitName(L)}出擊（士氣 +${S.R.leadMorale}、功績加倍）`;
+  }
   switch (optId) {
     case 'shift': { const E = S.units.filter(u => u.side !== s && active(u) && intelLvl(S, s, u) >= 2 && !isRanged(u)); const mx = E.reduce((a, u) => a + u.x, 0) / Math.max(1, E.length); const w: 'L' | 'R' = mx > 500 ? 'R' : 'L'; if (dep) { dep.wings[w] = 'press'; dep.wings[w === 'L' ? 'R' : 'L'] = 'hold'; } return `依令：戰線壓向${w === 'R' ? '東' : '西'}翼`; }
     case 'cav': { const E = S.units.filter(u => u.side !== s && active(u) && intelLvl(S, s, u) >= 2 && !isRanged(u)); const mx = E.reduce((a, u) => a + u.x, 0) / Math.max(1, E.length); if (dep) dep.cavWing = mx > 500 ? 'E' : 'W'; if (doc) doc.cav = 'raid'; return `依令：騎兵改到${mx > 500 ? '東' : '西'}翼，接戰後繞後`; }

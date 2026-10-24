@@ -125,6 +125,12 @@ body { font-family: var(--ui); -webkit-user-select: none; user-select: none; -we
 .advice.dec .bt button small { font-size: 10px; color: var(--gold); border: 1px solid var(--gold); border-radius: 4px; padding: 0 4px; }
 .advice.dec .bt button em { font-style: normal; font-size: 11px; color: var(--paper-dim); flex-basis: 100%; }
 .advice.dec .hd2 { font-size: 11px; color: var(--paper-dim); margin-bottom: 2px; }
+.lead { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--edge-b) + 86px); display: flex; gap: 6px; align-items: center; padding: 6px 10px; border-radius: 999px; background: rgba(31,26,20,0.85); border: 1px solid var(--gold); pointer-events: auto; z-index: 4; }
+.lead .nm { font-family: var(--display); color: var(--gold); font-size: 13px; margin-right: 4px; white-space: nowrap; }
+.lead button { min-height: 32px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: transparent !important; color: var(--paper); font-size: 13px; }
+.lead button.x2 { border-color: var(--gold); }
+.advice:not([hidden]) ~ .lead { display: none; } /* 決策卡出現時先收起視角列 */
+@media (max-width: 700px), (max-height: 430px) { .lead { bottom: calc(var(--edge-b) + 78px); padding: 4px 8px; } .lead button { min-height: 28px; padding: 0 8px; font-size: 12px; } }
 .advice .bt button { min-height: 26px; min-width: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line); background: transparent !important; font-family: var(--display) !important; font-size: 13px; }
 .advice .bt button:first-child { background: var(--gold) !important; color: var(--ink) !important; border-color: var(--gold); font-weight: 700; }
 .setup .war { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
@@ -291,6 +297,8 @@ export class Hud {
   private av: HTMLElement[] = []; private bars: HTMLElement[] = [];
   onCmd: () => void = () => {};
   onSound: () => void = () => {};
+  onLead: (act: string) => void = () => {};
+  setLead(name: string | null) { const el = this.root.querySelector<HTMLElement>('.lead')!; if (!name) { el.hidden = true; return; } el.querySelector('.nm')!.textContent = `${name}・視角`; el.hidden = false; }
   setSound(on: boolean) { const b = this.root.querySelector('#b-snd')!; b.setAttribute('aria-pressed', String(on)); b.textContent = on ? '音' : '靜'; b.classList.toggle('on', on); }
   setDaimyo(on: boolean) { this.root.classList.toggle('daimyo', on); }
   setCmdOpen(on: boolean) { const b = this.root.querySelector('#b-cmd')!; b.setAttribute('aria-pressed', String(on)); b.classList.toggle('on', on); }
@@ -344,6 +352,7 @@ export class Hud {
       <div class="info" hidden aria-live="polite"></div>
       <div class="prompt" hidden><span></span><button type="button" id="b-cancel">取消</button></div>
       <div class="advice" hidden></div>
+      <div class="lead" hidden><span class="nm"></span><button type="button" data-l="charge">衝鋒</button><button type="button" data-l="skill">武將技</button><button type="button" data-l="cry">鬨聲</button><button type="button" data-l="retreat">撤退</button><button type="button" class="x2" data-l="exit">返回俯瞰</button></div>
       <div class="intel" hidden></div>
       <div class="setup" hidden></div>
       <div class="feed" aria-live="polite"></div>
@@ -413,6 +422,7 @@ export class Hud {
     this.skillBtn = this.root.querySelector('#b-skill')!; this.skillBtn.onclick = () => cb.onSkill();
     this.root.querySelector<HTMLButtonElement>('#b-cmd')!.onclick = () => this.onCmd();
     this.root.querySelector<HTMLButtonElement>('#b-snd')!.onclick = () => this.onSound();
+    this.root.querySelectorAll<HTMLButtonElement>('.lead button').forEach(b => { b.onclick = () => this.onLead(b.dataset.l!); });
     this.retreatBtn = this.root.querySelector('#b-retreat')!; this.retreatBtn.onclick = () => cb.onRetreat();
     this.holdEl = this.root.querySelector('.hold')!;
     this.toastEl = this.root.querySelector('.toast')!;

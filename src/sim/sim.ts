@@ -358,7 +358,7 @@ export function cmdDeath(S: State, u: Unit, who: 'cmd' | 'adv', how: string, kil
     if (!u.cmdAlive) return;
     u.cmdAlive = false;
     if (u.state !== 'gone' && how !== 'wipe') mHit(S, u, R.cmdDeathUnit, 'cmdDeath');
-    if (u.type === 'general') aHit(S, u.side, R.aGenDeath, 'genDeath'); else aHit(S, u.side, R.aViceDeath, 'viceDeath');
+    if (u.type === 'general') { aHit(S, u.side, R.aGenDeath, 'genDeath'); if (S.meta.lead === u.id) aHit(S, u.side, R.leadGenDeath, 'leadDeath'); } else aHit(S, u.side, R.aViceDeath, 'viceDeath'); // 親征中大將討死：全軍震動
   } else {
     if (!u.advAlive) return;
     u.advAlive = false; aHit(S, u.side, R.aAdvisorDeath, 'advisorDeath');
@@ -370,6 +370,7 @@ export function cmdDeath(S: State, u: Unit, who: 'cmd' | 'adv', how: string, kil
 }
 // 戰場功績：擊潰敵隊或討取武將的部隊得功；每得功士氣提升，攻擊依功績加成（見 meleeAttack／volley）
 export function addMerit(S: State, u: Unit, n: number, why: string) {
+  if (S.meta.lead === u.id) n *= S.R.leadMeritMul; // 親自帶隊：功績加倍
   u.merit += n; mHit(S, u, S.R.meritMorale, 'merit');
   fx(S, { k: 'merit', a: u.id, n: u.merit, s: why });
 }

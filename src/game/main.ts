@@ -179,6 +179,10 @@ let visMode: 'all' | 0 | 1 = WATCH ? 'all' : 0;
 const viewSide = () => (visMode === 'all' ? 0 : visMode) as 0 | 1;
 const intelOf = (u: Unit) => {
   if (!S.R.fogOn || visMode === 'all' || u.side === visMode) return 3;
+  if (lead >= 0) { // 視角模式：只看得到帶隊部隊自己的視野（識別 80 m、察覺 130 m，森林減半；接戰中的對手一定看得到）
+    const L = S.units[lead]; if (L.contacts.includes(u.id)) return 2;
+    const d = dist(u, L), f = inForest(u.x, u.y) ? 0.5 : 1; return d <= 80 * f ? 2 : d <= 130 * f ? 1 : 0;
+  }
   return Math.max(S.vis[visMode][u.id], canSee(S, visMode, u) ? 2 : 0);
 };
 const viewOf = (id: number) => views[id];
@@ -194,6 +198,9 @@ const mine = (u: Unit) => u.side === 0;
 const selected = new Set<number>();
 let paused = true, speed = 1, started = false;
 let decision: Decision | null = null; // 決策卡顯示中：戰場暫停等玩家選
+// 視角模式：只操作一隊（主將旗本或騎兵將領），鏡頭跟隨拉近，只看該隊的視野；從決策卡的「我親自帶隊」進入
+let lead = -1; const leadLock: Record<number, number> = {}; S.meta.lead = -1; S.meta.leadLock = leadLock;
+let leadDist = 280;
 const SPEEDS = WATCH ? [0.5, 1, 2, 3, 5] : [0.5, 1, 2, 3];
 
 const setSel = (ids: number[], add: boolean) => {
@@ -498,8 +505,29 @@ function evalDecisionCard() {
   sfx.advice();
   hud.showDecision(`<div class="hd2">${d.kind === 'doctrine' ? '軍師提案' : '請示'}・戰場暫停</div><div style="display:flex;gap:8px;align-items:center">${img(pic, 'pp')}<div class="tx"><b>${d.speaker}</b>：${d.text}</div></div>`,
     d.options.map(o => ({ label: o.label, hint: o.hint, rec: o.rec })),
-    i => { const o = d.options[i]; const msg = applyDecision(S, 0, d, o.id); decision = null; hud.hideDecision(); hud.toast(msg); say(msg); sfx.cmd(); if (o.id === 'charge' || o.id === 'allin') say('全軍突擊！'); });
+    i => { const o = d.options[i]; const msg = applyDecision(S, 0, d, o.id); decision = null; hud.hideDecision(); hud.toast(msg); say(msg); sfx.cmd(); if (o.id === 'charge' || o.id === 'allin') say('全軍突擊！');
+      const req = S.meta.leadReq as { unit: number; target?: number } | undefined; if (req) { S.meta.leadReq = undefined; enterLead(req.unit, req.target); } });
 }
+function enterLead(id: number, target?: number) {
+  const u = S.units[id]; if (!active(u)) return;
+  lead = id; S.meta.lead = id; manualSet.add(id); u.aiLockK = ''; setSel([id], false); inspect = -1; infoClosed = -1;
+  if (target !== undefined && S.units[target] && active(S.units[target])) { u.target = target; attackRun.set(id, true); }
+  leadDist = rig.dist; rig.dist = 95; rig.tx = u.x; rig.ty = u.y;
+  hud.setLead(u.cmd || nameOf(u)); hud.toast(`${nameOf(u)}視角：點地面移動、點敵軍攻擊；「返回俯瞰」交回 AI`); sfx.cmd();
+}
+function exitLead(why = '') {
+  if (lead < 0) return; const u = S.units[lead];
+  leadLock[lead] = S.t + 30; handBack(u); lead = -1; S.meta.lead = -1; rig.dist = leadDist; hud.setLead(null);
+  hud.toast(why || `${nameOf(u)}交回 AI 指揮（30 秒內不能再親自帶隊）`);
+}
+hud.onLead = act => {
+  if (lead < 0) return; const u = S.units[lead];
+  if (act === 'exit') exitLead();
+  else if (act === 'skill') trySkill(u);
+  else if (act === 'cry') tryCry(u);
+  else if (act === 'retreat') orderRetreat();
+  else if (act === 'charge') { let best: Unit | null = null, bd = 220; for (const E of S.units) if (E.side === 1 && active(E) && intelOf(E) >= 1) { const d = dist(u, E); if (d < bd) { bd = d; best = E; } } if (best) orderAttack(best, true); else hud.toast('200 m 內沒有看得到的敵軍'); }
+};
 function evalAdvice() {
   if (!started || S.over) return;
   const g = general(S, 0); if (!g.advAlive) { if (advice) { advice = null; hud.hideAdvice(); } return; }
@@ -859,7 +887,7 @@ const MORALE_SRC: Record<string, string> = {
 };
 const ARMY_SRC: Record<string, string> = {
   unitRout: '部隊潰走', unitShatter: '部隊潰滅', bannerFall: '馬印倒下', enemyRout: '敵軍潰走', genDeath: '大將討死', viceDeath: '武將討死',
-  advisorDeath: '軍師討死', pointGain: '奪取據點', pointLost: '失去據點', rally: '部隊重整', houka: '放火',
+  advisorDeath: '軍師討死', leadDeath: '主公親征討死', pointGain: '奪取據點', pointLost: '失去據點', rally: '部隊重整', houka: '放火',
 };
 const SIDE_NAME = ['武田', '上杉'];
 const pct = (v: number) => `${v > 0 ? '+' : '−'}${Math.abs(Math.round(v))}`;
@@ -922,7 +950,7 @@ hud.onInfoAct = act => {
     hud.toast(`${row.label}：${doctrineLabel(key)}`); infoT = 0; return;
   }
   if (act === 'hand:all') { for (const id of [...manualSet]) handBack(S.units[id]); hud.toast('全部交回 AI 指揮'); infoT = 0; return; }
-  if (act === 'hand') { const u = infoUnit(); if (u && u.side === 0) { if (manualSet.has(u.id)) { handBack(u); hud.toast(`${nameOf(u)}交回 AI 指揮`); } else { manualSet.add(u.id); u.aiLockK = ''; hud.toast(`親自指揮${nameOf(u)}`); } } infoT = 0; return; }
+  if (act === 'hand') { const u = infoUnit(); if (u && u.side === 0) { if (u.id === lead) { exitLead(); infoT = 0; return; } if (manualSet.has(u.id)) { handBack(u); hud.toast(`${nameOf(u)}交回 AI 指揮`); } else { manualSet.add(u.id); u.aiLockK = ''; hud.toast(`親自指揮${nameOf(u)}`); } } infoT = 0; return; }
   if (act.startsWith('j:')) { const j = act.slice(2); if (jutsu === j) cancelJutsu(); else startJutsu(j); return; }
   if (act === 'auto') { const n = S.ninjas[selNin]; if (n) { n.manual = false; hud.toast('忍者恢復自動偵察'); } return; }
   const u = infoUnit(); if (!u || u.side !== 0) return;
@@ -1384,6 +1412,7 @@ function frame(now: number) {
     infoT = 0.25;
     hud.setInfo(cmdOpen ? cmdHtml() : selNin >= 0 ? ninjaHtml(S.ninjas[selNin]) : infoU && infoU.id !== infoClosed ? infoHtml(infoU) : inspectPoint >= 0 ? pointHtml(inspectPoint) : null);
     if (DAIMYO && !paused && !decision) { for (const line of tickDecisions(S, 0)) say(line); evalDecisionCard(); }
+    if (lead >= 0) { const u = S.units[lead]; if (!active(u)) exitLead(u.state === 'gone' ? `${nameOf(u)}已離場，返回俯瞰` : `${nameOf(u)}潰走，返回俯瞰`); else { rig.tx += (u.x - rig.tx) * 0.15; rig.ty += (u.y - rig.ty) * 0.15; if (!selected.has(lead)) setSel([lead], false); } }
     // 接戰環境音：有部隊接戰時每 0.5～0.9 秒一陣兵刃聲，強度看接戰隊數
     if (!paused && S.t - lastClashT > 0.5 + Math.random() * 0.4) { lastClashT = S.t; let n = 0; for (const u of S.units) if (u.contacts.length && active(u)) n++; if (n > 0) sfx.clash(Math.min(1, n / 8)); }
     if (S.R.pointWin && S.holdAll[0] > 0) hud.setHold(0, 60 - S.holdAll[0]); else if (S.R.pointWin && S.holdAll[1] > 0) hud.setHold(1, 60 - S.holdAll[1]); else hud.setHold(-1, 0);

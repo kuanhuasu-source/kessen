@@ -91,6 +91,7 @@ export const V1 = {
   waterHit: -10,         // 半渡而擊：攻擊水中（非渡口）的部隊，接觸時額外士氣打擊
   aiHoldYl: 295,         // AI 戰線式指揮的對峙線（己方座標）
   aiAttackT0: 30, aiAttackTR: 80, aiAnchorSpd: 3.3, deployFwd: 0, aiFormRun: false, aiVolleyDur: 20,
+  leadMorale: 10, leadMeritMul: 2, leadGenDeath: -30, // 視角模式：親自帶隊的部隊士氣 +N、功績倍率；大將親征討死時軍勢額外 −N
   meritOn: false, meritMorale: 8, meritAtk: 0.1, meritMax: 3, // 戰場功績：擊潰敵隊 +1、討取武將 +2（大將 +3）；每得功士氣 +N、每功攻擊 +10%（最多 3 功）
   ninjaFwd: 0,           // 忍者起始位置往前多少 m（佈陣前移後忍者該在軍隊前面）
   aiHunt: false,         // 戰線式 AI 攻勢時以看得到的敵軍位置為錨點目標（含背後），脫離接戰 20 秒後任何方向都可迎擊；關閉時錨點一路推到 700，兩軍會互相穿過後各自站在對方本陣
