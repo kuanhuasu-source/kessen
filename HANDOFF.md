@@ -9,6 +9,7 @@
 | 項目 | 位置 |
 | --- | --- |
 | 遊戲（可直接玩） | https://claude.ai/artifact/UjqYxfDUxLHEW3CA6xsy7R （第 22 版：地形高低與溪流、情報 v2、鐵砲／大筒不對稱編制）。更新時發布 `dist/kessen-m1.html` 到同一個 URL |
+| GitHub Pages（公開可玩） | https://kuanhuasu-source.github.io/kessen/ ，倉庫 `kuanhuasu-source/kessen`（只放遊戲，公開）。發布流程：在 LVV-Studio 的 `kessen/` 開發，`git subtree push --prefix=kessen https://github.com/kuanhuasu-source/kessen main` 推過去，Actions（`kessen/.github/workflows/pages.yml`）自動建置部署 |
 | 設計文件（線上，含圖表） | https://claude.ai/artifact/JAXq85B8a3UheAm2xAcFwL |
 | 進度與待辦 | `BACKLOG.md` |
 | 原始碼 | GitHub `kuanhuasu-source/lvv-studio` 的 `kessen/` 子資料夾（與 LVV Studio 配音工具同一個 repo，互不相關） |
