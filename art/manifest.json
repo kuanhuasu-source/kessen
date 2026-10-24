@@ -535,7 +535,11 @@
       "file": "intro/intro_s1.png",
       "aspect": "16:9",
       "size": "1K",
-      "prompt": "Two rival daimyo shown as a divided composition: on the left Takeda Shingen in vermilion-red armor with a war fan before the mountains of Kai, on the right Uesugi Kenshin in white monk hood and dark blue armor before the snowy mountains of Echigo, a river valley (Shinano) between them. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+      "prompt": "Two rival daimyo shown as a divided composition: on the left Takeda Shingen in vermilion-red armor with a war fan before the mountains of Kai, on the right Uesugi Kenshin in white monk hood and dark blue armor before the snowy mountains of Echigo, a river valley (Shinano) between them. HISTORICAL HERALDRY, strictly: Takeda side uses vermilion-red banners bearing the Takeda-bishi crest exactly as in reference image 1 (four hollow black diamonds forming a larger diamond), plus one dark-indigo banner with the four white kanji 風林火山 written vertically; Takeda Shingen wears the Suwa-hosho kabuto with long white yak-hair and holds an iron war fan (gunbai). Uesugi side uses deep-indigo banners bearing one large white kanji 毘 (Bishamonten), plus a white banner with one large kanji 龍, and the bamboo-and-two-sparrows crest exactly as in reference image 2 on armor and small flags; Uesugi Kenshin wears a white monk's head-wrap. No other crests: absolutely no hollyhock (aoi), no tomoe, no hexagons, no circles, no invented symbols on any banner. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge.",
+      "refs": [
+        "kamon/takeda.png",
+        "kamon/uesugi.png"
+      ]
     },
     {
       "id": "intro_s2",
@@ -543,7 +547,11 @@
       "file": "intro/intro_s2.png",
       "aspect": "16:9",
       "size": "1K",
-      "prompt": "Night scene: Uesugi army camp with blue banners on top of a forested mountain (Saijoyama) overlooking a river plain; across the river a small castle (Kaizu) with many cooking fires and smoke columns rising under a crescent moon. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+      "prompt": "Night scene: Uesugi army camp with blue banners on top of a forested mountain (Saijoyama) overlooking a river plain; across the river a small castle (Kaizu) with many cooking fires and smoke columns rising under a crescent moon. HISTORICAL HERALDRY, strictly: Takeda side uses vermilion-red banners bearing the Takeda-bishi crest exactly as in reference image 1 (four hollow black diamonds forming a larger diamond), plus one dark-indigo banner with the four white kanji 風林火山 written vertically; Takeda Shingen wears the Suwa-hosho kabuto with long white yak-hair and holds an iron war fan (gunbai). Uesugi side uses deep-indigo banners bearing one large white kanji 毘 (Bishamonten), plus a white banner with one large kanji 龍, and the bamboo-and-two-sparrows crest exactly as in reference image 2 on armor and small flags; Uesugi Kenshin wears a white monk's head-wrap. No other crests: absolutely no hollyhock (aoi), no tomoe, no hexagons, no circles, no invented symbols on any banner. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge.",
+      "refs": [
+        "kamon/takeda.png",
+        "kamon/uesugi.png"
+      ]
     },
     {
       "id": "intro_s3",
@@ -551,7 +559,11 @@
       "file": "intro/intro_s3.png",
       "aspect": "16:9",
       "size": "1K",
-      "prompt": "A one-eyed, limping old strategist (Yamamoto Kansuke) presenting a plan on a map scroll to Takeda Shingen inside a war camp at night, red Takeda-bishi banners, lanterns; in the background a column of red-armored troops marching into the dark mountains. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+      "prompt": "A one-eyed, limping old strategist (Yamamoto Kansuke) presenting a plan on a map scroll to Takeda Shingen inside a war camp at night, red Takeda-bishi banners, lanterns; in the background a column of red-armored troops marching into the dark mountains. HISTORICAL HERALDRY, strictly: Takeda side uses vermilion-red banners bearing the Takeda-bishi crest exactly as in reference image 1 (four hollow black diamonds forming a larger diamond), plus one dark-indigo banner with the four white kanji 風林火山 written vertically; Takeda Shingen wears the Suwa-hosho kabuto with long white yak-hair and holds an iron war fan (gunbai). Uesugi side uses deep-indigo banners bearing one large white kanji 毘 (Bishamonten), plus a white banner with one large kanji 龍, and the bamboo-and-two-sparrows crest exactly as in reference image 2 on armor and small flags; Uesugi Kenshin wears a white monk's head-wrap. No other crests: absolutely no hollyhock (aoi), no tomoe, no hexagons, no circles, no invented symbols on any banner. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge.",
+      "refs": [
+        "kamon/takeda.png",
+        "kamon/uesugi.png"
+      ]
     },
     {
       "id": "intro_s4",
@@ -559,7 +571,11 @@
       "file": "intro/intro_s4.png",
       "aspect": "16:9",
       "size": "1K",
-      "prompt": "Uesugi army crossing the wide Chikuma river at a ford before dawn in thick morning fog, blue banners and horses wading in the water, faint pale moon, silent and tense, seen from the riverbank. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+      "prompt": "Uesugi army crossing the wide Chikuma river at a ford before dawn in thick morning fog, blue banners and horses wading in the water, faint pale moon, silent and tense, seen from the riverbank. HISTORICAL HERALDRY, strictly: Takeda side uses vermilion-red banners bearing the Takeda-bishi crest exactly as in reference image 1 (four hollow black diamonds forming a larger diamond), plus one dark-indigo banner with the four white kanji 風林火山 written vertically; Takeda Shingen wears the Suwa-hosho kabuto with long white yak-hair and holds an iron war fan (gunbai). Uesugi side uses deep-indigo banners bearing one large white kanji 毘 (Bishamonten), plus a white banner with one large kanji 龍, and the bamboo-and-two-sparrows crest exactly as in reference image 2 on armor and small flags; Uesugi Kenshin wears a white monk's head-wrap. No other crests: absolutely no hollyhock (aoi), no tomoe, no hexagons, no circles, no invented symbols on any banner. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge.",
+      "refs": [
+        "kamon/takeda.png",
+        "kamon/uesugi.png"
+      ]
     },
     {
       "id": "intro_s7",
@@ -567,7 +583,11 @@
       "file": "intro/intro_s7.png",
       "aspect": "16:9",
       "size": "1K",
-      "prompt": "Red-armored Takeda cavalry detachment with many banners charging across a river ford at full gallop into the rear of the blue Uesugi army on a plain, midday light, dust and spray, dramatic reinforcement arriving. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+      "prompt": "Red-armored Takeda cavalry detachment with many banners charging across a river ford at full gallop into the rear of the blue Uesugi army on a plain, midday light, dust and spray, dramatic reinforcement arriving. HISTORICAL HERALDRY, strictly: Takeda side uses vermilion-red banners bearing the Takeda-bishi crest exactly as in reference image 1 (four hollow black diamonds forming a larger diamond), plus one dark-indigo banner with the four white kanji 風林火山 written vertically; Takeda Shingen wears the Suwa-hosho kabuto with long white yak-hair and holds an iron war fan (gunbai). Uesugi side uses deep-indigo banners bearing one large white kanji 毘 (Bishamonten), plus a white banner with one large kanji 龍, and the bamboo-and-two-sparrows crest exactly as in reference image 2 on armor and small flags; Uesugi Kenshin wears a white monk's head-wrap. No other crests: absolutely no hollyhock (aoi), no tomoe, no hexagons, no circles, no invented symbols on any banner. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge.",
+      "refs": [
+        "kamon/takeda.png",
+        "kamon/uesugi.png"
+      ]
     },
     {
       "id": "intro_s8",
@@ -575,7 +595,11 @@
       "file": "intro/intro_s8.png",
       "aspect": "16:9",
       "size": "1K",
-      "prompt": "Aftermath at dusk on the Kawanakajima plain: fallen banners of both red and blue, two armies withdrawing in opposite directions across the river, a lone war fan on the ground, quiet orange sky, somber mood. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge."
+      "prompt": "Aftermath at dusk on the Kawanakajima plain: fallen banners of both red and blue, two armies withdrawing in opposite directions across the river, a lone war fan on the ground, quiet orange sky, somber mood. HISTORICAL HERALDRY, strictly: Takeda side uses vermilion-red banners bearing the Takeda-bishi crest exactly as in reference image 1 (four hollow black diamonds forming a larger diamond), plus one dark-indigo banner with the four white kanji 風林火山 written vertically; Takeda Shingen wears the Suwa-hosho kabuto with long white yak-hair and holds an iron war fan (gunbai). Uesugi side uses deep-indigo banners bearing one large white kanji 毘 (Bishamonten), plus a white banner with one large kanji 龍, and the bamboo-and-two-sparrows crest exactly as in reference image 2 on armor and small flags; Uesugi Kenshin wears a white monk's head-wrap. No other crests: absolutely no hollyhock (aoi), no tomoe, no hexagons, no circles, no invented symbols on any banner. Japanese Sengoku period (1561, battle of Kawanakajima) artwork in the style of an ukiyo-e woodblock print with sumi ink outlines and muted mineral-pigment colors on aged washi paper. Clean composition, no text, no letters, no signature, no watermark, no frame, no border, no paper margin, no mounting; the artwork fills the entire image edge to edge.",
+      "refs": [
+        "kamon/takeda.png",
+        "kamon/uesugi.png"
+      ]
     }
   ]
 }

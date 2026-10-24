@@ -12,6 +12,7 @@
 // 在雲端工作區（金鑰由代理注入）執行：NODE_USE_ENV_PROXY=1 GEMINI_API_KEY=proxy node tools/gen-art.mjs
 // 金鑰只在你的電腦上使用，不會寫進遊戲程式碼。
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import sharp from 'sharp';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -36,8 +37,14 @@ const todo = items.filter(it => (!only || only.includes(it.id)) && (!group || it
 console.log(`模型 ${MODEL}；待生成 ${todo.length} 張（共 ${items.length}）`);
 
 async function gen(it) {
+  // refs：參考圖（art/out 相對路徑），例如家紋，讓旗幟畫對；縮到 512 再附上
+  const refParts = [];
+  for (const r of it.refs ?? []) {
+    const buf = await sharp(join(root, 'art/out', r)).resize(512, 512, { fit: 'inside' }).png().toBuffer();
+    refParts.push({ inlineData: { mimeType: 'image/png', data: buf.toString('base64') } });
+  }
   const body = {
-    contents: [{ role: 'user', parts: [{ text: it.prompt }] }],
+    contents: [{ role: 'user', parts: [{ text: it.prompt }, ...refParts] }],
     generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: it.aspect } },
   };
   if (MODEL.includes('pro')) body.generationConfig.imageConfig.imageSize = it.size || '1K';
