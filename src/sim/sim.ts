@@ -10,7 +10,7 @@ type Ev = { t: number; d: number; src: string };
 export type Unit = {
   id: number; side: Side; key: string; type: UType; cmd: string; cmdAlive: boolean;
   skill: string | null; passive: string | null; strategy: string | null; advPassive: string | null;
-  advisor: string | null; advAlive: boolean; reinf: boolean;
+  advisor: string | null; advAlive: boolean; reinf: boolean; away: boolean; // away：別働隊尚未抵達
   men0: number; men: number; hpPer: number; hp: number;
   x: number; y: number; f: number; form: Formation;
   ranks: number; sp: number; width: number; depth: number; rad: number;
@@ -85,7 +85,7 @@ export type State = {
 };
 
 // ---------------- 工具 ----------------
-export type FxEv = { k: 'volley' | 'charge' | 'blocked' | 'flank' | 'rear' | 'water' | 'rout' | 'shatter' | 'rally' | 'cmd' | 'adv' | 'chain' | 'cheer' | 'army' | 'surround' | 'found' | 'skill' | 'strat' | 'cry' | 'jutsu' | 'ninjaDead' | 'merit'; a: number; b?: number; n?: number; s?: string };
+export type FxEv = { k: 'volley' | 'charge' | 'blocked' | 'flank' | 'rear' | 'water' | 'rout' | 'shatter' | 'rally' | 'cmd' | 'adv' | 'chain' | 'cheer' | 'army' | 'surround' | 'found' | 'skill' | 'strat' | 'cry' | 'jutsu' | 'ninjaDead' | 'merit' | 'detach' | 'fogLift'; a: number; b?: number; n?: number; s?: string };
 const fx = (S: State, e: FxEv) => { S.fx?.push(e); };
 
 export function mulberry32(a: number) {
@@ -180,7 +180,7 @@ export function makeUnit(S: State, side: Side, r: RosterEntry | null, type: UTyp
   const u: Unit = {
     id: S.units.length, side, key, type, cmd: r ? r.cmd : '', cmdAlive: !!r,
     skill: r ? r.skill : null, passive: r ? r.passive : null, strategy: r?.strategy ?? null,
-    advPassive: r?.advisorPassive ?? null, advisor: r?.advisor ?? null, advAlive: !!r?.advisor, reinf: !r,
+    advPassive: r?.advisorPassive ?? null, advisor: r?.advisor ?? null, advAlive: !!r?.advisor, reinf: !r, away: false,
     men0: T.men, men: T.men, hpPer: T.hp, hp: T.men * T.hp,
     x, y, f: side === 0 ? Math.PI / 2 : -Math.PI / 2, form: 'line', ranks: 4, sp: 1.8, width: 0, depth: 0, rad: 0,
     morale: 0, moraleStart: 0, state: 'steady', routCount: 0,
@@ -722,19 +722,21 @@ function moveUnits(S: State) {
 }
 
 // ---------------- 視野與情報 ----------------
+// 朝霧：視野倍率（前 fogDur 秒 0.5，之後 fogFade 秒內回到 1）
+export function fogMul(S: State) { const R = S.R; if (!R.fogDur) return 1; const t = S.t; return t < R.fogDur ? 0.5 : t < R.fogDur + R.fogFade ? 0.5 + 0.5 * (t - R.fogDur) / R.fogFade : 1; }
 function updateVision(S: State) {
-  const R = S.R, t = S.t;
+  const R = S.R, t = S.t; const FM = fogMul(S);
   for (const side of [0, 1] as Side[]) {
     const vis = S.vis[side];
     const obs: { x: number; y: number; V: number; nin: boolean; spot: number }[] = []; // spot：察覺半徑（識別半徑 × 倍數）
     const koga = S.clan[side] === 'koga';
     const v2 = R.fogV2;
     for (const u of S.units) if (u.side === side && u.state !== 'gone') {
-      let V = v2 ? R.v2UnitSee : 200; if (height(u.x, u.y) >= 8) V *= 1.5; if (inForest(u.x, u.y)) V *= 0.5;
+      let V = (v2 ? R.v2UnitSee : 200) * FM; if (height(u.x, u.y) >= 8) V *= 1.5; if (inForest(u.x, u.y)) V *= 0.5;
       obs.push({ x: u.x, y: u.y, V, nin: false, spot: V * (v2 ? R.v2UnitSpot / R.v2UnitSee : 1.5) });
     }
     if (R.ninjaOn) for (const n of S.ninjas) if (n.side === side && n.alive) {
-      let V = (v2 ? R.v2NinSee : 250) * (koga ? S.R.kogaVision : 1); if (height(n.x, n.y) >= 8) V *= 1.5; if (inForest(n.x, n.y)) V *= 0.5;
+      let V = (v2 ? R.v2NinSee : 250) * (koga ? S.R.kogaVision : 1) * FM; if (height(n.x, n.y) >= 8) V *= 1.5; if (inForest(n.x, n.y)) V *= 0.5;
       obs.push({ x: n.x, y: n.y, V, nin: true, spot: V * (v2 ? R.v2NinSpot / R.v2NinSee : 1.5) });
     }
     // v2 察覺距離是識別距離的倍數（部隊 1.6、忍者 1.7）；v1 固定 1.5
@@ -1025,6 +1027,13 @@ export function step(S: State) {
       ru.role = 'reinf';
     }
   }
+  // 別働隊抵達：從入口進場，恢復在場狀態
+  if (R.detachOn && !S.meta.detachDone && t >= (S.meta.detachAt as number)) {
+    S.meta.detachDone = true; const D = MAP.detach; let i = 0;
+    for (const u of U) if (u.away) { u.away = false; u.state = 'steady'; u.morale = Math.max(u.morale, 70); u.x = clamp(D.entry.x + (i - 1) * 45, 40, 960); u.y = D.entry.y; u.hasDest = false; u.target = -1; i++; }
+    fx(S, { k: 'detach', a: D.side });
+  }
+  if (R.fogDur && t < R.fogDur + dt && t + dt >= R.fogDur) fx(S, { k: 'fogLift', a: 0 });
   // 視野
   if (Math.abs(t * 2 - Math.round(t * 2)) < 1e-6) updateVision(S);
   // 忍者被擊殺

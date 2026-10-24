@@ -136,4 +136,7 @@ export const MAP = {
   ambushCand: [{ x: 150, y: 610 }, { x: 260, y: 600 }, { x: 600, y: 478 }, { x: 160, y: 495 }],
   ambushR: 30,
   names: { village: '小島田', temple: '八幡社', supply: '丹波島' } as Record<string, string>,
+  // 別働隊：開戰時不在場的武田部隊（上妻女山撲空），之後從妻女山方向（上方）渡十二ヶ瀬夾擊上杉背後
+  detach: { side: 0 as Side, keys: ['archer1', 'gun1', 'cav2'], entry: { x: 430, y: 690 } },
+  aggr: [1, 1.15] as [number, number], // 侵略性倍率：上杉是渡河來攻的一方
 };

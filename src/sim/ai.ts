@@ -83,7 +83,7 @@ const CLS = (t: UType): 'spear' | 'archer' | 'samurai' | 'cav' | 'general' => is
 export function setup(S: State) {
   const rng = S.rng;
   const ai: [SideAI, SideAI] = ([0, 1] as Side[]).map(s => ({
-    posture: 'advance', attackT: S.R.aiLine ? S.R.aiAttackT0 + rng() * S.R.aiAttackTR : 45 + rng() * 105, aggr: 0.8 + rng() * 0.4, cavWing: rng() < 0.5 ? 'W' : 'E', // 戰線式：成線推進本身就要 1 分鐘，發起攻勢的時間提早
+    posture: 'advance', attackT: S.R.aiLine ? S.R.aiAttackT0 + rng() * S.R.aiAttackTR : 45 + rng() * 105, aggr: (0.8 + rng() * 0.4) * MAP.aggr[s], cavWing: rng() < 0.5 ? 'W' : 'E', // 戰線式：成線推進本身就要 1 分鐘，發起攻勢的時間提早
     nextTac: 0, nextStrat: 0, nextNin: 0, giseiDone: false,
     ax: MAP.base[s].x, ayl: MAP.base[s].yl + S.R.deployFwd, phase: 'form', volleyUntil: 0, ids: {}, slots: new Map(), reserveId: -1, rangedKeys: [], cavKeys: [],
   } as SideAI)) as [SideAI, SideAI];
@@ -122,6 +122,11 @@ export function setup(S: State) {
     ai[s].rangedKeys = ranged; ai[s].cavKeys = cavs;
   }
   S.meta.tenkyu = S.units.find(u => u.side === 0 && u.key === 'samurai1');
+  // 別働隊：開戰時不在場（state gone、away），抵達時間寫在 S.meta.detachAt
+  if (S.R.detachOn) {
+    const D = MAP.detach; S.meta.detachAt = S.R.detachT0 + rng() * S.R.detachTR; S.meta.detachDone = false;
+    for (const u of S.units) if (u.side === D.side && D.keys.includes(u.key)) { u.away = true; u.state = 'gone'; u.x = D.entry.x; u.y = D.entry.y + 60; }
+  }
   // 據點分派：西端的長槍取村落、另一隊長槍取寺廟；騎兵先取自己那一翼的據點
   for (const s of [0, 1] as Side[]) {
     const mine = S.units.filter(u => u.side === s);

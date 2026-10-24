@@ -1,6 +1,6 @@
 // 《決戰》M5：敵軍 AI、戰場迷霧、忍者情報與忍術、武將技／鬨聲／軍略。M4：士氣與軍勢可視化、連鎖潰逃、側背扇區、地形。M3：攻擊指令、近戰、射擊、衝鋒與傷亡畫面。戰鬥核心沿用士氣模擬器（src/sim）。
 import * as THREE from 'three';
-import { newState, step, effM, updDims, height, active, dist, cat, general, passiveOn, inForest, inPaddy, inMarsh, inWater, onTrail, isRanged, archerRange, mulberry32, useSkill, useStrategy, battleCry, useJutsu, skillBlocked, canSee, type Unit, type Formation, type Ninja } from '../sim/sim.ts';
+import { newState, step, effM, updDims, height, active, dist, cat, general, passiveOn, inForest, inPaddy, inMarsh, inWater, onTrail, isRanged, archerRange, mulberry32, useSkill, useStrategy, battleCry, useJutsu, skillBlocked, canSee, fogMul, type Unit, type Formation, type Ninja } from '../sim/sim.ts';
 import { MAP, UT } from '../sim/data.ts';
 import { adviseSide, weakestEngaged as weakest, cmdBlocked, CMD_CD, dispatchScouts, type Advice as SimAdvice } from '../sim/advisor.ts';
 import { evalDecision, applyDecision, tickDecisions, decState, type Decision } from '../sim/decisions.ts';
@@ -234,7 +234,7 @@ function reloadWith(over: Record<string, string | null>) {
   for (const [k, v] of Object.entries(over)) { if (v === null) p.delete(k); else p.set(k, v); }
   location.hash = p.toString(); location.reload();
 }
-function begin() { applyWarCouncil(); started = true; paused = false; hud.toast(WATCH ? '開始觀戰' : '出陣！'); unlockAudio(); sfx.battleStart(); }
+function begin() { applyWarCouncil(); started = true; paused = false; hud.toast(WATCH ? '開始觀戰' : '出陣！'); unlockAudio(); sfx.battleStart(); if (S.R.fogDur) say(`朝霧瀰漫，視野減半（約 ${Math.round(S.R.fogDur / 60 * 10) / 10} 分鐘後散去）`); if (S.R.detachOn) say(`別働隊（${S.units.filter(u => u.away).map(u => u.cmd).join('、')}）尚在妻女山方向，稍後渡河趕到`); }
 if (DAIMYO) document.querySelector<HTMLElement>('#b-cmd')?.classList.add('gone'); // 大名令併入決策卡（有 !important 的顯示規則，用 class 蓋）
 hud.setSound(!isMuted()); hud.onSound = () => { setMuted(!isMuted()); hud.setSound(!isMuted()); hud.toast(isMuted() ? '音效關閉' : '音效開啟'); if (!isMuted()) sfx.drum(1, 0.4); };
 hud.speeds = SPEEDS;
@@ -1283,6 +1283,8 @@ function afterStep() {
         if (mine(A) || intelOf(A) >= 2) say(mine(A) ? `${nameOf(A)}${e.k === 'shatter' ? '潰滅' : '潰走'}！` : `敵軍 ${nameOf(A)}${e.k === 'shatter' ? '潰滅' : '潰走'}`);
         break;
       case 'merit': if (mine(A) || intelOf(A) >= 2) { floatText(A, `功績 ${'★'.repeat(Math.min(3, e.n ?? 1))}`, 'good'); if (mine(A)) { say(`${nameOf(A)}${e.s === 'gen' ? '討取敵大將' : e.s === 'cmd' ? '討取敵將' : '擊潰敵隊'}，功績 ${e.n}${(e.n ?? 0) <= 3 ? `・${MERIT_NAME[e.n ?? 1]}` : ''}`); sfx.drum(1, 0.45); } } break;
+      case 'detach': { const names = S.units.filter(u => u.side === e.a && MAP.detach.keys.includes(u.key)).map(u => u.cmd).join('、'); say(`別働隊抵達！${names}從妻女山方向渡河而來`); hud.toast(`別働隊抵達：${names}`); sfx.battleStart(); if (!WATCH && e.a === 0) for (const u of S.units) if (u.side === 0 && MAP.detach.keys.includes(u.key)) hud.refreshCard(u); break; }
+      case 'fogLift': say('朝霧散了，視野恢復'); hud.toast('朝霧漸散'); break;
       case 'rally': sfx.rally(); floatText(A, '重整', 'good'); if (mine(A)) say(`${nameOf(A)}重整完畢，等候命令`); break;
       case 'cmd': say(`${mine(A) ? '' : '敵將 '}${A.cmd} 討死！`); floatText(A, '討死', 'bad'); break;
       case 'adv': say(`${mine(A) ? '' : '敵軍師 '}${A.advisor} 討死！`); break;
@@ -1412,6 +1414,7 @@ function frame(now: number) {
     infoT = 0.25;
     hud.setInfo(cmdOpen ? cmdHtml() : selNin >= 0 ? ninjaHtml(S.ninjas[selNin]) : infoU && infoU.id !== infoClosed ? infoHtml(infoU) : inspectPoint >= 0 ? pointHtml(inspectPoint) : null);
     if (DAIMYO && !paused && !decision) { for (const line of tickDecisions(S, 0)) say(line); evalDecisionCard(); }
+    { const fm = fogMul(S); const fg = scene.fog as THREE.Fog | null; if (fg) { fg.near = 700 * (0.3 + 0.7 * fm); fg.far = 2100 * (0.38 + 0.62 * fm); } } // 朝霧：場景霧跟著視野倍率
     if (lead >= 0) { const u = S.units[lead]; if (!active(u)) exitLead(u.state === 'gone' ? `${nameOf(u)}已離場，返回俯瞰` : `${nameOf(u)}潰走，返回俯瞰`); else { rig.tx += (u.x - rig.tx) * 0.15; rig.ty += (u.y - rig.ty) * 0.15; if (!selected.has(lead)) setSel([lead], false); } }
     // 接戰環境音：有部隊接戰時每 0.5～0.9 秒一陣兵刃聲，強度看接戰隊數
     if (!paused && S.t - lastClashT > 0.5 + Math.random() * 0.4) { lastClashT = S.t; let n = 0; for (const u of S.units) if (u.contacts.length && active(u)) n++; if (n > 0) sfx.clash(Math.min(1, n / 8)); }
