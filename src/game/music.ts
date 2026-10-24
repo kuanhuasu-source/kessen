@@ -41,4 +41,5 @@ export const music = {
   setDuck(d: number) { duck = d; const a = cur ? els[cur] : null; if (a) fadeTo(a, target(), 600); }, // 結算畫面把音樂壓低
   unlock() { if (!wantPlay) return; wantPlay = false; const a = cur ? els[cur] : null; if (a && a.paused) { tryPlay(a); fadeTo(a, target(), FADE); } },
   current: () => cur,
+  debug: () => Object.entries(els).map(([k, a]) => `${k} paused=${a.paused} vol=${a.volume.toFixed(2)} t=${a.currentTime.toFixed(1)} err=${a.error ? a.error.code : 0}`), // 測試用
 };

@@ -1462,7 +1462,7 @@ requestAnimationFrame(frame);
 
 // 測試用：無頭瀏覽器腳本透過這個介面下指令、快轉
 (window as unknown as Record<string, unknown>).__kessen = {
-  S, rig, focus, setSel, orderAttack, orderMove, selectNinja, startJutsu, trySkill, screenOf, intelOf, doCmd, evalAdvice, manualSet, DAIMYO, prof,
+  S, rig, focus, setSel, orderAttack, orderMove, selectNinja, startJutsu, trySkill, screenOf, intelOf, doCmd, evalAdvice, manualSet, DAIMYO, prof, music,
   advance(sec: number) {
     for (let i = 0; i < Math.round(sec / SIM_DT); i++) {
       for (const v of views) { v.prevX = v.u.x; v.prevY = v.u.y; }
