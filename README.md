@@ -40,7 +40,7 @@ npm run build:single # 單一 HTML（dist/kessen-m1.html）
 - 地圖（2026-10-21）：合成貼圖地表（草地、林地、稻田田塊、土路）、外圍犀川與千曲川、遠山、灌木石頭；水域規則（涉水減速、不能衝鋒、半渡而擊）以 `streams` 規則選用，`#ai=two|east` 試玩
 - 2026-10-24 八幡原地圖：依第四次川中島之戰地理重做（千曲川與三渡口、妻女山、茶臼山、小島田／八幡社／丹波島），兩軍佈陣不對稱
 - 2026-10-24 別働隊與朝霧：武田三隊開場不在場，第 3 分多從妻女山方向渡河趕到；開戰 90 秒內有朝霧、視野減半
-- 2026-10-24 配樂層：`src/game/music.ts`，三段外部 MP3（`public/music/council|battle|climax.mp3` → Pages 的 `music/`）；軍議、出陣、別働隊抵達各自切換並淡入淡出，結算時壓低；跟音效鍵共用靜音；單檔 artifact 沒有音樂。來源（Pixabay Content License）：council《Sakura dance background music, traditional japanese》 by 38534292（#165338）
+- 2026-10-24 配樂層：`src/game/music.ts`，三段外部 MP3（`public/music/council|battle|climax.mp3` → Pages 的 `music/`）；軍議、出陣、別働隊抵達各自切換並淡入淡出，結算時壓低；跟音效鍵共用靜音；單檔 artifact 沒有音樂。來源（Pixabay Content License）：council《Sakura dance background music, traditional japanese》 by 38534292（#165338）；battle《Sport Sequence Taiko Loop》 by Sonican（#558900，原 256 kbps 轉 128 kbps）
 - 2026-10-24 決策卡：別働隊抵達時請示夾擊方式；朝霧中可選「趁霧前推到河岸」；友軍動搖卡至少隔 60 秒。大名模式 240 局 不問 48%／全採納 60%
 - 2026-10-24 歷史比例兵數：武田主力 192 人對上杉 308 人（≈ 史實 8,000 對 13,000），別働隊 135 人；騎兵被圍、動搖或損員過多會自行脫離。AI 對 AI 武田 59%、大名模式不介入 48%／全採納 57%
 - 2026-10-24 GitHub Pages：公開倉庫 `kuanhuasu-source/kessen`，推到 main 自動建置部署到 https://kuanhuasu-source.github.io/kessen/
