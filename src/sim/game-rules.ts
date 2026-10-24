@@ -16,11 +16,11 @@ export const GAME_RULES = makeRules({
   archerRange: 200,      // 弓兵射程 150 → 200 m
   fogV2: true,           // 情報 v2（2026-10-21）：部隊察覺 130／識別 80 m、忍者 190／110 m、識別要累積觀察 8 秒、洞悉 12 秒、識別 40 秒後退化、察覺 120 秒後遺忘、地形秘密要靠到 15 m、忍者 4.5 m/s 掃描偵察、開戰只知己方半場秘密、不做針對性佈陣
   // 2026-10-21 地形與反一團（AI 對 AI 60 場、策略模擬各 60 局）
-  streams: 'two', // 兩條溪流（各在對峙線前），渡口在大路與兩翼
-  aiHoldYl: 280, deployFwd: 50, aiFormRun: true, aiAttackT0: 10, aiAttackTR: 30, aiAnchorSpd: 3.8, aiVolleyDur: 12, // 回顧（2026-10-22）開場節奏 A：佈陣前移 50、急行軍成線、攻勢 10～40 秒、對峙線 280（溪前）、錨點 3.8 m/s、對射 12 秒 → 首戰 88 → 57 秒
+  streams: 'chikuma', // 千曲川（2026-10-24 八幡原地圖）：斜貫戰場，渡口雨宮の渡し／十二ヶ瀬／小森の渡し
+  aiHoldYl: 280, deployFwd: 0, ninjaFwd: 40, aiFormRun: true, aiAttackT0: 10, aiAttackTR: 30, aiAnchorSpd: 3.8, aiVolleyDur: 12, // 回顧（2026-10-22）開場節奏 A：佈陣前移 50、急行軍成線、攻勢 10～40 秒、對峙線 280（溪前）、錨點 3.8 m/s、對射 12 秒 → 首戰 88 → 57 秒
   reliefNoise: 0.4,              // 緩坡起伏降到 ±0.7 m（滿幅會讓時間到從 12% 升到 20%）
   cmdRelieveN: 2, cmdRaidCharge: 12, cmdRaidShock: -10, cmdFocusMorale: -4, cmdFocusHit: 1.3, cmdRegroupMorale: 8, // 大名令加強（2026-10-22 方案一）：全採納建議 48%→52%（不介入 43%）；再加大到 15／−15／−6／1.6／12 也是 52%
-  meritOn: true, v2NinSpeed: 6, ninjaFwd: 170, // 2026-10-23：戰場功績；忍者 4.5→6 m/s 並從軍隊前方（y 200，戰線起點 160）出發，之前落在軍隊後面
+  meritOn: true, v2NinSpeed: 6, // 2026-10-23：戰場功績；忍者 4.5→6 m/s（起點在 ninjaFwd）
   aiHunt: true, withdrawEnd: 90, // 時間到判定（2026-10-22）：時間到的局多半是兩軍互相穿過後各站對方本陣；aiHunt 讓攻勢追著敵軍走（時間到 25%→9%），退卻結束再降到 4%（退卻 11%）
   pointWin: false,
   clanPassive: true, passiveSakutekiImmune: 30, // 回顧（2026-10-22）：忍術每家只留一主動，另一種改自動特性；防諜暴露後 30 秒免疫（每局被發現 37 → 15 次，甲賀勝率 200 局 40%→37% 在誤差內）       // 回顧（2026-10-22）：據點勝利只佔 5%，拿掉；據點只給增益

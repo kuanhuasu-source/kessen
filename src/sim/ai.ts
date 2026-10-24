@@ -2,7 +2,7 @@
 import { UT, MAP, CLANS, STEALTH_R, ROSTER_T, ROSTER_U, STREAMS, isRangedType, type Side, type UType } from './data.ts';
 import {
   type State, type Unit, type Ninja, makeUnit, dist, cat, clamp, active, fighting, has, isCav, isRanged, effM, general, archerRange,
-  useSkill, useStrategy, battleCry, useJutsu, inForest, inPaddy, updDims, onField, mHit,
+  useSkill, useStrategy, battleCry, useJutsu, inForest, inPaddy, updDims, onField, mHit, streamYAt,
 } from './sim.ts';
 
 type SideAI = { posture: 'advance' | 'hold' | 'attack'; attackT: number; aggr: number; cavWing: 'W' | 'E';
@@ -25,9 +25,10 @@ export function applyDeploy(S: State, s: Side, d: Deploy) {
   const A = (S.meta.ai as SideAI[])[s];
   const byKey = (k: string) => S.units.find(u => u.side === s && u.key === k);
   for (let i = 0; i < 4; i++) delete A.ids['line' + i];
-  const xs = d.line.length === 3 ? [440, 500, 560] : [410, 470, 530, 590];
-  d.line.forEach((k, i) => { const u = byKey(k); if (!u) return; A.ids['line' + i] = u.id; u.role = 'line'; u.x = xs[i]; u.y = Yl(s, 110 + S.R.deployFwd); u.holdX = u.x; u.holdY = u.y; });
-  if (d.reserve) { const u = byKey(d.reserve); if (u) { A.reserveId = u.id; u.role = 'reserve'; u.x = 500; u.y = Yl(s, 75 + S.R.deployFwd); } } else A.reserveId = -1;
+  const B = MAP.base[s];
+  const xs = (d.line.length === 3 ? [-60, 0, 60] : [-90, -30, 30, 90]).map(o => B.x + o);
+  d.line.forEach((k, i) => { const u = byKey(k); if (!u) return; A.ids['line' + i] = u.id; u.role = 'line'; u.x = xs[i]; u.y = Yl(s, B.yl + S.R.deployFwd); u.holdX = u.x; u.holdY = u.y; });
+  if (d.reserve) { const u = byKey(d.reserve); if (u) { A.reserveId = u.id; u.role = 'reserve'; u.x = B.x; u.y = Yl(s, B.yl - 35 + S.R.deployFwd); } } else A.reserveId = -1;
   A.cavWing = d.cavWing;
   A.cavKeys.forEach((k, i) => { const cav = byKey(k); if (!cav) return; const wingW = (d.cavWing === 'W') === (i === 0); cav.x = wingW ? 300 : 700; cav.y = Yl(s, 90); cav.role = wingW ? 'cav' : 'cap:supply'; });
   for (const u of S.units) if (u.side === s) { u.hasDest = false; u.destX = u.x; u.destY = u.y; }
@@ -72,6 +73,8 @@ export function issueCommand(S: State, s: Side, kind: CmdKind, target?: number):
 }
 
 const Yl = (side: Side, y: number) => side === 0 ? y : 700 - y; // 己方座標 → 絕對座標
+// 各方對峙線（己方座標）：武田用規則 aiHoldYl（量測工具可調），上杉用地圖預設
+export const holdYlOf = (S: State, s: Side) => s === 0 ? S.R.aiHoldYl : MAP.holdYl[1];
 const fwd = (side: Side) => side === 0 ? 1 : -1;
 const Q: Record<UType, number> = { spear: 1, archer: 0.8, samurai: 2.2, cav: 2.2, general: 2.5, gun: 1.0, cannon: 1.6 };
 const CLS = (t: UType): 'spear' | 'archer' | 'samurai' | 'cav' | 'general' => isRangedType(t) ? 'archer' : t as 'spear' | 'samurai' | 'cav' | 'general'; // 目標偏好表：遠程兵種視同弓兵
@@ -79,10 +82,10 @@ const CLS = (t: UType): 'spear' | 'archer' | 'samurai' | 'cav' | 'general' => is
 // ---------------- 佈陣 ----------------
 export function setup(S: State) {
   const rng = S.rng;
-  const ai: [SideAI, SideAI] = [0, 1].map(() => ({
+  const ai: [SideAI, SideAI] = ([0, 1] as Side[]).map(s => ({
     posture: 'advance', attackT: S.R.aiLine ? S.R.aiAttackT0 + rng() * S.R.aiAttackTR : 45 + rng() * 105, aggr: 0.8 + rng() * 0.4, cavWing: rng() < 0.5 ? 'W' : 'E', // 戰線式：成線推進本身就要 1 分鐘，發起攻勢的時間提早
     nextTac: 0, nextStrat: 0, nextNin: 0, giseiDone: false,
-    ax: 500, ayl: 110 + S.R.deployFwd, phase: 'form', volleyUntil: 0, ids: {}, slots: new Map(), reserveId: -1, rangedKeys: [], cavKeys: [],
+    ax: MAP.base[s].x, ayl: MAP.base[s].yl + S.R.deployFwd, phase: 'form', volleyUntil: 0, ids: {}, slots: new Map(), reserveId: -1, rangedKeys: [], cavKeys: [],
   } as SideAI)) as [SideAI, SideAI];
   S.meta.ai = ai;
   // 戰線順序來自名單（長槍與武士）；四成機率把前兩隊對調
@@ -105,15 +108,15 @@ export function setup(S: State) {
   for (const s of [0, 1] as Side[]) {
     const roster = s === 0 ? ROSTER_T : ROSTER_U;
     const R = (k: string) => roster.find(r => r.key === k)!;
-    const F = S.R.deployFwd;
-    const mk = (k: string, x: number, yl: number) => makeUnit(S, s, R(k), R(k).type, k, x, Yl(s, yl + F));
-    mk('gen', 500, 40).role = 'general';
-    const n = order[s].length; const xs = n === 3 ? [440, 500, 560] : [410, 470, 530, 590];
-    order[s].forEach((k, i) => { const u = mk(k, xs[i], 110); u.role = 'line'; });
+    const F = S.R.deployFwd, B = MAP.base[s];
+    const mk = (k: string, x: number, yl: number) => makeUnit(S, s, R(k), R(k).type, k, clamp(x, 40, 960), Yl(s, yl + F));
+    mk('gen', B.x, B.yl - 70).role = 'general';
+    const n = order[s].length; const xs = (n === 3 ? [-60, 0, 60] : [-90, -30, 30, 90]).map(o => B.x + o);
+    order[s].forEach((k, i) => { const u = mk(k, xs[i], B.yl); u.role = 'line'; });
     const ranged = roster.filter(r => isRangedType(r.type)).map(r => r.key);
-    ranged.forEach((k, i) => { mk(k, 500 + (i - (ranged.length - 1) / 2) * 110, 70).role = 'archer'; });
+    ranged.forEach((k, i) => { mk(k, B.x + (i - (ranged.length - 1) / 2) * 110, B.yl - 40).role = 'archer'; });
     const cavs = roster.filter(r => r.type === 'cav').map(r => r.key);
-    cavs.forEach((k, i) => { const wingW = (ai[s].cavWing === 'W') === (i === 0); mk(k, wingW ? 300 : 700, 90).role = 'cav'; });
+    cavs.forEach((k, i) => { const wingW = (ai[s].cavWing === 'W') === (i === 0); mk(k, wingW ? B.x - 200 : B.x + 200, B.yl - 20).role = 'cav'; });
     for (const u of S.units) if (u.side === s) ai[s].ids[u.key] = u.id;
     order[s].forEach((k, i) => { ai[s].ids['line' + i] = ai[s].ids[k]; });
     ai[s].rangedKeys = ranged; ai[s].cavKeys = cavs;
@@ -137,8 +140,8 @@ export function setup(S: State) {
     if (!S.R.ninjaSides[s]) continue;
     const c = CLANS[S.clan[s]];
     const roles = ['scoutW', 'scoutE', 'shadow', 'rear', 'shadow'];
-    for (let i = 0; i < c.n; i++) S.ninjas.push({ id: S.ninjas.length, side: s, x: 500 + (i - 2) * 10, y: Yl(s, 30 + S.R.ninjaFwd), alive: true,
-      detUntil: -1, immuneUntil: -1, nearT: 0, role: roles[i], tx: 500, ty: Yl(s, 30 + S.R.ninjaFwd), fleeUntil: -1 });
+    for (let i = 0; i < c.n; i++) S.ninjas.push({ id: S.ninjas.length, side: s, x: MAP.base[s].x + (i - 2) * 10, y: Yl(s, MAP.base[s].yl + S.R.ninjaFwd), alive: true,
+      detUntil: -1, immuneUntil: -1, nearT: 0, role: roles[i], tx: MAP.base[s].x, ty: Yl(s, MAP.base[s].yl + S.R.ninjaFwd), fleeUntil: -1 });
   }
   S.ai = tick;
 }
@@ -330,7 +333,7 @@ function tactical(S: State, s: Side, A: SideAI) {
     if (u.retreating) {
       if (eff >= 65 && !u.contacts.length) { u.retreating = false; }
       else {
-        const tx = gActive ? g.x : u.x, ty = gActive ? g.y - fwd(s) * 30 : Yl(s, 40);
+        const tx = gActive ? g.x : u.x, ty = gActive ? g.y - fwd(s) * 30 : Yl(s, MAP.base[s].yl - 70);
         moveTo(u, tx, ty, true);
         continue;
       }
@@ -381,9 +384,9 @@ function tactical(S: State, s: Side, A: SideAI) {
 function holdPos(S: State, u: Unit) {
   // 前線預設位置（寺廟前方）
   const s = u.side;
-  const xs: Record<string, number> = { spear1: 430, samurai1: 470, samurai2: 530, spear2: 570 };
+  const B = MAP.base[s]; const xs: Record<string, number> = { spear1: B.x - 70, samurai1: B.x - 30, samurai2: B.x + 30, spear2: B.x + 70 };
   const x = xs[u.key] ?? u.x;
-  return { x, y: Yl(s, 285) };
+  return { x, y: Yl(s, holdYlOf(S, s) + 5) };
 }
 
 function infantryAI(S: State, u: Unit, A: SideAI) {
@@ -489,7 +492,7 @@ function archerAI(S: State, u: Unit, A: SideAI) {
   if (steady && u.aiLockK === 'cv') u.aiLockK = '';
   if (S.R.aiLine) { const sl = A.slots.get(u.id); if (sl) { moveTo(u, sl.x, Yl(s, sl.yl)); return; } } // 戰線式：守在線後的槽位，不追目標
   if (A.posture === 'advance' || A.posture === 'hold') {
-    moveTo(u, 500 + (A.rangedKeys.indexOf(u.key) - (A.rangedKeys.length - 1) / 2) * 90, Yl(s, 245)); return;
+    moveTo(u, A.ax + (A.rangedKeys.indexOf(u.key) - (A.rangedKeys.length - 1) / 2) * 90, Yl(s, holdYlOf(S, s) - 35)); return;
   }
   // 攻勢：跟在主戰線後方，保持射距（止抖：80～160 m 不動、每 3 秒才重新決定）
   if (steady && u.hasDest && t - u.aiLockT < 3) return;
@@ -549,10 +552,10 @@ function cavAI(S: State, u: Unit, A: SideAI) {
     if (!E || (!loose && !threat)) { moveTo(u, sl.x, Yl(s, sl.yl), false); return; }
     cavAttack(S, u, E); return;
   }
-  if (A.posture === 'advance') { moveTo(u, A.cavWing === 'W' ? 320 : 690, Yl(s, 200)); return; }
+  if (A.posture === 'advance') { moveTo(u, clamp(A.ax + (A.cavWing === 'W' ? -180 : 190), 40, 960), Yl(s, holdYlOf(S, s) - 80)); return; }
   const E = pickTarget(S, u);
   if (!E || (A.posture === 'hold' && dist(u, E) > 160 && !(isRanged(E) || E.state === 'rout'))) {
-    moveTo(u, A.cavWing === 'W' ? 320 : 690, Yl(s, 230)); return;
+    moveTo(u, clamp(A.ax + (A.cavWing === 'W' ? -180 : 190), 40, 960), Yl(s, holdYlOf(S, s) - 50)); return;
   }
   cavAttack(S, u, E);
 }
@@ -677,7 +680,7 @@ function lineAI(S: State, s: Side, A: SideAI) {
   const ens = S.units.filter(E => E.side === e && onField(E) && active(E) && vis(S, s, E) >= 1 && !isRangedType(pType(S, s, E)))
     .map(E => { const p = seenPos(S, s, E); return { yl: Yl(s, p.y), x: p.x }; }).filter(o => Math.abs(o.x - A.ax) < 320).sort((a, b) => a.yl - b.yl);
   const frontYl = ens.length ? ens[Math.min(1, ens.length - 1)].yl : 999;
-  const HL = R.aiHoldYl;
+  const HL = holdYlOf(S, s);
   // aiHunt：攻勢的錨點目標是看得到的敵軍（離錨點最近的 3 隊平均，含背後），不是場地盡頭
   let huntYl = 700;
   if (R.aiHunt) {
@@ -705,12 +708,12 @@ function lineAI(S: State, s: Side, A: SideAI) {
     if (targetYl > A.ayl) { if (!lag) A.ayl = Math.min(targetYl, A.ayl + spd); }
     else if (targetYl < A.ayl) A.ayl = Math.max(targetYl, A.ayl - spd);
     // 橫向慢慢對準敵線中心
-    if (ens.length) { const cx = ens.slice(0, 4).reduce((a, o) => a + o.x, 0) / Math.min(4, ens.length); A.ax = clamp(A.ax + clamp(cx - A.ax, -2, 2), 380, 620); }
+    if (ens.length) { const cx = ens.slice(0, 4).reduce((a, o) => a + o.x, 0) / Math.min(4, ens.length); A.ax = clamp(A.ax + clamp(cx - A.ax, -2, 2), 200, 800); }
   }
   // 溪流：前方 110 m 內有溪就對準最近的渡口，過溪時隊形收攏
   let squeeze = 1;
   if (R.streams !== 'none') for (const st of STREAMS[R.streams] ?? []) {
-    const syl = Yl(s, st.pts[Math.floor(st.pts.length / 2)][1]);
+    const sy = streamYAt(S, A.ax); if (sy === null) continue; const syl = Yl(s, sy);
     if (syl > A.ayl - 25 && syl < A.ayl + 110 && !engaged.length) {
       const f = [...st.fords].sort((a, b) => Math.abs(a.x - A.ax) - Math.abs(b.x - A.ax))[0];
       if (f) A.ax = clamp(A.ax + clamp(f.x - A.ax, -3, 3), 60, 940);
@@ -887,23 +890,24 @@ function ninjaAI(S: State, s: Side, A: SideAI, jutsu = true) {
   const eg = general(S, e);
   for (const n of S.ninjas) {
     if (n.side !== s || !n.alive || n.manual) continue;
-    if (n.detUntil > t) { n.tx = n.x; n.ty = Yl(s, 30); continue; }
+    if (n.detUntil > t) { n.tx = n.x; n.ty = Yl(s, MAP.base[s].yl - 60); continue; }
     let tx = n.x, ty = n.y;
     if (S.R.fogV2) {
       // 情報 v2：只能用己方看得到的敵軍；偵察兵走掃描航線把敵方半場掃過一遍
       const seen = enemies.filter(u => vis(S, s, u) >= 1).map(u => seenPos(S, s, u));
       const cen = seen.length ? { x: seen.reduce((a, p) => a + p.x, 0) / seen.length, y: seen.reduce((a, p) => a + p.y, 0) / seen.length } : null;
       if (n.role === 'scoutW' || n.role === 'scoutE') {
-        const W: [number, number][] = [[130, 400], [130, 560], [300, 560], [300, 430], [440, 470], [440, 640], [240, 640], [130, 500]];
-        const path = n.role === 'scoutW' ? W : W.map(([x, y]) => [1000 - x, y] as [number, number]);
+        const Ex = MAP.base[e].x, cx = (x: number) => clamp(x, 40, 960); // 掃描敵方基點附近（己方座標）
+        const W: [number, number][] = [[cx(Ex - 220), 400], [cx(Ex - 220), 560], [cx(Ex - 60), 560], [cx(Ex - 60), 430], [cx(Ex + 90), 470], [cx(Ex + 90), 640], [cx(Ex - 100), 640], [cx(Ex - 220), 500]];
+        const path = n.role === 'scoutW' ? W : W.map(([x, y]) => [cx(2 * Ex - x), y] as [number, number]);
         const i = (n.wp ?? 0) % path.length; const [px, py] = path[i]; tx = px; ty = Yl(s, py);
         if (Math.hypot(n.x - tx, n.y - ty) < 20) n.wp = i + 1;
       } else if (n.role === 'rear') {
-        if (vis(S, s, eg) >= 1) { const p = seenPos(S, s, eg); tx = p.x; ty = p.y + (s === 0 ? 60 : -60); } else { tx = 500 + (n.id % 2 ? 80 : -80); ty = Yl(s, 600); }
+        if (vis(S, s, eg) >= 1) { const p = seenPos(S, s, eg); tx = p.x; ty = p.y + (s === 0 ? 60 : -60); } else { tx = clamp(MAP.base[e].x + (n.id % 2 ? 80 : -80), 40, 960); ty = Yl(s, 600); }
       } else { // shadow：跟著看得到的敵軍中心；沒看到任何敵軍就往敵方半場推進
         if (clash) { tx = clash.x + (n.id % 2 ? 50 : -50); ty = clash.y; }
         else if (cen) { tx = cen.x + (n.id % 2 ? 50 : -50); ty = cen.y; }
-        else { tx = 500 + (n.id % 2 ? 120 : -120); ty = Yl(s, 480); }
+        else { tx = clamp(MAP.base[e].x + (n.id % 2 ? 120 : -120), 40, 960); ty = Yl(s, 480); }
       }
     } else switch (n.role) {
       case 'scoutW': tx = 200; ty = Yl(s, t < 90 ? 420 : 470); break;

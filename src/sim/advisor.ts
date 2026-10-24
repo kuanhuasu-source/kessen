@@ -1,6 +1,6 @@
 // 軍師建議（大名模式）：依「我方看得到的情報」評估，一次給一張卡（建議＋對應的大名令）。
 // 放在模擬層是為了能無頭量測（tools/daimyo.ts）：遊戲層（main.ts）與量測工具用同一套規則。
-import type { Side } from './data.ts';
+import { MAP, type Side } from './data.ts';
 import { type State, type Unit, active, dist, effM, general, isRanged, archerRange, canSee } from './sim.ts';
 import { type CmdKind, cmdOf } from './ai.ts';
 
@@ -8,7 +8,7 @@ export type Advice = { id: string; text: string; cmd?: CmdKind; target?: number;
 const Yl = (side: Side, y: number) => side === 0 ? y : 700 - y;
 // 派忍者偵察：還活著且沒被發現的忍者分散到敵線前 40 m（己方座標 400），45 秒後交回自動
 export function dispatchScouts(S: State, s: Side) {
-  const xs = [500, 300, 700, 400, 600]; let i = 0, n = 0;
+  const Ex = MAP.base[1 - s].x; const xs = [Ex, Ex - 200, Ex + 200, Ex - 100, Ex + 100].map(x => Math.max(40, Math.min(960, x))); let i = 0, n = 0;
   for (const nj of S.ninjas) if (nj.side === s && nj.alive && nj.detUntil <= S.t) { nj.manual = true; nj.tx = xs[i++ % xs.length]; nj.ty = Yl(s, 400); nj.autoAt = S.t + 45; n++; }
   return n;
 }

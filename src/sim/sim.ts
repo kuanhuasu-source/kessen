@@ -118,8 +118,14 @@ export function height(x: number, y: number) {
   h += (1.1 * Math.sin(x / 97) * Math.cos(y / 83) + 0.7 * Math.sin((x + y) / 61) + 1.8) * RELIEF.noise;
   return Math.max(0, h);
 }
-export function inForest(x: number, y: number) { const f = MAP.forest; return x >= f.x0 && x <= f.x1 && y >= f.y0 && y <= f.y1; }
-export function inPaddy(x: number, y: number) { const p = MAP.paddy; return x >= p.x0 && x <= p.x1 && y >= p.y0 && y <= p.y1; }
+export function inForest(x: number, y: number) { for (const f of MAP.forests) if (x >= f.x0 && x <= f.x1 && y >= f.y0 && y <= f.y1) return true; return false; }
+export function inPaddy(x: number, y: number) { for (const p of MAP.paddies) if (x >= p.x0 && x <= p.x1 && y >= p.y0 && y <= p.y1) return true; return false; }
+// 第一條河在 x 處的中心 y（沒有河回傳 null）；AI 用來判斷「河在前方多遠」
+export function streamYAt(S: State, x: number): number | null {
+  const st = (STREAMS[S.R.streams] ?? [])[0]; if (!st) return null;
+  for (let i = 0; i < st.pts.length - 1; i++) { const [ax, ay] = st.pts[i], [bx, by] = st.pts[i + 1]; if ((x >= ax && x <= bx) || (x >= bx && x <= ax)) { const k = bx === ax ? 0 : (x - ax) / (bx - ax); return ay + (by - ay) * k; } }
+  return null;
+}
 export function inMarsh(S: State, x: number, y: number) { for (const m of S.secrets.marsh) if (Math.hypot(x - m.x, y - m.y) <= MAP.marshR) return true; return false; }
 export function onTrail(S: State, x: number, y: number) { return inForest(x, y) && Math.abs(x - S.secrets.trailX) <= 7; }
 // 水域：0 不在水中、1 涉水、2 渡口（淺灘）

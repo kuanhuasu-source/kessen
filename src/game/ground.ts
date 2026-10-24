@@ -9,10 +9,8 @@ import { rng } from './coords.ts';
 export const GROUND = { x0: -300, x1: 1300, y0: -300, y1: 1000, pxPerM: 1.5 }; // 外圍各延伸 300 m（北犀川、東千曲川在延伸區）
 // 河道（模擬座標）：北邊犀川由西往東，東邊千曲川由南往北；回傳到河中心線的距離（m）與河寬
 export function riverAt(x: number, y: number): { d: number; w: number } {
-  const sai = 790 + Math.sin(x / 170) * 28 + Math.sin(x / 61) * 9;      // 犀川中心 y
-  const chikuma = 1110 + Math.sin(y / 150) * 30 + Math.cos(y / 47) * 8; // 千曲川中心 x
-  const d1 = Math.abs(y - sai), d2 = Math.abs(x - chikuma);
-  return d1 < d2 ? { d: d1, w: 46 } : { d: d2, w: 60 };
+  const sai = 1090 + Math.sin(y / 150) * 30 + Math.cos(y / 47) * 8; // 犀川中心 x（右側＝北；往善光寺的方向）
+  return { d: Math.abs(x - sai), w: 52 };
 }
 // 溪流中心線距離（m）
 export function streamAt(x: number, y: number, key: string): { d: number; w: number } {
@@ -73,20 +71,31 @@ export async function paintGround(streams = 'none'): Promise<HTMLCanvasElement> 
       if (Math.floor((height(x + 2, y) - base) / 4) !== lv || Math.floor((height(x, y + 2) - base) / 4) !== lv) g.fillRect(X(x), Y(y + 2), 2 * k, 2 * k);
     }
   }
-  // ---- 森林地面（不規則邊緣） ----
-  { const f = MAP.forest; const wob = (t: number, seed: number) => Math.sin(t * 0.9 + seed) * 7 + Math.sin(t * 2.3 + seed * 2) * 4;
+  // ---- 森林地面（不規則邊緣，多片） ----
+  for (const f of MAP.forests) { const wob = (t: number, seed: number) => Math.sin(t * 0.9 + seed) * 7 + Math.sin(t * 2.3 + seed * 2) * 4;
     g.save(); g.beginPath();
     const steps = 48;
     for (let i = 0; i <= steps; i++) { const y = f.y0 + (f.y1 - f.y0) * i / steps; const x = f.x1 + wob(y / 10, 1); i ? g.lineTo(X(x), Y(y)) : g.moveTo(X(x), Y(y)); }
-    for (let i = steps; i >= 0; i--) { const x = f.x0 + (f.x1 - f.x0) * i / steps; const y = f.y1 + wob(x / 10, 3) * 0.6; g.lineTo(X(Math.max(GROUND.x0, x)), Y(y)); }
-    for (let i = 0; i <= steps; i++) { const x = f.x0 + (f.x1 - f.x0) * i / steps; const y = f.y0 - wob(x / 10, 5) * 0.6; g.lineTo(X(Math.max(GROUND.x0, x)), Y(y)); }
+    for (let i = steps; i >= 0; i--) { const x = f.x0 + (f.x1 - f.x0) * i / steps; const y = f.y1 + wob(x / 10, 3) * 0.6; g.lineTo(X(x), Y(y)); }
+    for (let i = 0; i <= steps; i++) { const y = f.y1 - (f.y1 - f.y0) * i / steps; const x = f.x0 - wob(y / 10, 7); g.lineTo(X(x), Y(y)); }
+    for (let i = 0; i <= steps; i++) { const x = f.x0 + (f.x1 - f.x0) * i / steps; const y = f.y0 - wob(x / 10, 5) * 0.6; g.lineTo(X(x), Y(y)); }
     g.closePath(); g.clip();
-    g.fillStyle = pat(forest, 28, '#4d5a30'); g.fillRect(X(GROUND.x0), Y(f.y1 + 20), (f.x1 + 20 - GROUND.x0) * k, (f.y1 - f.y0 + 40) * k);
-    g.fillStyle = 'rgba(30,45,25,0.35)'; g.fillRect(X(GROUND.x0), Y(f.y1 + 20), (f.x1 + 20 - GROUND.x0) * k, (f.y1 - f.y0 + 40) * k); // 林下偏暗
+    g.fillStyle = pat(forest, 28, '#4d5a30'); g.fillRect(X(f.x0 - 20), Y(f.y1 + 20), (f.x1 - f.x0 + 40) * k, (f.y1 - f.y0 + 40) * k);
+    g.fillStyle = 'rgba(30,45,25,0.35)'; g.fillRect(X(f.x0 - 20), Y(f.y1 + 20), (f.x1 - f.x0 + 40) * k, (f.y1 - f.y0 + 40) * k); // 林下偏暗
+    g.restore();
+  }
+  // ---- 收割後的旱田：整片平原分成大塊歪斜的田（只是畫面，不影響移動） ----
+  { g.save(); g.globalAlpha = 0.35;
+    for (let y = 0; y < 700; y += 70) for (let x = 0; x < 1000; x += 90) {
+      if (R() < 0.35) continue; const w = 60 + R() * 40, h = 40 + R() * 36, sk = (R() - 0.5) * 8;
+      g.fillStyle = R() < 0.5 ? 'rgba(190,175,110,0.5)' : 'rgba(165,160,95,0.4)';
+      g.beginPath(); g.moveTo(X(x), Y(y)); g.lineTo(X(x + w + sk), Y(y)); g.lineTo(X(x + w), Y(y + h)); g.lineTo(X(x - sk), Y(y + h)); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(110,95,60,0.35)'; g.lineWidth = 1.2 * k; g.stroke();
+    }
     g.restore();
   }
   // ---- 稻田：矩形內分成大小不一、略為歪斜的田塊，田埂是土色 ----
-  { const p = MAP.paddy;
+  for (const p of MAP.paddies) {
     g.save(); g.beginPath(); g.rect(X(p.x0), Y(p.y1), (p.x1 - p.x0) * k, (p.y1 - p.y0) * k); g.clip();
     g.fillStyle = '#8a7a52'; g.fillRect(X(p.x0), Y(p.y1), (p.x1 - p.x0) * k, (p.y1 - p.y0) * k); // 田埂底色
     const cols = 5, rows = 7; const xs: number[] = [p.x0], ys: number[] = [p.y0];
@@ -113,14 +122,14 @@ export async function paintGround(streams = 'none'): Promise<HTMLCanvasElement> 
     path(); g.strokeStyle = 'rgba(120,105,70,0.25)'; g.lineWidth = w * 0.35 * k; g.stroke();
     g.restore();
   };
-  road([[500, -300], [470, -120], [515, 60], [485, 200], [500, 300]], 7);        // 武田本陣 → 寺廟
-  road([[500, 400], [520, 520], [480, 640], [505, 760], [500, 1000]], 7);       // 寺廟 → 上杉本陣（過犀川的渡口）
-  road([[320, 350], [380, 330], [440, 345], [480, 350]], 5.5);                   // 村落 → 寺廟
-  road([[520, 350], [600, 340], [690, 360], [840, 350], [890, 350]], 5.5);       // 寺廟 → 補給點
-  road([[320, 350], [250, 300], [120, 230], [-100, 160]], 4.5, 0.8);             // 村落往西的鄉道
-  road([[890, 350], [960, 380], [1060, 420]], 4.5, 0.8);                         // 補給點往東到河邊
+  road([[560, -300], [530, -100], [520, 60], [505, 200], [500, 300], [470, 470], [440, 640], [420, 1000]], 7); // 北國街道：縱貫平原，過十二ヶ瀬西側的淺灘往妻女山
+  road([[330, 345], [420, 320], [500, 300]], 5.5);                                   // 小島田 → 八幡社
+  road([[500, 300], [600, 320], [700, 335], [880, 300], [1000, 280], [1090, 260]], 5.5); // 八幡社 → 丹波島 → 小森の渡し → 犀川（善光寺方向）
+  road([[330, 345], [290, 440], [260, 520], [230, 600], [180, 720]], 5, 0.9);      // 小島田 → 雨宮の渡し → 妻女山（上杉來路）
+  road([[-300, 300], [-100, 330], [130, 340], [330, 345]], 4.5, 0.8);              // 小島田往東的鄉道
+  road([[700, 335], [760, 400], [800, 520], [850, 640], [900, 760]], 4.5, 0.7);    // 丹波島往茶臼山的小路
   // 村落周邊的菜園與踩踏地
-  { const v = MAP.points[0]; g.fillStyle = 'rgba(120,100,65,0.35)'; g.beginPath(); g.ellipse(X(v.x), Y(v.y), 30 * k, 24 * k, 0.3, 0, 6.28); g.fill();
+  for (const v of MAP.points.filter(p => p.id !== 'temple')) { g.fillStyle = 'rgba(120,100,65,0.35)'; g.beginPath(); g.ellipse(X(v.x), Y(v.y), 30 * k, 24 * k, 0.3, 0, 6.28); g.fill();
     g.strokeStyle = 'rgba(95,80,45,0.5)'; g.lineWidth = 1.2 * k;
     for (const [dx, dy, w, h] of [[-48, 20, 26, 14], [34, -26, 22, 12], [-30, -34, 20, 12]] as const) {
       g.fillStyle = 'rgba(130,110,60,0.45)'; g.fillRect(X(v.x + dx), Y(v.y + dy), w * k, h * k);
@@ -138,17 +147,18 @@ export async function paintGround(streams = 'none'): Promise<HTMLCanvasElement> 
     g.setLineDash([14 * k, 22 * k]); path(); g.strokeStyle = 'rgba(220,235,240,0.35)'; g.lineWidth = 1.2 * k; g.stroke();
     g.restore();
   };
-  water(t => { const x = GROUND.x0 + t * 1600; return [x, 790 + Math.sin(x / 170) * 28 + Math.sin(x / 61) * 9]; }, 46);
-  water(t => { const y = GROUND.y0 + t * 1300; return [1110 + Math.sin(y / 150) * 30 + Math.cos(y / 47) * 8, y]; }, 60);
+  water(t => { const y = GROUND.y0 + t * 1300; return [1090 + Math.sin(y / 150) * 30 + Math.cos(y / 47) * 8, y]; }, 52); // 犀川（右側）
   // ---- 溪流與渡口 ----
   for (const st of STREAMS[streams] ?? []) {
     const path = () => { g.beginPath(); st.pts.forEach(([x, y], i) => i ? g.lineTo(X(x), Y(y)) : g.moveTo(X(x), Y(y))); };
     g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
-    path(); g.strokeStyle = '#a89a76'; g.lineWidth = (st.w + 10) * k; g.stroke();      // 河灘
+    path(); g.strokeStyle = '#b9ad88'; g.lineWidth = (st.w + 34) * k; g.stroke();      // 河原（礫石灘）
+    path(); g.strokeStyle = '#a89a76'; g.lineWidth = (st.w + 12) * k; g.stroke();      // 濕砂
     path(); g.strokeStyle = '#5c7d90'; g.lineWidth = st.w * k; g.stroke();             // 水
     path(); g.strokeStyle = 'rgba(160,195,210,0.5)'; g.lineWidth = st.w * 0.5 * k; g.stroke();
     g.setLineDash([8 * k, 14 * k]); path(); g.strokeStyle = 'rgba(225,240,245,0.4)'; g.lineWidth = 1 * k; g.stroke(); g.setLineDash([]);
-    for (const f of st.fords) { // 渡口：淺灘與踏石
+    for (const f of st.fords) { // 渡口：淺灘與踏石，旁邊寫名字
+      if (f.name) { g.font = `${Math.round(9 * k)}px serif`; g.fillStyle = 'rgba(50,40,25,0.75)'; g.fillText(f.name, X(f.x + f.r + 4), Y(f.y - 4)); }
       g.fillStyle = 'rgba(190,180,150,0.75)'; g.beginPath(); g.ellipse(X(f.x), Y(f.y), f.r * k, st.w * 0.6 * k, 0, 0, 6.28); g.fill();
       g.fillStyle = '#9a9388';
       for (let i = 0; i < 7; i++) { const a = R() * 6.28, d = R() * f.r * 0.7; g.beginPath(); g.ellipse(X(f.x + Math.cos(a) * d), Y(f.y + Math.sin(a) * d * 0.5), 1.4 * k, 1 * k, a, 0, 6.28); g.fill(); }

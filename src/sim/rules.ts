@@ -66,7 +66,7 @@ export const V1 = {
   hitowaRegen: 2,        // 人は城：未接戰回復倍率
   nokizaruIntel: 'mid' as 'low' | 'mid' | 'high',
   kogaVision: 1.3,       // 甲賀眾視野倍率
-  streams: 'none' as 'none' | 'two' | 'east', // 戰場溪流（data.ts STREAMS）
+  streams: 'none' as 'none' | 'two' | 'east' | 'chikuma', // 戰場溪流（data.ts STREAMS）
   pointWin: true,        // 控制全部據點 60 秒獲勝（遊戲 2026-10-22 起關閉：據點只給增益）
   cmdCommitMorale: 0, cmdChargeMorale: 0,
   cmdRelieveN: 1, cmdRaidCharge: 0, cmdRaidShock: 0, cmdFocusMorale: 0, cmdFocusHit: 1, cmdRegroupMorale: 0, // cmdFocusHit：集火令下對目標的命中倍率 // 大名令加強（方案一）：馳援派幾隊、繞後令下的騎兵衝鋒加成與接觸額外士氣、集火每輪額外士氣、整頓時動搖與撤退中的部隊 +N 士氣 // 大名令附帶士氣：主將親征時主將 80 m 內友軍 +N、全軍突擊時全軍 +N（0＝只改行為）

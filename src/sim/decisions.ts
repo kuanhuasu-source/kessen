@@ -2,7 +2,7 @@
 // 戰場暫停等玩家選；選項 2～4 個、一個標「軍師建議」、依情報等級增減；執行交給部隊 AI，40 秒後以戰報回報結果。
 // 放在模擬層讓 tools/daimyo.ts 能模擬「總是選建議／隨機選／不問」三種玩家。
 import { TRAIT, type Side, type Trait } from './data.ts';
-import { type State, type Unit, active, dist, effM, general, isRanged, archerRange, inWater, onField, mHit } from './sim.ts';
+import { type State, type Unit, active, dist, effM, general, isRanged, archerRange, inWater, onField, mHit, streamYAt } from './sim.ts';
 import { type CmdKind, type Doctrine, type Wing, issueCommand, doctrineOf, deployOf } from './ai.ts';
 import { intelLvl, weakestEngaged, dispatchScouts, cmdBlocked, CMD_CD, unitName } from './advisor.ts';
 
@@ -134,8 +134,9 @@ export function evalDecision(S: State, s: Side): Decision | null {
   if (R.streams !== 'none' && okId('ev:ford', 1e9) && doc.attack !== 'hold') {
     const A = (S.meta.ai as { posture: string; ayl: number }[])[s];
     const lineU = own.filter(u => u.role === 'line' && !u.contacts.length);
-    if (t <= 150 && A.posture === 'attack' && lineU.length >= 2 && lineU.every(u => Yl(s, u.y) < 285)) {
-      const foe = seen.filter(E => !isRanged(E) && Yl(s, E.y) > 300 && Yl(s, E.y) <= 480).sort((a, b) => Yl(s, a.y) - Yl(s, b.y))[0];
+    const ahead = (u: Unit) => { const ry = streamYAt(S, u.x); return ry !== null && Yl(s, ry) > Yl(s, u.y) + 10 && Yl(s, ry) < Yl(s, u.y) + 160; }; // 河在前方 10～160 m
+    if (t <= 150 && A.posture === 'attack' && lineU.length >= 2 && lineU.every(ahead)) {
+      const foe = seen.filter(E => !isRanged(E) && Yl(s, E.y) > Yl(s, lineU[0].y) + 40 && Yl(s, E.y) <= Yl(s, lineU[0].y) + 260).sort((a, b) => Yl(s, a.y) - Yl(s, b.y))[0];
       if (foe) { const u = lineU.sort((a, b) => dist(a, foe) - dist(b, foe))[0]; const foeNear = Yl(s, foe.y) < 360;
         return mk({ id: 'ev:ford', kind: 'event', speaker: u.cmd || unitName(u), advisor: false, unit: u.id, target: foe.id, cd: 1e9, text: `戰線已到溪邊，對岸 ${Math.round(Yl(s, foe.y) - Yl(s, u.y))} m 有敵${unitName(foe)}。先渡河的一方會挨半渡而擊。`,
           options: [{ id: 'cross', label: '渡河進攻', hint: '涉水中無法衝鋒、受箭 +30%，過了溪就能壓上', rec: !foeNear }, { id: 'bank', label: '在岸上列陣，等敵軍渡河', hint: '固守 90 秒，敵軍上岸時半渡而擊；若敵軍不來就白等', rec: foeNear }] }); }

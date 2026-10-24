@@ -104,6 +104,7 @@ node tools/shot.mjs "/tmp/phone.html#mode=watch&seed=42" out.png 844 390 2 ./scr
 - 忍者：v2 速度 6 m/s（`v2NinSpeed`）、起點戰線前 40 m（`ninjaFwd` 170）。情報曲線：察覺 28 秒、識別 120 秒 79%、全部識別 185 秒（半數的局）。
 - 忍者眾（`clanPassive`）：每家只有一種主動忍術（`CLANS[*].jutsu[0]`），第二種改為自動特性，實作在 sim.ts `updateVision`（情報網、疑兵）與 `step`（破壞、防諜，參數 `passiveSakutekiR`／`passiveSakutekiImmune`／`passiveGiheiMul`）；介面文字在 skills.ts `CLAN_PASSIVE`。量測用 `tools/matrix.ts`；單一家對軒猿的診斷腳本寫在 scratchpad，之後可併入 tools。
 - 情報 v2（`fogV2`）：部隊察覺 130／識別 80 m、忍者 190／110 m（甲賀 ×1.3、小丘 ×1.5、森林 ×0.5）、識別累積 8 秒、洞悉累積 12 秒、識別 40 秒退化、察覺 120 秒遺忘；`S.obs`／`S.mem`／`S.explored` 在 sim.ts `updateVision`；`tools/intel.ts` 量情報曲線。
+- 地圖（2026-10-24 起為八幡原歷史配置，`data.ts MAP`／`STREAMS.chikuma`）：y 往上為西南、右側為北；武田基點 (500,160) 在八幡原、上杉基點 (330,40) 在千曲川對岸；對峙線 `MAP.holdYl` 武田 280／上杉 110（`holdYlOf`）；千曲川斜貫、三個渡口；妻女山 (210,650) 高 40 m、茶臼山 (890,670) 高 28 m；據點 小島田（援軍）、八幡社（士氣）、丹波島（補給）。地形查詢 `inForest`／`inPaddy` 支援多片矩形（`MAP.forests`／`MAP.paddies`），`streamYAt(S, x)` 給河在某 x 的 y。
 - 地形：森林（受箭減半、騎兵 −40%、視野減半、察覺距離 60 m）、稻田（移動 −30%、衝鋒減半）、沼澤秘密（移動 −60%、無法衝鋒）、小丘（視野 +50%、居高 +15%）、水域（規則 `streams`，預設關：涉水 −50%、無法衝鋒、受箭 +30%、半渡而擊 −10；渡口 −20%）。
 - 士氣：高昂 ≥ 80、動搖 < 50、潰逃 < 25；潰逃後 15 秒未受攻擊且士氣 ≥ 35 重整（主將 60 m 內減半），重整後士氣上限 50，第 2 次潰逃即潰滅。
 - 軍勢：低於 25 總崩潰；高於 80 全軍緩升。

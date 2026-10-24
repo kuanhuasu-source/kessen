@@ -1067,7 +1067,7 @@ function jutsuFx(side: 0 | 1, j: string, unit?: number, point?: number) {
   const U = unit !== undefined ? S.units[unit] : null;
   if (side === 0) {
     if (name === 'ansatsu' && U) say(res === 'ok' ? `暗殺成功：${U.cmd} 討死！` : `暗殺 ${U.cmd} 失敗`);
-    else if (name === 'houka' && point !== undefined) say(`放火：${['村落', '寺廟', '補給點'][point]} 60 秒內失效`);
+    else if (name === 'houka' && point !== undefined) say(`放火：${POINT_NAME[point]} 60 秒內失效`);
     else if (name === 'sakuteki') say('防諜：敵方忍者暴露了');
     else say(`忍術「${J.name}」`);
     if (U && name === 'rumor') floatText(U, `流言 ${S.R.rumor}`, 'hit');
@@ -1076,7 +1076,7 @@ function jutsuFx(side: 0 | 1, j: string, unit?: number, point?: number) {
   // 敵方忍術：只告訴玩家看得出來的部分
   if (name === 'rumor' && U) { say(`敵忍散布流言：${nameOf(U)}士氣 ${S.R.rumor}，30 秒不回復`); floatText(U, `流言 ${S.R.rumor}`, 'bad'); }
   else if (name === 'ansatsu' && U) say(res === 'ok' ? `${U.cmd} 遭敵忍暗殺！` : `擊退刺殺 ${U.cmd} 的敵忍`);
-  else if (name === 'houka' && point !== undefined) say(`敵忍放火：我方${['村落', '寺廟', '補給點'][point]} 60 秒內失效`);
+  else if (name === 'houka' && point !== undefined) say(`敵忍放火：我方${POINT_NAME[point]} 60 秒內失效`);
   else if (name === 'sakuteki') say('敵軍防諜：附近的我方忍者暴露了');
   else if (name === 'kirigakure') say('敵軍陣中升起煙霧（霧隱）');
 }
@@ -1084,7 +1084,7 @@ const ninDet = new Map<number, boolean>();
 // 指揮模式的提示；觀戰時改用左上角戰報
 function say(text: string) { if (!WATCH) hud.toast(text); }
 const clock = () => `${Math.floor(S.t / 60)}:${String(Math.floor(S.t % 60)).padStart(2, '0')}`;
-const POINT_NAME = ['村落', '寺廟', '補給點'];
+const POINT_NAME = MAP.points.map(p => MAP.names[p.id] ?? p.id);
 const POINT_EFFECT = ['佔領 90 秒後起每 90 秒來一批援軍（長槍 60 人，最多 2 批）', `${S.R.templeR} m 內友軍士氣 +${S.R.templeAura}`, '60 m 內的弓兵每 20 秒回補 1 輪箭矢'];
 let inspectPoint = -1;
 function pickPoint(sx: number, sy: number): number {
@@ -1314,7 +1314,7 @@ function resize() {
 let bannerH = window.innerHeight;
 window.addEventListener('resize', resize);
 resize();
-rig.tx = 500; rig.ty = 190 + S.R.deployFwd; rig.dist = 280; rig.snap(); // 佈陣前移時鏡頭跟著前移，戰線與溪流在畫面中段
+rig.tx = MAP.base[0].x; rig.ty = MAP.base[0].yl + 60 + S.R.deployFwd; rig.dist = 280; rig.snap(); // 佈陣前移時鏡頭跟著前移，戰線與溪流在畫面中段
 
 let infoT = 0, smokeAcc = 0, hoofAcc = 0;
 hud.addNinjaCard(dbl => nextNinja(dbl), S.clan[0]);

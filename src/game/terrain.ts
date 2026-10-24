@@ -2,9 +2,9 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MAP } from '../sim/data.ts';
-import { height, inForest } from '../sim/sim.ts';
+import { height, inForest, inPaddy } from '../sim/sim.ts';
 import { toWorld, rng } from './coords.ts';
-import { GROUND, groundH, riverAt, paintGround, groundTexture } from './ground.ts';
+import { GROUND, groundH, riverAt, streamAt, paintGround, groundTexture } from './ground.ts';
 
 export const FACTION = { 0: new THREE.Color('#b8322a'), 1: new THREE.Color('#2f4f86'), neutral: new THREE.Color('#e9e2cf') };
 
@@ -93,17 +93,16 @@ export function buildTerrain(scene: THREE.Scene, streams: string = 'none'): Terr
   const treeGeo = mergeGeometries([trunk, crownA, crownB])!;
   const trees: THREE.Matrix4[] = [];
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3();
-  const f = MAP.forest;
-  for (let i = 0; i < 1400 && trees.length < 750; i++) {
+  for (const f of MAP.forests) for (let i = 0; i < 1400 && trees.length < 900; i++) {
     const x = f.x0 + R() * (f.x1 - f.x0), y = f.y0 + R() * (f.y1 - f.y0);
-    if (R() < 0.15) continue;
+    if (R() < 0.15 || R() > (f.x1 - f.x0) * (f.y1 - f.y0) / 40000) continue; // 小片林子樹少一點
     const k = 0.8 + R() * 0.7;
     trees.push(m.clone().compose(toWorld(x, y), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), R() * 6.28), s.set(k, k * (0.9 + R() * 0.3), k)));
   }
   // 原野上零星的樹
   for (let i = 0; i < 90; i++) {
     const x = R() * 1000, y = R() * 700;
-    if (inForest(x, y) || MAP.points.some(pt => Math.hypot(pt.x - x, pt.y - y) < 70) || (y > 200 && y < 500 && x > 600 && x < 860) || (Math.abs(x - 500) < 140 && (y < 180 || y > 520))) continue;
+    if (inForest(x, y) || inPaddy(x, y) || MAP.points.some(pt => Math.hypot(pt.x - x, pt.y - y) < 70) || streamAt(x, y, streams).d < 30 || (Math.abs(x - MAP.base[0].x) < 140 && y < 260) || (Math.abs(x - MAP.base[1].x) < 160 && y > 560)) continue;
     const k = 0.7 + R() * 0.6;
     trees.push(m.clone().compose(toWorld(x, y), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), R() * 6.28), s.set(k, k, k)));
   }
@@ -111,8 +110,8 @@ export function buildTerrain(scene: THREE.Scene, streams: string = 'none'): Terr
   for (let i = 0; i < 900 && trees.length < 1500; i++) {
     const x = GROUND.x0 + R() * (GROUND.x1 - GROUND.x0), y = GROUND.y0 + R() * (GROUND.y1 - GROUND.y0);
     if (x > -20 && x < 1020 && y > -20 && y < 720) continue;
-    const r = riverAt(x, y); const bank = r.d > r.w / 2 + 6 && r.d < r.w / 2 + 40;
-    if (r.d <= r.w / 2 + 6) continue;
+    const r = riverAt(x, y); const sr = streamAt(x, y, streams); const bank = (r.d > r.w / 2 + 6 && r.d < r.w / 2 + 40) || (sr.d > sr.w / 2 + 14 && sr.d < sr.w / 2 + 36);
+    if (r.d <= r.w / 2 + 6 || sr.d <= sr.w / 2 + 14) continue;
     if (!bank && R() < 0.75) continue;
     const k = 0.8 + R() * 0.8;
     const w = toWorld(x, y); w.y = groundH(x, y, height(x, y));
@@ -125,8 +124,7 @@ export function buildTerrain(scene: THREE.Scene, streams: string = 'none'): Terr
     for (let i = 0; i < 700; i++) {
       const x = GROUND.x0 + 40 + R() * (GROUND.x1 - GROUND.x0 - 80), y = GROUND.y0 + 40 + R() * (GROUND.y1 - GROUND.y0 - 80);
       if (riverAt(x, y).d < riverAt(x, y).w / 2 + 8) continue;
-      if ((x > MAP.paddy.x0 - 5 && x < MAP.paddy.x1 + 5 && y > MAP.paddy.y0 - 5 && y < MAP.paddy.y1 + 5) || MAP.points.some(pt => Math.hypot(pt.x - x, pt.y - y) < 48)) continue;
-      if (Math.abs(x - 500) < 12 && y > -300 && y < 1000) continue; // 南北大路
+      if (inPaddy(x, y) || streamAt(x, y, streams).d < streamAt(x, y, streams).w / 2 + 8 || MAP.points.some(pt => Math.hypot(pt.x - x, pt.y - y) < 48)) continue;
       const k = 0.6 + R() * 1.1; const w = toWorld(x, y); w.y = groundH(x, y, height(x, y));
       (R() < 0.8 ? bushes : rocks).push(m.clone().compose(w, q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), R() * 6.28), s.set(k, k, k)));
     }
@@ -167,7 +165,7 @@ export function buildTerrain(scene: THREE.Scene, streams: string = 'none'): Terr
 
   // 佔領範圍與旗幟
   const rings: THREE.Mesh[] = [], flags: THREE.Mesh[] = [], prog: THREE.Mesh[] = [], labels: THREE.Sprite[] = [];
-  const LABEL = [['村落', '援軍'], ['寺廟', '士氣 +10'], ['補給點', '箭矢']];
+  const LABEL = MAP.points.map(p => [MAP.names[p.id] ?? p.id, p.id === 'village' ? '援軍' : p.id === 'temple' ? '士氣 +10' : '箭矢']);
   const labelTex = (i: number, owner: number) => {
     const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64;
     const g = cv.getContext('2d')!;
