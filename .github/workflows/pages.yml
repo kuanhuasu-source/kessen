@@ -31,6 +31,7 @@ jobs:
           mkdir -p site
           cp dist/kessen-m1.html site/index.html
           cp dist/kessen-m1.html site/kessen.html
+          if [ -d dist/music ]; then cp -r dist/music site/music; fi  # 配樂（public/music/*.mp3）
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

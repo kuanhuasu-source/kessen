@@ -19,7 +19,8 @@ import { portraitOf, ninjaPortrait, skillIcon, jutsuIcon, kamon, illus, img, kan
 { const f = uiFrame(); if (f) { document.documentElement.classList.add('hasframe'); document.documentElement.style.setProperty('--frame', `url(${f})`); } } // 介面框：結算畫面邊框
 import { toWorld, toSim } from './coords.ts';
 import { sfx, unlock as unlockAudio, isMuted, setMuted } from './audio.ts';
-window.addEventListener('pointerdown', unlockAudio, { capture: true }); window.addEventListener('keydown', unlockAudio, { capture: true }); // 手機要在手勢後才能出聲
+import { music } from './music.ts';
+window.addEventListener('pointerdown', () => { unlockAudio(); music.unlock(); }, { capture: true }); window.addEventListener('keydown', () => { unlockAudio(); music.unlock(); }, { capture: true }); // 手機要在手勢後才能出聲
 
 // ---------------- 場景 ----------------
 const canvas = document.getElementById('view') as HTMLCanvasElement;
@@ -234,15 +235,15 @@ function reloadWith(over: Record<string, string | null>) {
   for (const [k, v] of Object.entries(over)) { if (v === null) p.delete(k); else p.set(k, v); }
   location.hash = p.toString(); location.reload();
 }
-function begin() { applyWarCouncil(); started = true; paused = false; hud.toast(WATCH ? '開始觀戰' : '出陣！'); unlockAudio(); sfx.battleStart(); if (S.R.fogDur) say(`朝霧瀰漫，視野減半（約 ${Math.round(S.R.fogDur / 60 * 10) / 10} 分鐘後散去）`); if (S.R.detachOn) { const away = S.units.filter(u => u.away); const here = S.units.filter(u => u.side === 0 && !u.away && !u.reinf).reduce((a, u) => a + u.men0, 0); const foe = S.units.filter(u => u.side === 1 && !u.reinf).reduce((a, u) => a + u.men0, 0); say(`別働隊（${away.map(u => u.cmd).join('、')}，${away.reduce((a, u) => a + u.men0, 0)} 人）尚在妻女山方向，稍後渡河趕到；此刻本隊 ${here} 人對上杉約 ${foe} 人，以寡擊眾先撐住`); } }
+function begin() { applyWarCouncil(); started = true; paused = false; hud.toast(WATCH ? '開始觀戰' : '出陣！'); unlockAudio(); sfx.battleStart(); music.play('battle'); if (S.R.fogDur) say(`朝霧瀰漫，視野減半（約 ${Math.round(S.R.fogDur / 60 * 10) / 10} 分鐘後散去）`); if (S.R.detachOn) { const away = S.units.filter(u => u.away); const here = S.units.filter(u => u.side === 0 && !u.away && !u.reinf).reduce((a, u) => a + u.men0, 0); const foe = S.units.filter(u => u.side === 1 && !u.reinf).reduce((a, u) => a + u.men0, 0); say(`別働隊（${away.map(u => u.cmd).join('、')}，${away.reduce((a, u) => a + u.men0, 0)} 人）尚在妻女山方向，稍後渡河趕到；此刻本隊 ${here} 人對上杉約 ${foe} 人，以寡擊眾先撐住`); } }
 if (DAIMYO) document.querySelector<HTMLElement>('#b-cmd')?.classList.add('gone'); // 大名令併入決策卡（有 !important 的顯示規則，用 class 蓋）
-hud.setSound(!isMuted()); hud.onSound = () => { setMuted(!isMuted()); hud.setSound(!isMuted()); hud.toast(isMuted() ? '音效關閉' : '音效開啟'); if (!isMuted()) sfx.drum(1, 0.4); };
+hud.setSound(!isMuted()); music.setMuted(isMuted()); hud.onSound = () => { setMuted(!isMuted()); music.setMuted(isMuted()); hud.setSound(!isMuted()); hud.toast(isMuted() ? '音效與音樂關閉' : '音效與音樂開啟'); if (!isMuted()) sfx.drum(1, 0.4); };
 hud.speeds = SPEEDS;
 hud.setWatch(WATCH, () => { camAuto = !camAuto; manualUntil = 0; hud.toast(camAuto ? '導播鏡頭' : '手動鏡頭'); },
   () => { visMode = visMode === 'all' ? 0 : visMode === 0 ? 1 : 'all'; hud.toast(visMode === 'all' ? '視野：全知' : `視野：${SIDE_NAME[visMode]}軍`); });
 if (params.get('go') === '1') {
   params.delete('go'); history.replaceState(null, '', '#' + params.toString()); begin();
-} else hud.showSetup2({
+} else { music.play('council'); hud.showSetup2({
   mode: WATCH ? 'watch' : 'play', bg: illus('title'),
   war: {
     rows: [
@@ -264,7 +265,7 @@ if (params.get('go') === '1') {
   onPick1: id => { if (id !== clan1) reloadWith({ foe: id }); },
   onGo: begin, onHelp: () => hud.showHelp(true),
   onNew: () => reloadWith({ seed: String((Math.random() * 1e9) | 0) }),
-});
+}); }
 
 // ---------------- 拾取 ----------------
 const ray = new THREE.Raycaster();
@@ -1186,6 +1187,7 @@ function showEnd() {
   const o = S.over!; const R = S.rec;
   const w = o.winner;
   if (WATCH || w === -1) sfx.drum(3, 0.5); else if (w === 0) sfx.victory(); else sfx.defeat();
+  music.setDuck(0.4);
   const title = WATCH ? (w === -1 ? '平手' : `${SIDE_NAME[w]}軍勝`) : w === -1 ? '平手' : w === 0 ? '勝利' : '敗北';
   const loser = w === -1 ? null : (1 - w) as 0 | 1;
   const why = o.type === 'collapse' && loser !== null ? `${SIDE_NAME[loser]}軍總崩潰` : o.type === 'withdraw' && loser !== null ? `${SIDE_NAME[loser]}軍退卻（久無接戰、軍勢落後）` : OVER_TYPE[o.type] ?? o.type;
@@ -1283,7 +1285,7 @@ function afterStep() {
         if (mine(A) || intelOf(A) >= 2) say(mine(A) ? `${nameOf(A)}${e.k === 'shatter' ? '潰滅' : '潰走'}！` : `敵軍 ${nameOf(A)}${e.k === 'shatter' ? '潰滅' : '潰走'}`);
         break;
       case 'merit': if (mine(A) || intelOf(A) >= 2) { floatText(A, `功績 ${'★'.repeat(Math.min(3, e.n ?? 1))}`, 'good'); if (mine(A)) { say(`${nameOf(A)}${e.s === 'gen' ? '討取敵大將' : e.s === 'cmd' ? '討取敵將' : '擊潰敵隊'}，功績 ${e.n}${(e.n ?? 0) <= 3 ? `・${MERIT_NAME[e.n ?? 1]}` : ''}`); sfx.drum(1, 0.45); } } break;
-      case 'detach': { const names = S.units.filter(u => u.side === e.a && MAP.detach.keys.includes(u.key)).map(u => u.cmd).join('、'); say(`別働隊抵達！${names}從妻女山方向渡河而來`); hud.toast(`別働隊抵達：${names}`); sfx.battleStart(); if (!WATCH && e.a === 0) for (const u of S.units) if (u.side === 0 && MAP.detach.keys.includes(u.key)) hud.refreshCard(u); break; }
+      case 'detach': { const names = S.units.filter(u => u.side === e.a && MAP.detach.keys.includes(u.key)).map(u => u.cmd).join('、'); say(`別働隊抵達！${names}從妻女山方向渡河而來`); hud.toast(`別働隊抵達：${names}`); sfx.battleStart(); if (e.a === 0) music.play('climax'); if (!WATCH && e.a === 0) for (const u of S.units) if (u.side === 0 && MAP.detach.keys.includes(u.key)) hud.refreshCard(u); break; }
       case 'fogLift': say('朝霧散了，視野恢復'); hud.toast('朝霧漸散'); break;
       case 'rally': sfx.rally(); floatText(A, '重整', 'good'); if (mine(A)) say(`${nameOf(A)}重整完畢，等候命令`); break;
       case 'cmd': say(`${mine(A) ? '' : '敵將 '}${A.cmd} 討死！`); floatText(A, '討死', 'bad'); break;
