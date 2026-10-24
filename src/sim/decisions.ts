@@ -81,7 +81,8 @@ export function evalDecision(S: State, s: Side): Decision | null {
     if (okId('doc:behind', 150) && t > 60 && S.army[s] + 15 <= S.army[e]) {
       const bad = S.army[s] < 45;
       return mk({ id: 'doc:behind', kind: 'doctrine', speaker: adv, advisor: true, cd: 150, text: `我軍軍勢 ${Math.round(S.army[s])}，落後敵軍 ${Math.round(S.army[e] - S.army[s])}。再拖下去會連鎖潰逃。`,
-        options: [{ id: 'regroup', label: '整頓固守', hint: '戰線後退 60 m，動搖者脫離，守住再說', rec: bad }, { id: 'allin', label: '全軍壓上', hint: '趁還有力氣賭一把', rec: !bad }, { id: 'ret45', label: '撤退線提高到 45', hint: '保存兵力' }] });
+        options: [{ id: 'regroup', label: '整頓固守', hint: '戰線後退 60 m，動搖者脫離，守住再說', rec: true }, { id: 'ret45', label: '撤退線提高到 45', hint: '保存兵力，等敵軍露出破綻' }, { id: 'allin', label: '全軍壓上', hint: '賭一把；量測多半更糟' }] });
+      void bad;
     }
     // 敵主將暴露
     if (okId('doc:gen', 120) && eg.cmdAlive && active(eg) && lvl(eg) >= 2 && !guarded(eg) && g.cmdAlive && active(g) && effM(S, g) >= 60 && dist(g, eg) < 220)
@@ -127,8 +128,8 @@ export function evalDecision(S: State, s: Side): Decision | null {
   if (R.streams !== 'none' && okId('ev:ford', 1e9) && doc.attack !== 'hold') {
     const A = (S.meta.ai as { posture: string; ayl: number }[])[s];
     const lineU = own.filter(u => u.role === 'line' && !u.contacts.length);
-    if (A.posture === 'attack' && lineU.length >= 2 && lineU.every(u => Yl(s, u.y) < 285)) {
-      const foe = seen.filter(E => !isRanged(E) && Yl(s, E.y) > 300).sort((a, b) => Yl(s, a.y) - Yl(s, b.y))[0];
+    if (t <= 150 && A.posture === 'attack' && lineU.length >= 2 && lineU.every(u => Yl(s, u.y) < 285)) {
+      const foe = seen.filter(E => !isRanged(E) && Yl(s, E.y) > 300 && Yl(s, E.y) <= 480).sort((a, b) => Yl(s, a.y) - Yl(s, b.y))[0];
       if (foe) { const u = lineU.sort((a, b) => dist(a, foe) - dist(b, foe))[0]; const foeNear = Yl(s, foe.y) < 360;
         return mk({ id: 'ev:ford', kind: 'event', speaker: u.cmd || unitName(u), advisor: false, unit: u.id, target: foe.id, cd: 1e9, text: `戰線已到溪邊，對岸 ${Math.round(Yl(s, foe.y) - Yl(s, u.y))} m 有敵${unitName(foe)}。先渡河的一方會挨半渡而擊。`,
           options: [{ id: 'cross', label: '渡河進攻', hint: '涉水中無法衝鋒、受箭 +30%，過了溪就能壓上', rec: !foeNear }, { id: 'bank', label: '在岸上列陣，等敵軍渡河', hint: '固守 90 秒，敵軍上岸時半渡而擊；若敵軍不來就白等', rec: foeNear }] }); }
