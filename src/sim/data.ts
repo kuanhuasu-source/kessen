@@ -21,6 +21,12 @@ export type RosterEntry = {
 };
 
 // 武田軍（side 0）：甲州流，以騎兵與火器見長。長槍 2、武士 1、騎兵 2、弓 1、鐵砲 1（282 人）
+// 將領性格（決策卡「交給他判斷」與台詞用）：bold 猛、steady 穩、cautious 慎
+export type Trait = 'bold' | 'steady' | 'cautious';
+export const TRAIT: Record<string, Trait> = {
+  '武田信玄': 'steady', '馬場信春': 'steady', '武田信繁': 'bold', '內藤昌豐': 'cautious', '高坂昌信': 'cautious', '小山田信茂': 'steady', '山縣昌景': 'bold', '飯富虎昌': 'bold',
+  '上杉謙信': 'bold', '直江景綱': 'cautious', '柿崎景家': 'bold', '甘粕景持': 'cautious', '中條藤資': 'steady', '色部勝長': 'steady', '安田長秀': 'cautious', '齋藤朝信': 'bold',
+};
 export const ROSTER_T: RosterEntry[] = [
   { key: 'gen', type: 'general', cmd: '武田信玄', skill: 'furin', passive: 'hitowa',
     advisor: '山本勘助', strategy: 'kitsutsuki', advisorPassive: 'heiho' },

@@ -1,7 +1,7 @@
 // 決策卡引擎（大名模式主迴圈，2026-10-23 設計）：佈陣後部隊自走，遇到狀況由現場將領請示（事件卡）或軍師提案（方針卡），
 // 戰場暫停等玩家選；選項 2～4 個、一個標「軍師建議」、依情報等級增減；執行交給部隊 AI，40 秒後以戰報回報結果。
 // 放在模擬層讓 tools/daimyo.ts 能模擬「總是選建議／隨機選／不問」三種玩家。
-import type { Side } from './data.ts';
+import { TRAIT, type Side, type Trait } from './data.ts';
 import { type State, type Unit, active, dist, effM, general, isRanged, archerRange, inWater, onField } from './sim.ts';
 import { type CmdKind, type Doctrine, type Wing, issueCommand, doctrineOf, deployOf } from './ai.ts';
 import { intelLvl, weakestEngaged, dispatchScouts, cmdBlocked, CMD_CD, unitName } from './advisor.ts';
@@ -9,13 +9,31 @@ import { intelLvl, weakestEngaged, dispatchScouts, cmdBlocked, CMD_CD, unitName 
 export type DOption = { id: string; label: string; hint?: string; rec?: boolean };
 export type Decision = { id: string; kind: 'doctrine' | 'event'; speaker: string; advisor: boolean; text: string; options: DOption[]; unit?: number; target?: number; cd: number };
 type Pending = { at: number; text: string; unit?: number; men0?: number; mor0?: number };
-export type DecState = { last: Record<string, number>; lastKind: Record<string, number>; nDoc: number; nEv: number; cmdCd: Partial<Record<CmdKind, number>>; pending: Pending[]; wingRestore: { at: number; w: 'L' | 'C' | 'R'; prev: Wing }[]; log: { t: number; id: string; opt: string; who: string; text: string; label: string }[] };
+export type DecState = { last: Record<string, number>; lastKind: Record<string, number>; nDoc: number; nEv: number; cmdCd: Partial<Record<CmdKind, number>>; pending: Pending[]; wingRestore: { at: number; w: 'L' | 'C' | 'R'; prev: Wing }[]; docRestore?: { at: number; attack: Doctrine['attack'] }; log: { t: number; id: string; opt: string; who: string; text: string; label: string }[] };
 export function decState(S: State): DecState {
   let d = S.meta.dec as DecState | undefined;
   if (!d) { d = { last: {}, lastKind: {}, nDoc: 0, nEv: 0, cmdCd: {}, pending: [], wingRestore: [], log: [] }; S.meta.dec = d; }
   return d;
 }
 const GAP_KIND = { doctrine: 45, event: 20 }; // 同層卡片的最短間隔（秒）
+// 將領口吻：事件卡文字結尾依性格加一句
+const VOICE: Record<Trait, string[]> = { bold: ['請准我上！', '此時不衝更待何時。', '交給我，必取之。'], steady: ['請主公裁示。', '進退皆可，但要快。', '在下聽令。'], cautious: ['貿然行動恐有閃失。', '是否先觀望？', '請三思。'] };
+const AGGRESSIVE = new Set(['charge', 'allin', 'raid', 'relieve', 'cross', 'cap', 'focus', 'commit', 'now', 'shift', 'cav', 'scout', 'stay']);
+const DEFENSIVE = new Set(['hold', 'bank', 'retreat', 'back', 'ignore', 'regroup', 'ret45', 'keep', 'face', 'steady', 'pass', 'wait']);
+export const traitOf = (name: string): Trait => TRAIT[name] ?? 'steady';
+export const TRAIT_NAME: Record<Trait, string> = { bold: '猛', steady: '穩', cautious: '慎' };
+// 「交給他判斷」：依性格從既有選項挑一個（猛→最積極、慎→最保守、穩→軍師建議）
+export function delegatePick(d: Decision): DOption {
+  const tr = traitOf(d.speaker); const real = d.options.filter(o => o.id !== 'delegate');
+  if (tr === 'bold') return real.find(o => AGGRESSIVE.has(o.id)) ?? real[0];
+  if (tr === 'cautious') return real.find(o => DEFENSIVE.has(o.id)) ?? real[real.length - 1];
+  return real.find(o => o.rec) ?? real[0];
+}
+function withVoice(d: Decision, seed: number): Decision {
+  if (d.advisor) return d;
+  const tr = traitOf(d.speaker); const v = VOICE[tr][Math.abs(seed) % 3];
+  return { ...d, text: `${d.text}${v}`, options: [...d.options, { id: 'delegate', label: `交給${d.speaker}判斷`, hint: `性格「${TRAIT_NAME[tr]}」：${tr === 'bold' ? '會選最積極的' : tr === 'cautious' ? '會選最保守的' : '會照軍師建議'}` }] };
+}
 const Yl = (side: Side, y: number) => side === 0 ? y : 700 - y;
 const fwd = (side: Side) => side === 0 ? 1 : -1;
 function wingOfUnit(S: State, s: Side, u: Unit): 'L' | 'C' | 'R' { const ax = (S.meta.ai as { ax: number }[])[s].ax; return u.x < ax - 40 ? 'L' : u.x > ax + 40 ? 'R' : 'C'; }
@@ -37,7 +55,7 @@ export function evalDecision(S: State, s: Side): Decision | null {
   const cavFree = own.find(u => u.type === 'cav' && !u.contacts.length && !u.retreating);
   const rangedReady = own.some(u => isRanged(u) && u.ammo > 0);
   const doc = doctrineOf(S, s);
-  const mk = (d: Omit<Decision, 'cd'> & { cd?: number }): Decision => ({ cd: 90, ...d });
+  const mk = (d: Omit<Decision, 'cd'> & { cd?: number }): Decision => withVoice({ cd: 90, ...d }, Math.floor(t));
   // ---- 方針卡（軍師提案，只在前提被推翻時）----
   if (okKind('doctrine') && adv) {
     // 敵主力位置偏向一翼
@@ -57,7 +75,7 @@ export function evalDecision(S: State, s: Side): Decision | null {
     if (okId('doc:cannon', 1e9) && doc.attack !== 'now' && !own.some(u => u.contacts.length)) {
       const can_ = seen.find(E => E.type === 'cannon');
       if (can_) return mk({ id: 'doc:cannon', kind: 'doctrine', speaker: adv, advisor: true, cd: 1e9, target: can_.id, text: `敵大筒${unitName(can_)}現身，射程 260 m。守著等射完箭會先挨轟。`,
-        options: [{ id: 'now', label: '立刻進攻', hint: '攻勢時機改為開戰即攻', rec: !cavFree }, ...(cavFree && can('raid') ? [{ id: 'raid', label: '騎兵先打大筒', hint: '大筒 60 m 內打不到人', rec: true }] : []), { id: 'keep', label: '維持方針' }] });
+        options: [...(cavFree && can('raid') ? [{ id: 'raid', label: '騎兵先打大筒', hint: '大筒 60 m 內打不到人', rec: true }] : []), { id: 'keep', label: '維持方針，照計畫推進', hint: '量測：倉促進攻反而吃虧', rec: !(cavFree && can('raid')) }] });
     }
     // 軍勢落後
     if (okId('doc:behind', 150) && t > 60 && S.army[s] + 15 <= S.army[e]) {
@@ -68,12 +86,7 @@ export function evalDecision(S: State, s: Side): Decision | null {
     // 敵主將暴露
     if (okId('doc:gen', 120) && eg.cmdAlive && active(eg) && lvl(eg) >= 2 && !guarded(eg) && g.cmdAlive && active(g) && effM(S, g) >= 60 && dist(g, eg) < 220)
       return mk({ id: 'doc:gen', kind: 'doctrine', speaker: adv, advisor: true, cd: 120, target: eg.id, text: `敵主將${eg.cmd}身邊沒有長槍掩護，離我方本陣 ${Math.round(dist(g, eg))} m。`,
-        options: [...(cavFree && can('raid') ? [{ id: 'raid', label: '騎兵繞後直取敵將', rec: true }] : []), ...(can('commit') ? [{ id: 'commit', label: '主公親率旗本直取', hint: '旗本 30 秒內攻擊附近敵軍', rec: !cavFree }] : []), { id: 'ignore', label: '不理會' }] });
-    // 敵軍動搖：全軍突擊
-    const wav = seen.filter(E => E.state === 'waver').length, rt = seen.filter(E => E.state === 'rout').length;
-    if (okId('doc:charge', 90) && t > 60 && wav + 2 * rt >= 2 && S.army[s] >= S.army[e] - 5 && can('charge'))
-      return mk({ id: 'doc:charge', kind: 'doctrine', speaker: adv, advisor: true, cd: 90, text: `敵軍 ${wav} 隊動搖、${rt} 隊潰走。`,
-        options: [{ id: 'charge', label: '全軍突擊', hint: '30 秒內全線跑步壓上、騎兵自由獵殺', rec: true }, { id: 'steady', label: '穩步推進', hint: '維持戰線' }] });
+        options: [...(can('commit') ? [{ id: 'commit', label: '主公親率旗本直取', hint: '旗本 30 秒內攻擊附近敵軍', rec: true }] : []), ...(cavFree && can('raid') ? [{ id: 'raid', label: '騎兵繞後直取敵將', rec: !can('commit') }] : []), { id: 'ignore', label: '不理會' }] });
   }
   if (!okKind('event')) return null;
   // ---- 事件卡（現場將領請示）----
@@ -99,27 +112,27 @@ export function evalDecision(S: State, s: Side): Decision | null {
   if (wavE && okId('ev:focus:' + wavE.id, 60)) {
     const shooter = own.filter(u => isRanged(u) && u.ammo > 0 && dist(u, wavE) <= archerRange(S, u, wavE))[0];
     const opts: DOption[] = [];
-    if (shooter && can('focus')) opts.push({ id: 'focus', label: '集中箭火逼它潰走', rec: true });
-    if (cavFree && can('raid')) opts.push({ id: 'raid', label: '騎兵繞到它背後衝鋒', rec: !shooter });
-    if (opts.length) { opts.push({ id: 'ignore', label: '不理會' }); const sp = shooter ?? cavFree!; return mk({ id: 'ev:focus:' + wavE.id, kind: 'event', speaker: sp.cmd || unitName(sp), advisor: false, unit: sp.id, target: wavE.id, cd: 60, text: `敵${unitName(wavE)}已經動搖（士氣約 ${Math.round(effM(S, wavE))}）。`, options: opts }); }
+    if (cavFree && can('raid')) opts.push({ id: 'raid', label: '騎兵繞到它背後衝鋒', hint: '動搖的部隊挨衝鋒多半直接潰走', rec: true });
+    if (opts.length) { if (shooter && can('focus')) opts.push({ id: 'focus', label: '集中箭火', hint: '弓兵本來就會優先射動搖的敵軍，效果有限' }); opts.push({ id: 'ignore', label: '不理會' }); const sp = cavFree!; return mk({ id: 'ev:focus:' + wavE.id, kind: 'event', speaker: sp.cmd || unitName(sp), advisor: false, unit: sp.id, target: wavE.id, cd: 60, text: `敵${unitName(wavE)}已經動搖（士氣約 ${Math.round(effM(S, wavE))}）。`, options: opts }); }
   }
   // 敵遠程部隊沒有掩護
   if (cavFree && can('raid')) {
-    const ea = seen.filter(E => isRanged(E) && dist(cavFree, E) < 260 && !guarded(E)).sort((a, b) => (a.type === 'cannon' ? -1 : 0) - (b.type === 'cannon' ? -1 : 0) || dist(a, cavFree) - dist(b, cavFree))[0];
+    const isolated = (E: Unit) => !seen.some(X => X !== E && !isRanged(X) && X.type !== 'cav' && dist(X, E) < 80);
+    const ea = cavFree.men >= cavFree.men0 * 0.7 ? seen.filter(E => isRanged(E) && dist(cavFree, E) < 260 && !guarded(E) && isolated(E)).sort((a, b) => (a.type === 'cannon' ? -1 : 0) - (b.type === 'cannon' ? -1 : 0) || dist(a, cavFree) - dist(b, cavFree))[0] : undefined;
     if (ea && okId('ev:raid:' + ea.id, 150)) return mk({ id: 'ev:raid:' + ea.id, kind: 'event', speaker: cavFree.cmd || unitName(cavFree), advisor: false, unit: cavFree.id, target: ea.id, cd: 150,
-      text: `敵${unitName(ea)}${ea.type === 'cannon' ? '的大筒' : ea.type === 'gun' ? '的鐵砲' : '的弓兵'}沒有長槍掩護，離我 ${Math.round(dist(cavFree, ea))} m。`,
+      text: `敵${unitName(ea)}${ea.type === 'cannon' ? '的大筒' : ea.type === 'gun' ? '的鐵砲' : '的弓兵'}落單了，80 m 內沒有敵步兵，離我 ${Math.round(dist(cavFree, ea))} m。`,
       options: [{ id: 'raid', label: '繞到背後衝鋒', rec: true }, { id: 'ignore', label: '按兵不動' }] });
   }
-  // 渡口在前：戰線部隊快到溪邊，對岸有識別的敵軍
-  if (R.streams !== 'none') for (const u of own) {
-    if (u.role !== 'line' || u.contacts.length || u.retreating || !okId('ev:ford:' + u.id, 120)) continue;
-    const ahead = inWater(S, u.x, u.y + fwd(s) * 25);
-    if (!ahead) continue;
-    const foe = seen.filter(E => !isRanged(E) && (E.y - u.y) * fwd(s) > 0 && dist(E, u) < 220).sort((a, b) => dist(a, u) - dist(b, u))[0];
-    if (!foe) continue;
-    const foeNearStream = inWater(S, foe.x, foe.y - fwd(s) * 25) !== 0 || dist(foe, u) < 90;
-    return mk({ id: 'ev:ford:' + u.id, kind: 'event', speaker: u.cmd || unitName(u), advisor: false, unit: u.id, target: foe.id, cd: 120, text: `前方是溪流${ahead === 2 ? '（渡口）' : ''}，對岸有敵${unitName(foe)}，${Math.round(dist(foe, u))} m。要渡河嗎？`,
-      options: [{ id: 'cross', label: '渡河進攻', hint: '涉水中無法衝鋒、受箭 +30%', rec: !foeNearStream }, { id: 'bank', label: '在岸上列陣，等敵軍渡河', hint: '這一翼固守 60 秒，敵軍上岸時半渡而擊', rec: foeNearStream }] });
+  // 渡河：發起攻勢時戰線還在溪的己方側、對岸有識別的敵軍 → 問一次（渡河進攻／岸上等敵軍渡河）
+  if (R.streams !== 'none' && okId('ev:ford', 1e9) && doc.attack !== 'hold') {
+    const A = (S.meta.ai as { posture: string; ayl: number }[])[s];
+    const lineU = own.filter(u => u.role === 'line' && !u.contacts.length);
+    if (A.posture === 'attack' && lineU.length >= 2 && lineU.every(u => Yl(s, u.y) < 285)) {
+      const foe = seen.filter(E => !isRanged(E) && Yl(s, E.y) > 300).sort((a, b) => Yl(s, a.y) - Yl(s, b.y))[0];
+      if (foe) { const u = lineU.sort((a, b) => dist(a, foe) - dist(b, foe))[0]; const foeNear = Yl(s, foe.y) < 360;
+        return mk({ id: 'ev:ford', kind: 'event', speaker: u.cmd || unitName(u), advisor: false, unit: u.id, target: foe.id, cd: 1e9, text: `戰線已到溪邊，對岸 ${Math.round(Yl(s, foe.y) - Yl(s, u.y))} m 有敵${unitName(foe)}。先渡河的一方會挨半渡而擊。`,
+          options: [{ id: 'cross', label: '渡河進攻', hint: '涉水中無法衝鋒、受箭 +30%，過了溪就能壓上', rec: !foeNear }, { id: 'bank', label: '在岸上列陣，等敵軍渡河', hint: '固守 90 秒，敵軍上岸時半渡而擊；若敵軍不來就白等', rec: foeNear }] }); }
+    }
   }
   // 彈藥用盡
   for (const u of own) if (isRanged(u) && u.ammo <= 0 && !u.contacts.length && !u.retreating && okId('ev:ammo:' + u.id, 1e9))
@@ -153,6 +166,7 @@ export function applyDecision(S: State, s: Side, d: Decision, optId: string): st
   const cmd = (k: CmdKind, target?: number) => { if (issueCommand(S, s, k, target)) { D.cmdCd[k] = t + CMD_CD[k]; return true; } return false; };
   const report = (text: string, u?: Unit | null) => { D.pending.push({ at: t + 40, text, unit: u?.id, men0: u?.men, mor0: u ? effM(S, u) : undefined }); };
   const who = d.speaker;
+  if (optId === 'delegate') { const o = delegatePick(d); const msg = applyDecision(S, s, d, o.id); D.log.pop(); D.log.push({ t, id: d.id, opt: 'delegate:' + o.id, who, text: d.text, label: `交給${who}判斷 → ${o.label}` }); return `${who}自行判斷：${o.label}。${msg}`; }
   switch (optId) {
     case 'shift': { const E = S.units.filter(u => u.side !== s && active(u) && intelLvl(S, s, u) >= 2 && !isRanged(u)); const mx = E.reduce((a, u) => a + u.x, 0) / Math.max(1, E.length); const w: 'L' | 'R' = mx > 500 ? 'R' : 'L'; if (dep) { dep.wings[w] = 'press'; dep.wings[w === 'L' ? 'R' : 'L'] = 'hold'; } return `依令：戰線壓向${w === 'R' ? '東' : '西'}翼`; }
     case 'cav': { const E = S.units.filter(u => u.side !== s && active(u) && intelLvl(S, s, u) >= 2 && !isRanged(u)); const mx = E.reduce((a, u) => a + u.x, 0) / Math.max(1, E.length); if (dep) dep.cavWing = mx > 500 ? 'E' : 'W'; if (doc) doc.cav = 'raid'; return `依令：騎兵改到${mx > 500 ? '東' : '西'}翼，接戰後繞後`; }
@@ -168,7 +182,7 @@ export function applyDecision(S: State, s: Side, d: Decision, optId: string): st
     case 'focus': if (T && cmd('focus', T.id)) { report(`集火${unitName(T)}`, T); return `依令：弓兵集火${unitName(T)}`; } return '弓兵現在射不到';
     case 'retreat': case 'back': if (U) { U.retreating = true; U.hasDest = false; report(`${unitName(U)}退到主將旁`, U); } return `依令：${U ? unitName(U) : ''}退到主將旁整頓`;
     case 'cross': if (U) report(`${unitName(U)}渡河進攻`, U); return `${who}：渡河！`;
-    case 'bank': if (U && dep) { const w = wingOfUnit(S, s, U); D.wingRestore.push({ at: t + 60, w, prev: dep.wings[w] }); dep.wings[w] = 'hold'; report(`${unitName(U)}在岸上列陣`, U); return `依令：${w === 'L' ? '左' : w === 'R' ? '右' : '中央'}翼在岸上固守 60 秒`; } return `${who}：列陣`;
+    case 'bank': if (doc) { D.docRestore = { at: t + 90, attack: doc.attack }; doc.attack = 'hold'; report('岸上列陣等敵軍渡河', U); return '依令：全線在岸上列陣固守 90 秒'; } return `${who}：列陣`;
     case 'cap': if (U) { const p = S.points.find(p => p.owner !== s && dist(U, p) < 90); if (p) { U.role = 'cap:' + p.id; return `依令：${unitName(U)}去佔領據點`; } } return '據點不在附近';
     case 'scout': { const n = dispatchScouts(S, s); return `依令：${n} 名忍者前往敵線前偵察`; }
   }
@@ -179,6 +193,7 @@ export function tickDecisions(S: State, s: Side): string[] {
   const D = decState(S), t = S.t, out: string[] = [];
   const dep = deployOf(S, s);
   D.wingRestore = D.wingRestore.filter(r => { if (t >= r.at) { if (dep) dep.wings[r.w] = r.prev; return false; } return true; });
+  if (D.docRestore && t >= D.docRestore.at) { const doc = (S.meta.doctrine as Doctrine[] | undefined)?.[s]; if (doc && doc.attack === 'hold') doc.attack = D.docRestore.attack; D.docRestore = undefined; out.push('戰報・岸上列陣期滿，恢復原方針'); }
   D.pending = D.pending.filter(p => {
     if (t < p.at) return true;
     const u = p.unit !== undefined ? S.units[p.unit] : null;

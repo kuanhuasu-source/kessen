@@ -14,7 +14,8 @@ const RV: Record<string, Partial<Rules>> = { base: {}, passive: { daimyoPassive:
   midB: { cmdRelieveN: 2, cmdRaidCharge: 12, cmdRaidShock: -10, cmdFocusMorale: -4, cmdFocusHit: 1.3, cmdRegroupMorale: 8 }, strongB: { cmdRelieveN: 2, cmdRaidCharge: 15, cmdRaidShock: -15, cmdFocusMorale: -6, cmdFocusHit: 1.6, cmdRegroupMorale: 12 }, c8: { cmdCommitMorale: 8 }, ch5: { cmdChargeMorale: 5 }, both: { cmdCommitMorale: 8, cmdChargeMorale: 5 }, c12: { cmdCommitMorale: 12 }, ch8: { cmdChargeMorale: 8 } };
 const N = Number(process.argv[2] || 60);
 const rates = (process.argv[3] || '0,0.5,1').split(',').map(Number);
-const MODE = process.env.MODE || 'dec'; // dec＝決策卡（p＝選軍師建議的機率，其餘隨機；p<0 不問）；adv＝舊建議卡
+const MODE = process.env.MODE || 'dec';
+const optStat: Record<string, { n: number; w: number }> = {}; // MODE=stat：隨機選項，統計每張卡每個選項的勝率（有混淆，但能看出哪些選項根本沒差） // dec＝決策卡（p＝選軍師建議的機率，其餘隨機；p<0 不問）；adv＝舊建議卡
 const rv = process.argv[4] || 'base';
 const skip = new Set((process.argv[5] || '').split(',').filter(Boolean)); // 這些類型的建議不出現（消融用）
 const R = makeRules({ ...GAME_RULES, ...(RV[rv] ?? {}), name: rv });
@@ -28,14 +29,14 @@ for (const p of rates) {
     S.meta.deployment = [JSON.parse(JSON.stringify(DEFAULT_DEPLOY)), null];
     S.meta.playerSide = 0;
     const rng = mulberry32(777 + i);
-    const cmdCd: Partial<Record<CmdKind, number>> = {}; const adviceCd: Record<string, number> = {}; let adviceT = -99;
+    const cmdCd: Partial<Record<CmdKind, number>> = {}; const adviceCd: Record<string, number> = {}; let adviceT = -99; const picksThisGame: string[] = [];
     let s120 = -1, s180 = -1;
     const idf = () => { const en = S.units.filter(u => u.side === 1 && u.state !== 'gone' && !u.reinf); return en.filter(u => S.vis[0][u.id] >= 2).length / Math.max(1, en.length); };
     while (!S.over) {
       step(S); S.fx!.length = 0;
       if (s120 < 0 && S.t >= 120) s120 = idf(); if (s180 < 0 && S.t >= 180) s180 = idf();
       if (MODE === 'dec') {
-        if (p >= 0 && S.t - adviceT >= 0.5) { adviceT = S.t; tickDecisions(S, 0); const d = evalDecision(S, 0); if (d) { shown++; const b = byKind[kindOf(d.id)] ??= { shown: 0, taken: 0 }; b.shown++; const rec = d.options.find(o => o.rec) ?? d.options[0]; const o = rng() < p ? rec : d.options[Math.floor(rng() * d.options.length)]; if (o === rec) { taken++; b.taken++; } applyDecision(S, 0, d, o.id); } }
+        if (p >= 0 && S.t - adviceT >= 0.5) { adviceT = S.t; tickDecisions(S, 0); const d = evalDecision(S, 0); if (d) { shown++; const b = byKind[kindOf(d.id)] ??= { shown: 0, taken: 0 }; b.shown++; const rec = d.options.find(o => o.rec) ?? d.options[0]; const o = rng() < p ? rec : d.options[Math.floor(rng() * d.options.length)]; if (o === rec) { taken++; b.taken++; } applyDecision(S, 0, d, o.id); picksThisGame.push(`${kindOf(d.id)} ${o.id}${o === rec ? '*' : ''}`); } }
         continue;
       }
       if (p > 0 && S.t - adviceT >= 3) {
@@ -51,8 +52,10 @@ for (const p of rates) {
         } else adviceCd[a.id] = S.t + 90;
       }
     }
+    for (const k of new Set(picksThisGame)) { const o = optStat[k] ??= { n: 0, w: 0 }; o.n++; if (S.over!.winner === 0) o.w++; }
     if (S.over!.winner === 0) w++; t += S.over!.t; id120 += s120 < 0 ? idf() : s120; id180 += s180 < 0 ? (s120 < 0 ? idf() : s120) : s180;
   }
+  if (process.env.STAT) { console.log('  選項統計（出現局數 → 該局勝率；* 為軍師建議）：'); for (const [k, v] of Object.entries(optStat).sort()) if (v.n >= 10) console.log(`    ${k.padEnd(24)} ${String(v.n).padStart(4)} 局  ${Math.round(v.w / v.n * 100)}%`); }
   const kinds = Object.entries(byKind).map(([k, v]) => `${k} ${(v.shown / N).toFixed(1)}/${(v.taken / N).toFixed(1)}`).join('、');
   console.log(`採納 ${String(Math.round(p * 100)).padStart(3)}%  武田勝 ${String(Math.round(w / N * 100)).padStart(3)}%  時長 ${(t / N).toFixed(0)}s  識別 120s ${(id120 / N * 100).toFixed(0)}% 180s ${(id180 / N * 100).toFixed(0)}%  建議 ${(shown / N).toFixed(1)} 張/局、採納 ${(taken / N).toFixed(1)}${kinds ? `  （出現/採納：${kinds}）` : ''}`);
 }
