@@ -235,7 +235,7 @@ function reloadWith(over: Record<string, string | null>) {
   location.hash = p.toString(); location.reload();
 }
 function begin() { applyWarCouncil(); started = true; paused = false; hud.toast(WATCH ? '開始觀戰' : '出陣！'); unlockAudio(); sfx.battleStart(); }
-if (DAIMYO) { const b = document.querySelector<HTMLElement>('#b-cmd'); if (b) b.style.display = 'none'; } // 大名令併入決策卡
+if (DAIMYO) document.querySelector<HTMLElement>('#b-cmd')?.classList.add('gone'); // 大名令併入決策卡（有 !important 的顯示規則，用 class 蓋）
 hud.setSound(!isMuted()); hud.onSound = () => { setMuted(!isMuted()); hud.setSound(!isMuted()); hud.toast(isMuted() ? '音效關閉' : '音效開啟'); if (!isMuted()) sfx.drum(1, 0.4); };
 hud.speeds = SPEEDS;
 hud.setWatch(WATCH, () => { camAuto = !camAuto; manualUntil = 0; hud.toast(camAuto ? '導播鏡頭' : '手動鏡頭'); },

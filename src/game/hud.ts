@@ -185,6 +185,10 @@ body { font-family: var(--ui); -webkit-user-select: none; user-select: none; -we
   font-size: 12.5px; font-variant-numeric: tabular-nums; padding: 0; }
 #hud .rail button[aria-pressed="true"] { background: var(--paper); color: var(--ink); }
 .rail svg { width: 14px; height: 14px; fill: currentColor; }
+.rail button svg.li { width: 18px; height: 18px; fill: none; margin-top: 2px; }
+.rail button .lb { display: block; font-size: 9.5px; line-height: 10px; margin-top: -1px; opacity: 0.85; font-family: var(--display); }
+.rail button:has(.lb) { grid-template-rows: auto auto; align-content: center; gap: 1px; }
+#hud .rail button.gone { display: none !important; }
 .rail .sep { height: 1px; margin: 2px 6px; background: var(--line); }
 .rail #b-form, .rail #b-halt, .rail #b-box, .rail #b-skill, .rail #b-retreat, .rail .w { font-family: var(--display); font-size: 16px; }
 .rail button:disabled { opacity: 0.35; cursor: default; }
@@ -265,6 +269,22 @@ body { font-family: var(--ui); -webkit-user-select: none; user-select: none; -we
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
 `;
 
+// 側欄圖示（內嵌 SVG 線稿，currentColor）
+const IC: Record<string, string> = {
+  form: '<circle cx="6" cy="6" r="1.8"/><circle cx="12" cy="6" r="1.8"/><circle cx="18" cy="6" r="1.8"/><circle cx="6" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="18" cy="12" r="1.8"/><circle cx="6" cy="18" r="1.8"/><circle cx="12" cy="18" r="1.8"/><circle cx="18" cy="18" r="1.8"/>',
+  halt: '<path d="M8 3h8l5 5v8l-5 5H8l-5-5V8z"/><path d="M8 12h8"/>',
+  box: '<rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 2.2"/>',
+  retreat: '<path d="M18 20V10a4 4 0 0 0-4-4H6"/><path d="M9 3L6 6l3 3"/>',
+  skill: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
+  cmd: '<path d="M5 21V4"/><path d="M5 4h12l-3 4 3 4H5"/>',
+  cam: '<path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  vis: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+  snd: '<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6"/>',
+  mute: '<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9l5 6M21 9l-5 6"/>',
+};
+const ico = (k: string) => `<svg class="li" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${IC[k]}</svg>`;
+const railBtn = (id: string, k: string, label: string, kanji: string, title: string, cls = '', pressed?: boolean) =>
+  `<button id="${id}"${cls ? ` class="${cls}"` : ''} aria-label="${label}"${pressed !== undefined ? ` aria-pressed="${pressed}"` : ''} title="${title}">${ico(k)}<small class="lb">${kanji}</small></button>`;
 const ICON_PAUSE = '<svg viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="1.5" width="3.5" height="11" rx="1"/><rect x="8.5" y="1.5" width="3.5" height="11" rx="1"/></svg>';
 const ICON_PLAY = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5v11l9.5-5.5z"/></svg>';
 
@@ -299,7 +319,7 @@ export class Hud {
   onSound: () => void = () => {};
   onLead: (act: string) => void = () => {};
   setLead(name: string | null) { const el = this.root.querySelector<HTMLElement>('.lead')!; if (!name) { el.hidden = true; return; } el.querySelector('.nm')!.textContent = `${name}・視角`; el.hidden = false; }
-  setSound(on: boolean) { const b = this.root.querySelector('#b-snd')!; b.setAttribute('aria-pressed', String(on)); b.textContent = on ? '音' : '靜'; b.classList.toggle('on', on); }
+  setSound(on: boolean) { const b = this.root.querySelector('#b-snd')!; b.setAttribute('aria-pressed', String(on)); b.innerHTML = `${ico(on ? 'snd' : 'mute')}<small class="lb">${on ? '音' : '靜'}</small>`; b.classList.toggle('on', on); }
   setDaimyo(on: boolean) { this.root.classList.toggle('daimyo', on); }
   setCmdOpen(on: boolean) { const b = this.root.querySelector('#b-cmd')!; b.setAttribute('aria-pressed', String(on)); b.classList.toggle('on', on); }
   // 軍師建議卡
@@ -338,15 +358,15 @@ export class Hud {
         <button id="b-speed" aria-label="遊戲速度" title="切換速度">1×</button>
         <button id="b-help" aria-label="操作說明" title="操作說明">？</button>
         <span class="sep"></span>
-        <button id="b-form" aria-label="切換陣型" title="切換陣型（F）">陣</button>
-        <button id="b-halt" aria-label="停止" title="停止（H）">停</button>
-        <button id="b-box" aria-label="框選" aria-pressed="false" title="框選（觸控用）">框</button>
-        <button id="b-retreat" aria-label="撤退" title="選取部隊有序撤退（T）">退</button>
-        <button id="b-skill" aria-label="武將技" title="選取部隊施放武將技（R）">技</button>
-        <button id="b-cmd" class="c" aria-label="大名令" aria-pressed="false" title="大名令：馳援、集中弓火、騎兵繞後、全軍整頓">令</button>
-        <button id="b-cam" class="w" aria-label="導播鏡頭" aria-pressed="true" title="導播鏡頭：自動跟隨戰況">鏡</button>
-        <button id="b-vis" class="w" aria-label="視野" title="切換視野：全知／武田／上杉">全</button>
-        <button id="b-snd" class="w" aria-label="音效" aria-pressed="true" title="音效開關">音</button>
+        ${railBtn('b-form', 'form', '切換陣型', '陣', '切換陣型（F）')}
+        ${railBtn('b-halt', 'halt', '停止', '停', '停止（H）')}
+        ${railBtn('b-box', 'box', '框選', '框', '框選（觸控用）', '', false)}
+        ${railBtn('b-retreat', 'retreat', '撤退', '退', '選取部隊有序撤退（T）')}
+        ${railBtn('b-skill', 'skill', '武將技', '技', '選取部隊施放武將技（R）')}
+        ${railBtn('b-cmd', 'cmd', '大名令', '令', '大名令：馳援、集中弓火、騎兵繞後、全軍整頓', 'c', false)}
+        ${railBtn('b-cam', 'cam', '導播鏡頭', '鏡', '導播鏡頭：自動跟隨戰況', 'w', true)}
+        ${railBtn('b-vis', 'vis', '視野', '全', '切換視野：全知／武田／上杉', 'w')}
+        ${railBtn('b-snd', 'snd', '音效', '音', '音效開關', 'w', true)}
       </div>
       <div class="cards" role="toolbar" aria-label="部隊"></div>
       <div class="info" hidden aria-live="polite"></div>
@@ -467,7 +487,7 @@ export class Hud {
     clearTimeout(this.toastT); this.toastT = window.setTimeout(() => this.toastEl.classList.remove('on'), 1400);
   }
   update(t: number, army: [number, number], units: Unit[], selected: Set<number>, morale: (u: Unit) => number, paused: boolean, speed: number, form: string, boxMode: boolean, manual?: Set<number>) {
-    this.formBtn.disabled = !form; this.formBtn.textContent = form || '陣';
+    this.formBtn.disabled = !form; const fl = this.formBtn.querySelector('.lb'); if (fl && fl.textContent !== (form || '陣')) fl.textContent = form || '陣';
     this.haltBtn.disabled = selected.size === 0; this.retreatBtn.disabled = selected.size === 0;
     this.boxBtn.setAttribute('aria-pressed', String(boxMode));
     const left = Math.max(0, 600 - t);
@@ -595,7 +615,7 @@ export class Hud {
   }
   setWatchState(cam: boolean, vis: string) {
     const c = this.root.querySelector<HTMLButtonElement>('#b-cam')!; c.setAttribute('aria-pressed', String(cam));
-    const v = this.root.querySelector<HTMLButtonElement>('#b-vis')!; if (v.textContent !== vis) v.textContent = vis;
+    const v = this.root.querySelector<HTMLButtonElement>('#b-vis .lb')!; if (v.textContent !== vis) v.textContent = vis;
   }
   // 戰報（觀戰）
   feed(time: string, text: string, side: number, big = false) {
