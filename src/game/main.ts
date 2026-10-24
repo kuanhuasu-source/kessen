@@ -234,7 +234,7 @@ function reloadWith(over: Record<string, string | null>) {
   for (const [k, v] of Object.entries(over)) { if (v === null) p.delete(k); else p.set(k, v); }
   location.hash = p.toString(); location.reload();
 }
-function begin() { applyWarCouncil(); started = true; paused = false; hud.toast(WATCH ? '開始觀戰' : '出陣！'); unlockAudio(); sfx.battleStart(); if (S.R.fogDur) say(`朝霧瀰漫，視野減半（約 ${Math.round(S.R.fogDur / 60 * 10) / 10} 分鐘後散去）`); if (S.R.detachOn) say(`別働隊（${S.units.filter(u => u.away).map(u => u.cmd).join('、')}）尚在妻女山方向，稍後渡河趕到`); }
+function begin() { applyWarCouncil(); started = true; paused = false; hud.toast(WATCH ? '開始觀戰' : '出陣！'); unlockAudio(); sfx.battleStart(); if (S.R.fogDur) say(`朝霧瀰漫，視野減半（約 ${Math.round(S.R.fogDur / 60 * 10) / 10} 分鐘後散去）`); if (S.R.detachOn) { const away = S.units.filter(u => u.away); const here = S.units.filter(u => u.side === 0 && !u.away && !u.reinf).reduce((a, u) => a + u.men0, 0); const foe = S.units.filter(u => u.side === 1 && !u.reinf).reduce((a, u) => a + u.men0, 0); say(`別働隊（${away.map(u => u.cmd).join('、')}，${away.reduce((a, u) => a + u.men0, 0)} 人）尚在妻女山方向，稍後渡河趕到；此刻本隊 ${here} 人對上杉約 ${foe} 人，以寡擊眾先撐住`); } }
 if (DAIMYO) document.querySelector<HTMLElement>('#b-cmd')?.classList.add('gone'); // 大名令併入決策卡（有 !important 的顯示規則，用 class 蓋）
 hud.setSound(!isMuted()); hud.onSound = () => { setMuted(!isMuted()); hud.setSound(!isMuted()); hud.toast(isMuted() ? '音效關閉' : '音效開啟'); if (!isMuted()) sfx.drum(1, 0.4); };
 hud.speeds = SPEEDS;

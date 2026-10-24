@@ -20,7 +20,7 @@ export type RosterEntry = {
   advisor?: string; strategy?: string; advisorPassive?: string;
 };
 
-// 武田軍（side 0）：甲州流，以騎兵與火器見長。長槍 2、武士 1、騎兵 2、弓 1、鐵砲 1（282 人）
+// 武田軍（side 0）：甲州流，以騎兵與火器見長。長槍 2、武士 1、騎兵 2、弓 1、鐵砲 1（282 人；八幡原：別働隊 高坂／小山田／飯富 ×1.5 → 主力 192＋別働隊 135）
 // 將領性格（決策卡「交給他判斷」與台詞用）：bold 猛、steady 穩、cautious 慎
 export type Trait = 'bold' | 'steady' | 'cautious';
 export const TRAIT: Record<string, Trait> = {
@@ -39,7 +39,7 @@ export const ROSTER_T: RosterEntry[] = [
   { key: 'cav2', type: 'cav', cmd: '飯富虎昌', skill: 'shinsa', passive: 'atk2' },
 ];
 
-// 上杉軍（side 1）：越後精兵，武士多、有大筒。長槍 2、武士 2、騎兵 1、弓 1、大筒 1（280 人）
+// 上杉軍（side 1）：越後精兵，武士多、有大筒。長槍 2、武士 2、騎兵 1、弓 1、大筒 1（280 人；八幡原 ×1.1 → 308 人）
 export const ROSTER_U: RosterEntry[] = [
   { key: 'gen', type: 'general', cmd: '上杉謙信', skill: 'kuruma', passive: 'bishamon',
     advisor: '宇佐美定滿', strategy: 'kanpa', advisorPassive: 'echigo' },

@@ -94,6 +94,7 @@ export const V1 = {
   leadMorale: 10, leadMeritMul: 2, leadGenDeath: -30, // 視角模式：親自帶隊的部隊士氣 +N、功績倍率；大將親征討死時軍勢額外 −N
   detachOn: false, detachT0: 190, detachTR: 40, // 別働隊（八幡原地圖）：抵達時間 T0 + 亂數 × TR 秒
   fogDur: 0, fogFade: 30,                       // 朝霧：前 fogDur 秒視野減半，之後 fogFade 秒內散去（0＝沒有霧）
+  cavEscape: false,      // 騎兵被包圍（兩隊以上接戰、遭側背攻擊）、動搖、或士氣低於 60 且損員三成時立刻脫離，士氣回到 60 前不再出擊，往所有接戰者的反方向退；關閉時只有「10 秒打不穿」與「正面撞長槍」會退
   menMul: [1, 1] as [number, number], menMulDetach: 1, // 兵數倍率：各方編制人數 × N（援軍不受影響）；別働隊再 × menMulDetach
   meritOn: false, meritMorale: 8, meritAtk: 0.1, meritMax: 3, // 戰場功績：擊潰敵隊 +1、討取武將 +2（大將 +3）；每得功士氣 +N、每功攻擊 +10%（最多 3 功）
   ninjaFwd: 0,           // 忍者起始位置往前多少 m（佈陣前移後忍者該在軍隊前面）

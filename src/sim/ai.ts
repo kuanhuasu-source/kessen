@@ -524,10 +524,15 @@ function cavAI(S: State, u: Unit, A: SideAI) {
     const tg = S.units[u.contacts[0]];
     const stuck = t - u.cavPhaseT > 10 && tg && active(tg) && u.men > 0.3 * u.men0;
     const bad = u.contacts.some(c => S.units[c].type === 'spear' && cat(u, S.units[c]) === 0) && t - u.cavPhaseT > 3;
-    if ((stuck || bad) && u.state !== 'waver' && !(S.R.aiSteady && t - u.aiLockT < 25)) {
+    // 被包圍：兩隊以上接戰、或有人打到側背、或已動搖 → 3 秒後就脫離（不受 25 秒止抖限制）
+    const surrounded = S.R.cavEscape && t - u.cavPhaseT > 1 && (u.contacts.length >= 2 || u.contacts.some(c => cat(S.units[c], u) !== 0) || u.state === 'waver' || (u.morale < 60 && u.men < 0.7 * u.men0));
+    if (surrounded || ((stuck || bad) && u.state !== 'waver' && !(S.R.aiSteady && t - u.aiLockT < 25))) {
       u.cavPhase = 'withdraw'; u.cavPhaseT = t; u.disUntil = t + 6; u.aiLockT = t; u.targetT = t; // 止抖：退衝至少隔 25 秒，退開後仍打同一目標
-      const ax = u.x - tg.x, ay = u.y - tg.y, L = Math.hypot(ax, ay) || 1;
-      moveTo(u, u.x + ax / L * 80, u.y + ay / L * 80 - fwd(s) * 20, true);
+      let ax = 0, ay = 0;
+      for (const c of u.contacts) { const v = S.units[c]; const dx = u.x - v.x, dy = u.y - v.y, L = Math.hypot(dx, dy) || 1; ax += dx / L; ay += dy / L; }
+      if (!surrounded || Math.hypot(ax, ay) < 0.3) { ax = u.x - tg.x; ay = u.y - tg.y; }
+      const L = Math.hypot(ax, ay) || 1, far = surrounded ? 110 : 80;
+      moveTo(u, u.x + ax / L * far, u.y + ay / L * far - fwd(s) * 20, true);
     }
     return;
   }
@@ -554,7 +559,7 @@ function cavAI(S: State, u: Unit, A: SideAI) {
     if (rc && rc.target !== undefined) { const T = S.units[rc.target]; if (T && active(T) && T.state !== 'gone') { cavAttack(S, u, T); return; } }
     const passive = (S.R.daimyoPassive || S.R.daimyoPassiveCav) && S.meta.playerSide === s; // 大名模式：騎兵繞後要靠大名令（free 仍自由獵殺）
     const loose = cmdOf(S, s, 'charge') || (Dc === 'free' && A.posture === 'attack') || (Dc !== 'guard' && !passive && A.phase === 'melee');
-    if (!E || (!loose && !threat)) { moveTo(u, sl.x, Yl(s, sl.yl), false); return; }
+    if (!E || (!loose && !threat) || (S.R.cavEscape && u.morale < 60 && !threat)) { moveTo(u, sl.x, Yl(s, sl.yl), false); return; } // 士氣未回到 60 不再出擊，回槽位休整
     cavAttack(S, u, E); return;
   }
   if (A.posture === 'advance') { moveTo(u, clamp(A.ax + (A.cavWing === 'W' ? -180 : 190), 40, 960), Yl(s, holdYlOf(S, s) - 80)); return; }
