@@ -87,7 +87,7 @@ export function evalDecision(S: State, s: Side): Decision | null {
     if (okId('doc:behind', 150) && t > 60 && S.army[s] + 15 <= S.army[e]) {
       const bad = S.army[s] < 45;
       return mk({ id: 'doc:behind', kind: 'doctrine', speaker: adv, advisor: true, cd: 150, text: `我軍軍勢 ${Math.round(S.army[s])}，落後敵軍 ${Math.round(S.army[e] - S.army[s])}。再拖下去會連鎖潰逃。`,
-        options: [{ id: 'regroup', label: '整頓固守', hint: '戰線後退 60 m，動搖者脫離，守住再說', rec: R.decBehindRec === 'regroup' }, { id: 'ret45', label: '撤退線提高到 45', hint: '保存兵力，等敵軍露出破綻' }, { id: 'allin', label: '全軍壓上', hint: R.decBehindRec === 'allin' ? '別働隊快到了，正面壓上配合夾擊' : '賭一把；量測多半更糟', rec: R.decBehindRec === 'allin' }] });
+        options: [{ id: 'regroup', label: '整頓固守', hint: '戰線後退 60 m，動搖者脫離，守住再說', rec: R.decBehindRec === 'regroup' }, { id: 'ret45', label: '撤退線提高到 45', hint: '保存兵力；量測最差（比整頓少 4 點）' }, { id: 'allin', label: '全軍壓上', hint: R.decBehindRec === 'allin' ? '別働隊快到了，正面壓上配合夾擊' : '賭一把；量測與整頓差不多，別働隊到之前風險大', rec: R.decBehindRec === 'allin' }] });
       void bad;
     }
     // 敵主將暴露
