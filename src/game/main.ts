@@ -158,8 +158,8 @@ const DOCTRINE_ROWS: { key: keyof Doctrine; label: string; opts: { id: string; l
   { key: 'cav', label: '騎兵', opts: [{ id: 'guard', label: '護翼' }, { id: 'raid', label: '接戰後繞後' }, { id: 'free', label: '自由遊擊' }] },
   { key: 'retreatAt', label: '撤退線', opts: [{ id: '0', label: '不撤' }, { id: '35', label: '士氣 35' }, { id: '45', label: '士氣 45' }], note: '士氣低於此值的部隊自動脫離接戰退到主將旁' },
 ];
-// 忍者眾難度（依 AI 對 AI 矩陣各 120 局、情報 v2 與新編制：三ツ者 46%、伊賀 46%、甲賀 31% 的我方勝率；甲賀沒有洞悉，在情報 v2 下吃虧）
-const CLAN_DIFF: Record<string, string> = { koga: '較難', mitsumono: '普通', iga: '普通' };
+// 忍者眾難度（2026-10-25 八幡原＋別働隊，AI 對 AI 矩陣每格 60 局：我方三ツ者 53%、伊賀 58%、甲賀 53%，差距在雜訊內，三家都「普通」；對手方面 軒猿 39%、伊賀 46%、甲賀 51%，甲賀最難纏）
+const CLAN_DIFF: Record<string, string> = { koga: '普通', mitsumono: '普通', iga: '普通' };
 const doctrineLabel = (key: keyof Doctrine) => DOCTRINE_ROWS.find(r => r.key === key)!.opts.find(o => o.id === String(doctrine0[key]))?.label ?? '';
 function setDoctrine(key: string, id: string) {
   if (key === 'retreatAt') doctrine0.retreatAt = +id; else (doctrine0 as unknown as Record<string, string>)[key] = id;
