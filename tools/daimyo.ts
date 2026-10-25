@@ -22,6 +22,7 @@ const optStat: Record<string, { n: number; w: number }> = {}; // MODE=stat：隨
 const rv = process.argv[4] || 'base';
 const skip = new Set((process.argv[5] || '').split(',').filter(Boolean)); // 這些類型的建議不出現（消融用）
 const R = makeRules({ ...GAME_RULES, ...(RV[rv] ?? {}), name: rv });
+const FORCE: Record<string, string> = Object.fromEntries((process.env.FORCE || '').split(',').filter(Boolean).map(kv => kv.split('='))); // FORCE=doc:cannon=keep,doc:behind=allin：這些卡固定選該選項（其餘照 p）
 const kindOf = (id: string) => id.startsWith('doc:') || id.startsWith('ev:') ? id.split(':').slice(0, 2).join(':') : id.split(':')[0];
 console.log(`規則 ${rv}，每組 ${N} 局（武田大名模式預設方針，上杉為預設 AI）${skip.size ? `，略過 ${[...skip].join('、')}` : ''}`);
 for (const p of rates) {
@@ -39,7 +40,7 @@ for (const p of rates) {
       step(S); S.fx!.length = 0;
       if (s120 < 0 && S.t >= 120) s120 = idf(); if (s180 < 0 && S.t >= 180) s180 = idf();
       if (MODE === 'dec') {
-        if (p >= 0 && S.t - adviceT >= 0.5) { adviceT = S.t; tickDecisions(S, 0); const d = evalDecision(S, 0); if (d) { shown++; const b = byKind[kindOf(d.id)] ??= { shown: 0, taken: 0 }; b.shown++; const rec = d.options.find(o => o.rec) ?? d.options[0]; const o = rng() < p ? rec : d.options[Math.floor(rng() * d.options.length)]; if (o === rec) { taken++; b.taken++; } applyDecision(S, 0, d, o.id); picksThisGame.push(`${kindOf(d.id)} ${o.id}${o === rec ? '*' : ''}`); } }
+        if (p >= 0 && S.t - adviceT >= 0.5) { adviceT = S.t; tickDecisions(S, 0); const d = evalDecision(S, 0); if (d) { shown++; const b = byKind[kindOf(d.id)] ??= { shown: 0, taken: 0 }; b.shown++; const rec = d.options.find(o => o.rec) ?? d.options[0]; const forced = FORCE[kindOf(d.id)] ? d.options.find(x => x.id === FORCE[kindOf(d.id)]) : undefined; const o = forced ?? (rng() < p ? rec : d.options[Math.floor(rng() * d.options.length)]); if (o === rec) { taken++; b.taken++; } applyDecision(S, 0, d, o.id); picksThisGame.push(`${kindOf(d.id)} ${o.id}${o === rec ? '*' : ''}`); } }
         continue;
       }
       if (p > 0 && S.t - adviceT >= 3) {
