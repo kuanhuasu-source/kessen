@@ -119,6 +119,39 @@ body { font-family: var(--ui); -webkit-user-select: none; user-select: none; -we
 #hud.v2 .toast { background: rgba(244,234,208,0.97); color: #2a1d14; border: 1px solid #9a2b20; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); font-weight: 600; max-width: 82vw; white-space: normal; text-align: center; }
 #hud.v2 .ft { text-shadow: 0 0 3px #f4ead0, 0 0 3px #f4ead0, 0 1px 2px #f4ead0; }
 #hud.v2 .ft.hit { color: #9a5a12; } #hud.v2 .ft.bad { color: #a3301f; } #hud.v2 .ft.good { color: #3d6b34; }
+/* 結算：重點數字、軍勢變化圖、轉折點；明細收合 */
+.end .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 2px 0 8px; }
+.end .kpi { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px; }
+.end .kpi .lb { font-size: 11.5px; color: var(--paper-dim); }
+.end .kpi .v { font-family: var(--display); font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 5px; }
+.end .kpi .v i, .end .chart .lg i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+.end .kpi .v em { font-style: normal; color: var(--paper-dim); font-weight: 400; margin: 0 2px; }
+.end .chart { position: relative; margin: 4px 0 2px; }
+.end .chart .lg { display: flex; gap: 12px; align-items: center; font-size: 11.5px; color: var(--paper-dim); } .end .chart .lg span:first-child { margin-right: auto; color: var(--paper); font-size: 12.5px; } .end .chart .lg .k { display: inline-flex; align-items: center; gap: 4px; }
+.end .chart svg { width: 100%; height: auto; display: block; touch-action: pan-y; }
+.end .chart .g { stroke: rgba(239,230,210,0.14); stroke-width: 1; } .end .chart .ax { fill: #a89f8b; font-size: 9.5px; } .end .chart .ev { fill: var(--paper); font-size: 11px; font-weight: 700; }
+.end .chart .dot { stroke: #1f1a14; stroke-width: 2; } .end .chart .mk { fill: #3a332a; stroke: #a89f8b; stroke-width: 1; } .end .chart .mkt { fill: var(--paper); font-size: 9.5px; font-weight: 700; }
+.end .chart .cross { stroke: rgba(239,230,210,0.55); stroke-width: 1; }
+.end .chart .lg .rd { color: var(--gold); font-variant-numeric: tabular-nums; } .end .chart .lg .k b { color: var(--paper); font-variant-numeric: tabular-nums; }
+.end .btns { position: sticky; bottom: -8px; padding: 8px 0 8px; background: linear-gradient(rgba(27,22,17,0), #1b1611 30%); } .setup .row2 { position: sticky; bottom: -14px; padding: 8px 0 10px; background: linear-gradient(rgba(31,26,20,0), #1f1a14 30%); }
+.end .turns { list-style: none; margin: 4px 0 8px; padding: 0; display: grid; gap: 3px; font-size: 12.5px; }
+.end .turns li { display: flex; align-items: center; gap: 8px; } .end .turns b { flex: none; width: 16px; height: 16px; border-radius: 50%; background: #3a332a; border: 1px solid #a89f8b; display: grid; place-items: center; font-size: 10px; }
+.end .turns time { flex: none; min-width: 34px; color: var(--gold); font-variant-numeric: tabular-nums; }
+.end .more { border-top: 1px solid var(--line); margin-top: 4px; } .end .more summary { cursor: pointer; padding: 7px 0; font-size: 12.5px; color: var(--paper-dim); }
+.coach { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--edge-b) + 66px); z-index: 12; pointer-events: auto; display: flex; align-items: center; gap: 12px; width: min(560px, 88vw); padding: 9px 12px 9px 14px;
+  background: rgba(244,234,208,0.98); color: #2a1d14; border: 1.5px solid #9a2b20; border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.4); font-size: 13.5px; line-height: 1.5; }
+.coach span { flex: 1; } .coach button { flex: none; min-height: 34px; padding: 0 14px; border-radius: 6px; background: #2a1d14 !important; color: #f1e6cf !important; border: 0; font-weight: 700; }
+.advice .tut { margin: 0 0 6px; padding: 4px 8px; border-radius: 4px; background: rgba(244,234,208,0.95); color: #2a1d14; font-size: 12.5px; }
+.setup .pickt { margin: 6px 0 6px; color: var(--paper-dim); font-size: 12.5px; }
+.setup .clans.slim .clan { padding: 8px 10px; gap: 2px; } .setup .clans.slim .clan .j { font-size: 12px; color: var(--paper-dim); }
+.setup .clans.one { grid-template-columns: 1fr; margin-top: 8px; } .setup .clans.one .clan { cursor: default; }
+.setup .adv { margin-top: 10px; border: 1px solid var(--line); border-radius: 9px; padding: 0 10px; }
+.setup .adv summary { list-style: none; display: flex; align-items: center; gap: 8px; min-height: 40px; cursor: pointer; font-size: 13px; }
+.setup .adv summary::-webkit-details-marker { display: none; }
+.setup .adv .sum { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.setup .adv .tog { flex: none; padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; color: var(--gold); }
+.setup .adv[open] .tog { background: var(--gold); color: var(--ink); } .setup .adv[open] { padding-bottom: 10px; }
+.setup .adv .war { margin-top: 0; }
 .advice:not([hidden]) ~ .toast { opacity: 0 !important; } /* 決策卡開著時不疊戰報提示 */
 .logv .ll { max-height: 56vh; overflow: auto; font-size: 13px; line-height: 1.6; }
 .logv .ll div { padding: 2px 0; border-bottom: 1px solid rgba(239,230,210,0.08); opacity: 0.75; } .logv .ll div.mj { opacity: 1; font-weight: 600; } .logv .ll time { display: inline-block; min-width: 38px; color: var(--gold); font-variant-numeric: tabular-nums; }
@@ -366,6 +399,13 @@ export class Hud {
   }
   setHands(on: boolean) { this.root.classList.toggle('hands', on); }
   setV2(on: boolean) { this.root.classList.toggle('v2', on); }
+  // 第一局引導：下方的紙條，按「知道了」才繼續
+  coach(text: string, onOk: () => void) {
+    let el = this.root.querySelector<HTMLElement>('.coach');
+    if (!el) { el = document.createElement('div'); el.className = 'coach'; this.root.appendChild(el); }
+    el.innerHTML = `<span></span><button type="button">知道了</button>`; el.querySelector('span')!.textContent = text; el.hidden = false;
+    el.querySelector('button')!.onclick = () => { el!.hidden = true; onOk(); };
+  }
   setDebug(on: boolean) { this.root.classList.toggle('debug', on); }
   onLog: () => void = () => {};
   showLog(html: string | null) { const el = this.root.querySelector<HTMLElement>('.logv')!; if (html === null) { el.hidden = true; return; } el.querySelector('.ll')!.innerHTML = html; el.hidden = false; const ll = el.querySelector('.ll')!; ll.scrollTop = ll.scrollHeight; }
@@ -610,7 +650,7 @@ export class Hud {
   }
   // 出陣畫面（含觀戰模式）
   showSetup2(o: {
-    mode: 'play' | 'watch'; clans0: { id: string; html: string; short: string }[]; clan0: string; clans1: { id: string; short: string }[]; clan1: string;
+    mode: 'play' | 'watch'; clans0: { id: string; html: string; short: string; brief?: string }[]; clan0: string; clans1: { id: string; short: string }[]; clan1: string;
     onMode: (m: 'play' | 'watch') => void; onPick0: (id: string) => void; onPick1: (id: string) => void; onGo: () => void; onHelp: () => void; onNew: () => void; onIntro?: () => void;
     bg?: string; // 背景插畫
     war?: { rows: { key: string; label: string; opts: { id: string; label: string }[]; cur: string; note?: string }[]; onPick: (key: string, id: string) => void;
@@ -619,9 +659,12 @@ export class Hud {
     const el = this.root.querySelector<HTMLElement>('.setup')!;
     const play = o.mode === 'play';
     el.innerHTML = `<div class="sheet" role="dialog" aria-label="出陣準備"><h2>川中島・出陣</h2>
-      <div class="modes"><button type="button" data-m="play" aria-pressed="${play}">親自指揮武田軍</button><button type="button" data-m="watch" aria-pressed="${!play}">觀戰：AI 對 AI</button></div>
-      ${play ? `<div class="clans">${o.clans0.map(c => `<button type="button" class="clan" data-c0="${c.id}" aria-pressed="${c.id === o.clan0}">${c.html}</button>`).join('')}</div>
-        ${o.war ? `<div class="war"><h3>軍議</h3>${o.war.rows.map(r => `<div class="pick"><span>${r.label}</span>${r.opts.map(x => `<button type="button" class="chip" data-w="${r.key}" data-v="${x.id}" aria-pressed="${x.id === r.cur}">${x.label}</button>`).join('')}${r.note ? `<p class="m">${r.note}</p>` : ''}</div>`).join('')}<div class="extra">${o.war.extra ?? ''}</div></div>` : ''}`
+      ${play ? '' : `<div class="modes"><button type="button" data-m="play" aria-pressed="false">親自指揮武田軍</button><button type="button" data-m="watch" aria-pressed="true">觀戰：AI 對 AI</button></div>`}
+      ${play ? `<p class="pickt">選一支忍者眾，其餘交給軍師</p><div class="clans slim">${o.clans0.map(c => `<button type="button" class="clan" data-c0="${c.id}" aria-pressed="${c.id === o.clan0}">${c.brief ?? c.html}</button>`).join('')}</div>
+        <details class="adv"><summary><span class="sum"></span><span class="tog">調整</span></summary>
+        ${o.war ? `<div class="war"><h3>軍議</h3>${o.war.rows.map(r => `<div class="pick"><span>${r.label}</span>${r.opts.map(x => `<button type="button" class="chip" data-w="${r.key}" data-v="${x.id}" aria-pressed="${x.id === r.cur}">${x.label}</button>`).join('')}${r.note ? `<p class="m">${r.note}</p>` : ''}</div>`).join('')}<div class="extra">${o.war.extra ?? ''}</div></div>` : ''}
+        <div class="clans one">${o.clans0.filter(c => c.id === o.clan0).map(c => `<div class="clan">${c.html}</div>`).join('')}</div>
+        <div class="modes sm"><button type="button" data-m="watch" aria-pressed="false">改看 AI 對 AI 觀戰</button></div></details>`
         : `<div class="pick"><span style="color:#e3a39c">武田忍者眾</span>${o.clans0.map(c => `<button type="button" class="chip" data-c0="${c.id}" aria-pressed="${c.id === o.clan0}">${c.short}</button>`).join('')}</div>
            <div class="pick"><span style="color:#a9bde0">上杉忍者眾</span>${o.clans1.map(c => `<button type="button" class="chip" data-c1="${c.id}" aria-pressed="${c.id === o.clan1}">${c.short}</button>`).join('')}</div>
            <p class="lead" style="display:block">雙方都由 AI 指揮。導播鏡頭會跟著戰況走，拖曳或縮放就改手動，10 秒後交回導播；點任一部隊可查看並跟隨。右側「視」切換全知或單方視野。</p>`}
@@ -632,10 +675,13 @@ export class Hud {
     el.querySelectorAll<HTMLButtonElement>('[data-c0]').forEach(b => b.onclick = () => o.onPick0(b.dataset.c0!));
     el.querySelectorAll<HTMLButtonElement>('[data-c1]').forEach(b => b.onclick = () => o.onPick1(b.dataset.c1!));
     el.querySelector<HTMLElement>('.war .extra')?.addEventListener('click', e => { const b = (e.target as HTMLElement).closest<HTMLElement>('[data-x]'); if (b && o.war?.onExtra) o.war.onExtra(b.dataset.x!); });
+    // 軍議摘要：收合時只看這一行（指揮方式以外的各項目前選了什麼）
+    const sum = () => { const t = el.querySelector<HTMLElement>('.adv .sum'); if (t) t.textContent = '軍師的佈陣：' + [...el.querySelectorAll<HTMLButtonElement>('[data-w][aria-pressed="true"]')].filter(b => b.dataset.w !== 'cmd').map(b => b.dataset.w === 'retreatAt' ? '撤退線 ' + (b.textContent ?? '').replace('士氣 ', '') : b.textContent).join('・'); };
     el.querySelectorAll<HTMLButtonElement>('[data-w]').forEach(b => b.onclick = () => {
       el.querySelectorAll<HTMLButtonElement>(`[data-w="${b.dataset.w}"]`).forEach(x => x.setAttribute('aria-pressed', String(x === b)));
-      o.war!.onPick(b.dataset.w!, b.dataset.v!);
+      o.war!.onPick(b.dataset.w!, b.dataset.v!); sum();
     });
+    sum();
     el.querySelector<HTMLButtonElement>('.go')!.onclick = () => { el.hidden = true; o.onGo(); };
     el.querySelector<HTMLButtonElement>('[data-help]')!.onclick = () => o.onHelp();
     el.querySelector<HTMLButtonElement>('[data-new]')?.addEventListener('click', () => o.onNew());

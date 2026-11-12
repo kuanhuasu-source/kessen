@@ -8,7 +8,7 @@
 
 | 項目 | 位置 |
 | --- | --- |
-| 遊戲（可直接玩） | https://claude.ai/artifact/UjqYxfDUxLHEW3CA6xsy7R （第 50 版：2D 繪卷戰場＋瘦身（一）＋歷史導入＋配樂層）。更新時發布 `dist/kessen-m1.html` 到同一個 URL |
+| 遊戲（可直接玩） | https://claude.ai/artifact/UjqYxfDUxLHEW3CA6xsy7R （第 51 版：2D 繪卷戰場＋瘦身（一）（二）＋歷史導入＋配樂層）。更新時發布 `dist/kessen-m1.html` 到同一個 URL |
 | GitHub Pages（公開可玩） | https://kuanhuasu-source.github.io/kessen/ ，倉庫 `kuanhuasu-source/kessen`（只放遊戲，公開）。發布流程：在 LVV-Studio 的 `kessen/` 開發，`git subtree push --prefix=kessen https://github.com/kuanhuasu-source/kessen main` 推過去，Actions（`kessen/.github/workflows/pages.yml`）自動建置部署 |
 | 設計文件（線上，含圖表） | https://claude.ai/artifact/JAXq85B8a3UheAm2xAcFwL |
 | 進度與待辦 | `BACKLOG.md` |
