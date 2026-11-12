@@ -15,6 +15,7 @@ const ROADS: [number, number][][] = [
   [[330, 345], [420, 320], [500, 300]], [[500, 300], [600, 320], [700, 335], [880, 300], [1000, 280], [1090, 260]],
   [[330, 345], [290, 440], [260, 520], [230, 600], [180, 720]], [[-300, 300], [-100, 330], [130, 340], [330, 345]], [[700, 335], [760, 400], [800, 520], [850, 640], [900, 760]],
 ];
+const SPECK = [0.035, 0.05, 0.065, 0.08].flatMap(a => [`rgba(90,70,40,${a})`, `rgba(255,250,230,${a})`]);
 const HILL_NAME: Record<string, string> = { '210,650': '妻女山', '890,670': '茶臼山', '500,210': '八幡原' };
 
 export type Draw2D = {
@@ -27,6 +28,8 @@ export type Draw2D = {
   explored: Uint8Array | null; fog: number;              // fog：視野倍率（1＝沒有霧）
   target: Unit | null; info: Unit | null;
   preview: { x: number; y: number; f: number; w: number; d: number }[] | null;
+  lead: number;      // 視角模式帶隊的部隊（-1＝俯瞰）
+  title: boolean;    // 右上角題箋（右側按鈕變多時收起）
 };
 type Fx = { k: 'arrow' | 'puff' | 'ring' | 'star' | 'mark'; x: number; y: number; x1?: number; y1?: number; t: number; dur: number; r?: number; c?: string; delay?: number };
 
@@ -41,10 +44,13 @@ export class View2D {
   private lastMen = new Map<number, number>();
   private flashM: { x: number; y: number; t: number; attack: boolean; r: number } | null = null;
   private clock = 0; private r = rng(20261112);
+  private specks: { x: number; y: number; w: number; s: number }[] = [];
+  private detail = document.createElement('canvas'); private dRect: { x0: number; y0: number; x1: number; y1: number; res: number } | null = null; private dBakeAt = 0;
 
   constructor(private S: State, public canvas: HTMLCanvasElement) {
     this.g = canvas.getContext('2d')!; canvas.style.background = PAPER;
     this.mist.width = 40; this.mist.height = 28;
+    { const r = rng(31); for (let i = 0; i < 60000; i++) this.specks.push({ x: WX0 + r() * (WX1 - WX0), y: WY0 + r() * (WY1 - WY0), w: 1 + r() * 2, s: Math.floor(r() * 8) }); this.specks.sort((a, b) => a.s - b.s); }
     this.bake(); this.resize();
     // 字型晚到的話重烤一次（題箋與地名用得到）
     if (document.fonts?.load) void document.fonts.load(`700 12px ${FONT}`, '川中島合戰圖妻女山').then(() => { this.bake(); this.bakeDeco(); }).catch(() => undefined);
@@ -61,14 +67,18 @@ export class View2D {
   flash(x: number, y: number, attack: boolean, r: number) { this.flashM = { x, y, t: 0, attack, r }; }
 
   // ---------------- 靜態地圖 ----------------
-  private bake() {
-    const c = this.stat; c.width = (WX1 - WX0) * RES; c.height = (WY1 - WY0) * RES;
-    const g = c.getContext('2d')!; const r = rng(7);
-    const X = (x: number) => (x - WX0) * RES, Y = (y: number) => (WY1 - y) * RES, K = RES;
-    g.fillStyle = PAPER; g.fillRect(0, 0, c.width, c.height);
-    { const gr = g.createRadialGradient(X(500), Y(350), 100, X(500), Y(350), 1500); gr.addColorStop(0, 'rgba(196,205,150,0.55)'); gr.addColorStop(1, 'rgba(176,170,120,0.3)'); g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height); }
-    for (let i = 0; i < 140; i++) { const x = r() * c.width, y = r() * c.height, rr = 60 + r() * 220; const gr = g.createRadialGradient(x, y, 0, x, y, rr); gr.addColorStop(0, `rgba(${r() < 0.5 ? '150,165,105' : '205,190,140'},0.16)`); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x - rr, y - rr, 2 * rr, 2 * rr); }
-    for (let i = 0; i < 60000; i++) { g.fillStyle = `rgba(${r() < 0.5 ? '90,70,40' : '255,250,230'},${0.03 + r() * 0.05})`; g.fillRect(r() * c.width, r() * c.height, 1 + r() * 2, 1); }
+  private bake() { this.bakeInto(this.stat, WX0, WY0, WX1, WY1, RES); this.dRect = null; }
+  // 把地圖的一塊（模擬座標 rx0..rx1 × ry0..ry1）以每公尺 res 像素畫進畫布。繪製座標一律用「每公尺 2 像素」的尺寸，靠畫布縮放換成 res，
+  // 所以整張底圖與拉近用的局部高解析圖是同一段程式、同一組亂數，內容完全一致。
+  private bakeInto(c: HTMLCanvasElement, rx0: number, ry0: number, rx1: number, ry1: number, res: number) {
+    c.width = Math.round((rx1 - rx0) * res); c.height = Math.round((ry1 - ry0) * res);
+    const g = c.getContext('2d')!; const r = rng(7); g.setTransform(res / 2, 0, 0, res / 2, 0, 0);
+    const X = (x: number) => (x - rx0) * 2, Y = (y: number) => (ry1 - y) * 2, K = 2, CW = (rx1 - rx0) * 2, CH = (ry1 - ry0) * 2;
+    g.fillStyle = PAPER; g.fillRect(0, 0, CW, CH);
+    { const gr = g.createRadialGradient(X(500), Y(350), 100, X(500), Y(350), 1500); gr.addColorStop(0, 'rgba(196,205,150,0.55)'); gr.addColorStop(1, 'rgba(176,170,120,0.3)'); g.fillStyle = gr; g.fillRect(0, 0, CW, CH); }
+    for (let i = 0; i < 140; i++) { const x = X(WX0 + r() * (WX1 - WX0)), y = Y(WY0 + r() * (WY1 - WY0)), rr = 60 + r() * 220; if (x + rr < 0 || x - rr > CW || y + rr < 0 || y - rr > CH) { r(); continue; } const gr = g.createRadialGradient(x, y, 0, x, y, rr); gr.addColorStop(0, `rgba(${r() < 0.5 ? '150,165,105' : '205,190,140'},0.16)`); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x - rr, y - rr, 2 * rr, 2 * rr); }
+    // 紙的顆粒：開機時算好一次（八種深淺），每次烘焙只畫落在範圍內的
+    { let cur = -1; for (const sp of this.specks) { const x = X(sp.x), y = Y(sp.y); if (x < -3 || x > CW || y < -1 || y > CH) continue; if (sp.s !== cur) { cur = sp.s; g.fillStyle = SPECK[cur]; } g.fillRect(x, y, sp.w, 1); } }
     // 高地：暈染＋等高筆觸＋地名
     for (const h of MAP.hills) {
       const x = X(h.x), y = Y(h.y), rr = h.r * K; const a = Math.min(0.6, 0.18 + h.h / 70);
@@ -122,6 +132,9 @@ export class View2D {
       g.globalAlpha = 0.25; for (let i = 0; i < 260; i++) { g.fillStyle = r() < 0.5 ? '#fff3c4' : '#b08a3a'; g.fillRect(r() * W, yEdge - dir * (r() * 44), 1.5, 1.5); } g.restore();
     };
     cloud(30, 1); cloud(H - 44, -1);
+  }
+
+  private title() { const g = this.g, W = this.W;
     const x = W - 34, y = 40; g.fillStyle = '#a3301f'; g.fillRect(x, y, 15, 66); g.strokeStyle = '#e3c15a'; g.lineWidth = 1; g.strokeRect(x + 1.5, y + 1.5, 12, 63); g.fillStyle = '#fbf4e2'; g.font = `700 9.5px ${FONT}`; g.textAlign = 'center'; [...'川中島合戰圖'].forEach((ch, i) => g.fillText(ch, x + 7.5, y + 12 + i * 10.2));
   }
 
@@ -146,6 +159,18 @@ export class View2D {
     g.fillStyle = '#d8c9a4'; g.fillRect(0, 0, W, H);
     g.imageSmoothingEnabled = true;
     g.drawImage(this.stat, this.X(WX0), this.Y(WY1), (WX1 - WX0) * k, (WY1 - WY0) * k);
+    // 拉近時底圖會糊：另外烤一張只涵蓋鏡頭附近的高解析局部圖蓋上去（移出範圍或縮放差太多才重烤，最快每 0.22 秒一次）
+    const need = k * this.dpr;
+    if (need > RES * 1.3) {
+      const hw = W / 2 / k, hh = H / 2 / k, d = this.dRect;
+      const ok = d && this.cx - hw >= d.x0 && this.cx + hw <= d.x1 && this.cy - hh >= d.y0 && this.cy + hh <= d.y1 && d.res >= need * 0.8 && d.res <= need * 1.8;
+      if (!ok && performance.now() - this.dBakeAt > 220) {
+        const mx = hw * 0.7, my = hh * 0.7, x0 = Math.max(WX0, this.cx - hw - mx), x1 = Math.min(WX1, this.cx + hw + mx), y0 = Math.max(WY0, this.cy - hh - my), y1 = Math.min(WY1, this.cy + hh + my);
+        const res = Math.min(need, 8, Math.sqrt(5e6 / Math.max(1, (x1 - x0) * (y1 - y0))));
+        this.bakeInto(this.detail, x0, y0, x1, y1, res); this.dRect = { x0, y0, x1, y1, res }; this.dBakeAt = performance.now();
+      }
+      const q = this.dRect; if (q && q.res > RES * 1.1) g.drawImage(this.detail, this.X(q.x0), this.Y(q.y1), (q.x1 - q.x0) * k, (q.y1 - q.y0) * k);
+    } else if (this.dRect && need < RES) { this.dRect = null; this.detail.width = this.detail.height = 1; }
     // 未探索的地方罩一層霞
     if (o.explored) {
       const m = this.mist.getContext('2d')!; const im = m.createImageData(40, 28);
@@ -189,7 +214,14 @@ export class View2D {
     }
     // 點地面的回饋
     if (this.flashM) { const f = this.flashM; f.t += o.dt || 0.016; const q = f.t / 0.6; if (q >= 1) this.flashM = null; else { g.strokeStyle = f.attack ? `rgba(163,48,31,${1 - q})` : `rgba(42,29,20,${1 - q})`; g.lineWidth = 1.6; g.beginPath(); g.arc(this.X(f.x), this.Y(f.y), (f.r ? f.r * (1.4 - q * 0.4) : 2 + q * 6) * k + 3, 0, 7); g.stroke(); } }
+    // 視角模式：只看得到帶隊部隊的視野，外圍罩上暗霞；虛線圈是識別距離
+    if (o.lead >= 0 && S.units[o.lead] && S.units[o.lead].state !== 'gone') {
+      const L = S.units[o.lead], p = o.pos(L), x = this.X(p.x), y = this.Y(p.y);
+      const gr = g.createRadialGradient(x, y, 125 * k, x, y, 230 * k); gr.addColorStop(0, 'rgba(46,34,22,0)'); gr.addColorStop(1, 'rgba(46,34,22,0.5)'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+      g.strokeStyle = 'rgba(227,193,90,0.55)'; g.lineWidth = 1.2; g.setLineDash([6, 5]); g.beginPath(); g.arc(x, y, 80 * k, 0, 7); g.stroke(); g.setLineDash([]);
+    }
     g.drawImage(this.deco, 0, 0, W, H);
+    if (o.title) this.title();
   }
 
   private block(u: Unit, p: { x: number; y: number }, o: Draw2D) {
@@ -197,15 +229,29 @@ export class View2D {
     const wpx = Math.max(18, Math.max(u.width, 10) * k * 1.15), dpx = Math.max(8, Math.max(u.depth, 5) * k * 1.15);
     const rout = u.state === 'rout' || u.state === 'shattered', sel = o.selected.has(u.id);
     g.save(); g.translate(x, y); g.rotate(-u.f + Math.PI / 2);
+    if (u.id === o.lead) { g.strokeStyle = `rgba(227,193,90,${0.55 + 0.35 * Math.sin(this.clock * 4)})`; g.lineWidth = 2; g.beginPath(); g.roundRect(-wpx / 2 - 7, -dpx / 2 - 7, wpx + 14, dpx + 14, 6); g.stroke(); }
     if (sel) { g.strokeStyle = '#e3c15a'; g.lineWidth = 3; g.beginPath(); g.roundRect(-wpx / 2 - 3, -dpx / 2 - 3, wpx + 6, dpx + 6, 3); g.stroke(); }
     g.fillStyle = 'rgba(42,29,20,0.18)'; g.fillRect(-wpx / 2 + 1.5, -dpx / 2 + 2, wpx, dpx);
     g.fillStyle = rout ? '#8a8378' : c.fill; g.strokeStyle = c.dark; g.lineWidth = 1; g.beginPath(); g.roundRect(-wpx / 2, -dpx / 2, wpx, dpx, 1.5); g.fill(); g.stroke();
     // 士兵：人數換成點，排成行列
     const cav = u.type === 'cav' || u.type === 'general'; const n = Math.max(1, Math.ceil(u.men / (k < 1.7 ? (cav ? 1.5 : 2.5) : 1)));
     const cols = Math.max(1, Math.min(n, Math.round(Math.sqrt(n * wpx / dpx)))), rows = Math.ceil(n / cols); const cw = (wpx - 3) / cols, ch = (dpx - 3) / rows, rr = Math.max(0.6, Math.min(cw, ch) * (cav ? 0.4 : 0.32));
-    g.fillStyle = c.man; let left = n;
-    for (let r = 0; r < rows && left > 0; r++) for (let q = 0; q < cols && left > 0; q++, left--) { const px = -wpx / 2 + 1.5 + cw * (q + 0.5) + (rout ? Math.sin(u.id * 7 + q * 3 + this.clock * 6) * 1.5 : 0), py = -dpx / 2 + 1.5 + ch * (r + 0.5) + (rout ? Math.cos(u.id + r * 5 + this.clock * 6) * 1.5 : 0); g.beginPath(); g.arc(px, py, rr, 0, 7); g.fill(); }
-    if (u.type === 'spear' && !rout) { g.strokeStyle = 'rgba(42,29,20,0.55)'; g.lineWidth = 0.6; for (let q = 0; q < cols; q++) { const px = -wpx / 2 + 1.5 + cw * (q + 0.5); g.beginPath(); g.moveTo(px, -dpx / 2 + 1); g.lineTo(px, -dpx / 2 - 4); g.stroke(); } }
+    let left = n; const near = k >= 2.4, cs = Math.min(cw, ch); // 拉近時每個點換成小人（頭盔、身體、兵器；騎兵有馬）
+    for (let r = 0; r < rows && left > 0; r++) for (let q = 0; q < cols && left > 0; q++, left--) {
+      const px = -wpx / 2 + 1.5 + cw * (q + 0.5) + (rout ? Math.sin(u.id * 7 + q * 3 + this.clock * 6) * 1.5 : 0), py = -dpx / 2 + 1.5 + ch * (r + 0.5) + (rout ? Math.cos(u.id + r * 5 + this.clock * 6) * 1.5 : 0);
+      if (!near) { g.fillStyle = c.man; g.beginPath(); g.arc(px, py, rr, 0, 7); g.fill(); continue; }
+      if (cav) { g.fillStyle = '#6b4a2e'; g.beginPath(); g.ellipse(px, py + cs * 0.06, cs * 0.2, cs * 0.4, 0, 0, 7); g.fill(); g.fillStyle = '#3d2a1a'; g.beginPath(); g.arc(px, py - cs * 0.36, cs * 0.11, 0, 7); g.fill(); }
+      // 足輕戴陣笠（淺色圓＋中心一點）；武士與騎馬武者戴兜（深色圓＋金色前立）
+      if (u.type === 'samurai' || cav) { g.fillStyle = c.dark; g.beginPath(); g.arc(px, py, cs * (cav ? 0.17 : 0.25), 0, 7); g.fill(); g.fillStyle = '#e3c15a'; g.beginPath(); g.arc(px, py - cs * (cav ? 0.1 : 0.14), cs * 0.07, 0, 7); g.fill(); }
+      else { g.fillStyle = c.man; g.strokeStyle = c.dark; g.lineWidth = Math.max(0.5, cs * 0.05); g.beginPath(); g.arc(px, py, cs * 0.27, 0, 7); g.fill(); g.stroke(); g.fillStyle = c.dark; g.beginPath(); g.arc(px, py, cs * 0.06, 0, 7); g.fill(); }
+      if (rout) continue;
+      g.strokeStyle = 'rgba(42,29,20,0.75)'; g.lineWidth = Math.max(0.6, cs * 0.05);
+      if (u.type === 'spear') { g.beginPath(); g.moveTo(px + cs * 0.24, py + cs * 0.15); g.lineTo(px + cs * 0.24, py - cs * 0.85); g.stroke(); }
+      else if (u.type === 'archer') { g.beginPath(); g.arc(px + cs * 0.05, py - cs * 0.12, cs * 0.3, -Math.PI * 0.85, -Math.PI * 0.15); g.stroke(); }
+      else if (u.type === 'gun') { g.beginPath(); g.moveTo(px + cs * 0.2, py); g.lineTo(px + cs * 0.2, py - cs * 0.5); g.stroke(); }
+      else if (u.type === 'samurai' || cav) { g.strokeStyle = 'rgba(245,245,240,0.9)'; g.beginPath(); g.moveTo(px + cs * 0.22, py - cs * 0.05); g.lineTo(px + cs * 0.4, py - cs * 0.42); g.stroke(); }
+    }
+    if (u.type === 'spear' && !rout && !near) { g.strokeStyle = 'rgba(42,29,20,0.55)'; g.lineWidth = 0.6; for (let q = 0; q < cols; q++) { const px = -wpx / 2 + 1.5 + cw * (q + 0.5); g.beginPath(); g.moveTo(px, -dpx / 2 + 1); g.lineTo(px, -dpx / 2 - 4); g.stroke(); } }
     g.fillStyle = c.dark; g.beginPath(); g.moveTo(0, -dpx / 2 - 6); g.lineTo(-3.5, -dpx / 2 - 1); g.lineTo(3.5, -dpx / 2 - 1); g.fill();
     g.restore();
     if (o.manual.has(u.id)) { g.fillStyle = '#e3c15a'; g.font = `700 9px ${FONT}`; g.textAlign = 'center'; g.fillText('手', x, y + dpx / 2 + 11); }

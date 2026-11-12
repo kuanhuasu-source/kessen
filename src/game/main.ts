@@ -1372,7 +1372,7 @@ function frame(now: number) {
       selected, manual: manualSet,
       showNinja: n => visMode === 'all' || n.side === visMode || n.detUntil > S.t, selNin, ninRange: jutsu !== null,
       explored: fogged ? S.explored[viewSide()] : null, fog: fogMul(S),
-      target: dU, info: infoU, preview: preview2d,
+      target: dU, info: infoU, preview: preview2d, lead, title: !(manualSet.size > 0 || lead >= 0),
     });
   }
   prof.render += performance.now() - tp; prof.frames++;
