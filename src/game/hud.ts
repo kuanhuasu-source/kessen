@@ -1,6 +1,6 @@
 // 畫面介面：以戰場為主。上方一條細的軍勢列，右側直排的時間控制，左下角小型部隊旗牌。
 import type { Unit } from '../sim/sim.ts';
-import { KANJI, TYPE_NAME } from './units.ts';
+import { KANJI, TYPE_NAME } from './names.ts';
 import { kanBox, portraitOf, ninjaPortrait, kamon, img, unitIcon } from './art.ts';
 
 const CSS = `

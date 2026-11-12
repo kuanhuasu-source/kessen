@@ -1,6 +1,6 @@
 # 決戰（Kessen）— MVP
 
-網頁即時戰略遊戲。技術：TypeScript + Vite + Three.js。戰鬥核心（`src/sim`）沿用士氣模擬器，規則為設計文件 v2 士氣調整＋ v3 忍者調整（`src/sim/game-rules.ts`）。
+網頁即時戰略遊戲。技術：TypeScript + Vite + Canvas 2D（繪卷風戰場；3D 版已移除）。戰鬥核心（`src/sim`）沿用士氣模擬器，規則為設計文件 v2 士氣調整＋ v3 忍者調整（`src/sim/game-rules.ts`）。
 
 ## 開發
 ```bash
@@ -41,7 +41,8 @@ npm run build:single # 單一 HTML（dist/kessen-m1.html）
 - 2026-10-24 八幡原地圖：依第四次川中島之戰地理重做（千曲川與三渡口、妻女山、茶臼山、小島田／八幡社／丹波島），兩軍佈陣不對稱
 - 2026-10-24 別働隊與朝霧：武田三隊開場不在場，第 3 分多從妻女山方向渡河趕到；開戰 90 秒內有朝霧、視野減半
 - 2026-11-12 瘦身（二）：出陣畫面一屏（選忍者眾，軍議收合）；結算改成重點數字、軍勢變化圖、轉折點；第一局三步引導；首次接戰、別働隊抵達、大將討死時自動帶鏡頭
-- 2026-11-12 2D 繪卷戰場：戰場畫面預設改成屏風繪風格的 2D（`src/game/view2d.ts`），和歷史導入同一套美術；`#view=3d` 可回舊的 3D。無頭測試幀率 56（3D 為 10～12）
+- 2026-11-12 移除 3D：戰場只剩 2D 繪卷，Three.js 與 3D 模組刪除，單檔 4.1 → 3.1 MB
+- 2026-11-12 2D 繪卷戰場：戰場畫面預設改成屏風繪風格的 2D（`src/game/view2d.ts`），和歷史導入同一套美術。無頭測試幀率 56（3D 為 10～12）
 - 2026-11-12 瘦身（一）：戰鬥畫面只留必要資訊（效能列、手動鈕、情報數字、多數飄字收起；訊息分大事小事並有戰報紀錄；資訊面板精簡）；據點、敵大筒、彈盡三種卡由軍師代辦（每局 9.5 張）；地形秘密移除，別働隊改 158 人補償。AI 對 AI 武田 58%、大名模式不介入 55%／全採納 63%
 - 2026-10-24 歷史導入：第一次開啟播放約 2 分鐘的川中島之戰小動畫（八幕浮世繪場景圖慢速推拉、Gemini 語音合成的日文旁白 Charon、繁中加日文字幕、可略過；出陣畫面「川中島の戦い」鈕可重看）。旁白與場景圖在開發時生成後內嵌（`src/intro/`、`art/web/intro/`，單檔 2.2 → 4.0 MB），遊戲不呼叫任何 API。重生旁白：`node tools/gen-intro-voice.mjs`
 - 2026-10-24 配樂層：`src/game/music.ts`，三段外部 MP3（`public/music/council|battle|climax.mp3` → Pages 的 `music/`）；軍議、出陣、別働隊抵達各自切換並淡入淡出，結算時壓低；跟音效鍵共用靜音；單檔 artifact 沒有音樂。來源（Pixabay Content License）：council《Sakura dance background music, traditional japanese》 by 38534292（#165338，原 4:26 剪成前 120 秒淡出、112 kbps）；battle《Sport Sequence Taiko Loop》 by Sonican（#558900，原 256 kbps 轉 128 kbps）；climax《Against All Gods (Epic Viking Tribal Adventure Music)》 by joelfazhari（#464889，轉 128 kbps）
@@ -76,11 +77,8 @@ npm run build:single # 單一 HTML（dist/kessen-m1.html）
 ## 結構
 - `src/sim/`：戰鬥模擬（與士氣模擬器同一份程式；`sim.ts` 新增了陣線寬度、抵達朝向與畫面事件 `S.fx`；`ai.ts` 新增 `S.meta.aiSides` 與手動忍者）
 - `src/game/orders.ts`：攻擊指令、弓兵自由射擊（依戰場迷霧）、舊的敵軍守備（測試用）
-- `src/game/ninja.ts`：忍者顯示、物見範圍
 - `src/game/skills.ts`：武將技、被動、軍略、忍術、忍者眾的名稱與說明
-- `src/game/effects.ts`：陣亡、箭矢、揚塵、潰逃波及圈、朝向扇區
-- `src/game/terrain.ts`：地形、據點、探明後的地形秘密
-- `src/game/units.ts`：士兵 InstancedMesh、陣型槽位、接戰動作、陣亡、旗號
+- `src/game/view2d.ts`：2D 繪卷戰場（地圖、部隊陣形與幟旗、特效、霞與朝霧）
 - `src/game/camera.ts`：RTS 鏡頭
 - `src/game/hud.ts`：介面
 - `src/game/art.ts`：2D 美術查表（肖像、圖示、家紋、插畫）

@@ -1,6 +1,6 @@
 // 繪卷風 2D 戰場（2026-11 回顧後的 B 方案）：紙底、金雲、千曲川、松林、題箋；部隊是陣形色塊＋幟旗（旗上家紋與兵種字，旗的姿態表示士氣）。
 // 只負責畫：模擬狀態、選取、情報等級都由 main.ts 傳進來。靜態地圖先烤成一張離屏畫布，每幀只貼圖再畫部隊與特效。
-import { MAP, STREAMS, type UType } from '../sim/data.ts';
+import { MAP, STREAMS } from '../sim/data.ts';
 import type { State, Unit, Ninja } from '../sim/sim.ts';
 import { rng } from './coords.ts';
 
@@ -9,7 +9,7 @@ const WX0 = -220, WX1 = 1220, WY0 = -140, WY1 = 840; // 靜態地圖涵蓋的範
 const INK = '#2a1d14', PAPER = '#e9dcbd';
 const FONT = '"LXGW WenKai TC", "Noto Serif TC", serif';
 const COL = [{ fill: '#b5392b', dark: '#7d2219', man: '#f3d2bf', name: '#6d1d14' }, { fill: '#2f4a7a', dark: '#1d2f52', man: '#cfdaf0', name: '#1d2f52' }];
-const KAN: Record<UType, string> = { spear: '槍', archer: '弓', samurai: '侍', cav: '騎', general: '將', gun: '銃', cannon: '筒' };
+import { KANJI as KAN } from './names.ts';
 const ROADS: [number, number][][] = [
   [[560, -300], [530, -100], [520, 60], [505, 200], [500, 300], [470, 470], [440, 640], [420, 1000]],
   [[330, 345], [420, 320], [500, 300]], [[500, 300], [600, 320], [700, 335], [880, 300], [1000, 280], [1090, 260]],
@@ -31,8 +31,7 @@ export type Draw2D = {
 type Fx = { k: 'arrow' | 'puff' | 'ring' | 'star' | 'mark'; x: number; y: number; x1?: number; y1?: number; t: number; dur: number; r?: number; c?: string; delay?: number };
 
 export class View2D {
-  canvas = document.createElement('canvas');
-  private g = this.canvas.getContext('2d')!;
+  private g: CanvasRenderingContext2D;
   private stat = document.createElement('canvas');   // 靜態地圖
   private deco = document.createElement('canvas');   // 螢幕座標的金雲與題箋
   private mist = document.createElement('canvas');   // 未探索的霞（40×28 格）
@@ -43,9 +42,8 @@ export class View2D {
   private flashM: { x: number; y: number; t: number; attack: boolean; r: number } | null = null;
   private clock = 0; private r = rng(20261112);
 
-  constructor(private S: State, before: HTMLElement) {
-    this.canvas.id = 'v2d'; this.canvas.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;display:block;background:' + PAPER;
-    before.parentElement!.insertBefore(this.canvas, before);
+  constructor(private S: State, public canvas: HTMLCanvasElement) {
+    this.g = canvas.getContext('2d')!; canvas.style.background = PAPER;
     this.mist.width = 40; this.mist.height = 28;
     this.bake(); this.resize();
     // 字型晚到的話重烤一次（題箋與地名用得到）

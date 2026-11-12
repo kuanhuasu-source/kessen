@@ -1,5 +1,4 @@
 // 《決戰》M5：敵軍 AI、戰場迷霧、忍者情報與忍術、武將技／鬨聲／軍略。M4：士氣與軍勢可視化、連鎖潰逃、側背扇區、地形。M3：攻擊指令、近戰、射擊、衝鋒與傷亡畫面。戰鬥核心沿用士氣模擬器（src/sim）。
-import * as THREE from 'three';
 import { newState, step, effM, updDims, height, active, dist, cat, general, passiveOn, inForest, inPaddy, inMarsh, inWater, onTrail, isRanged, archerRange, mulberry32, useSkill, useStrategy, battleCry, useJutsu, skillBlocked, canSee, fogMul, type Unit, type Formation, type Ninja } from '../sim/sim.ts';
 import { MAP, UT } from '../sim/data.ts';
 import { adviseSide, weakestEngaged as weakest, cmdBlocked, CMD_CD, dispatchScouts, type Advice as SimAdvice } from '../sim/advisor.ts';
@@ -7,17 +6,13 @@ import { evalDecision, applyDecision, tickDecisions, decState, type Decision } f
 import { setup, issueCommand, cmdOf, applyDeploy, DEFAULT_DOCTRINE, DEFAULT_DEPLOY, type Doctrine, type CmdKind, type Deploy, type Wing } from '../sim/ai.ts';
 import { ROSTER_T } from '../sim/data.ts';
 import { GAME_RULES, SIM_DT } from '../sim/game-rules.ts';
-import { buildTerrain } from './terrain.ts';
-import { UnitView, TYPE_NAME, KANJI, type CorpseSink } from './units.ts';
-import { Corpses, Arrows, Dust, Pulses, FacingDisc } from './effects.ts';
+import { TYPE_NAME, KANJI } from './names.ts';
 import { playerOrders, attackRun, seenPos, retreatOrders } from './orders.ts';
-import { NinjaView, AreaFx } from './ninja.ts';
 import { SKILL, PASSIVE, STRATEGY, ADV_PASSIVE, JUTSU, CLAN_INFO, CLAN_PASSIVE } from './skills.ts';
 import { CameraRig } from './camera.ts';
 import { Hud } from './hud.ts';
 import { portraitOf, ninjaPortrait, skillIcon, jutsuIcon, kamon, illus, img, kanBox, unitIcon, uiFrame } from './art.ts';
 { const f = uiFrame(); if (f) { document.documentElement.classList.add('hasframe'); document.documentElement.style.setProperty('--frame', `url(${f})`); } } // 介面框：結算畫面邊框
-import { toWorld, toSim } from './coords.ts';
 import { sfx, unlock as unlockAudio, isMuted, setMuted } from './audio.ts';
 import { music } from './music.ts';
 import { showIntro, INTRO_KEY } from './intro.ts';
@@ -33,10 +28,7 @@ if (typeof CanvasRenderingContext2D !== 'undefined' && !('roundRect' in CanvasRe
     this.moveTo(x + rr, y); this.arcTo(x + w, y, x + w, y + h, rr); this.arcTo(x + w, y + h, x, y + h, rr); this.arcTo(x, y + h, x, y, rr); this.arcTo(x, y, x + w, y, rr); this.closePath();
   };
 }
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: window.devicePixelRatio < 2, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-const scene = new THREE.Scene();
-const rig = new CameraRig(window.innerWidth / window.innerHeight);
+const rig = new CameraRig();
 
 // ---------------- 模擬 ----------------
 // 網址 #clan=iga&foe=koga&seed=123 可指定忍者眾與亂數種子（出陣畫面選擇後會寫入網址並重新載入）
@@ -54,7 +46,6 @@ const AI_VARIANTS: Record<string, Partial<typeof GAME_RULES>> = {
 };
 const aiVar = params.get('ai');
 const S = newState(aiVar && AI_VARIANTS[aiVar] ? { ...GAME_RULES, ...AI_VARIANTS[aiVar], name: `game+${aiVar}` } : GAME_RULES, seed, [clan0, clan1]);
-const terrain = buildTerrain(scene, S.R.streams); // 要在 S 建立之後（溪流預設來自規則）
 S.dt = SIM_DT;
 setup(S);          // 依設計文件佈陣：雙方各 8 隊、忍者
 // 觀戰模式（#mode=watch）：雙方都由 AI 指揮
@@ -151,7 +142,7 @@ function applyWarCouncil() {
   // 預備隊空著時戰線保持四隊
   S.meta.deployment = [deploy0, null];
   applyDeploy(S, 0, deploy0);
-  for (const v of views) v.snap();
+  for (const v of views) { v.prevX = v.u.x; v.prevY = v.u.y; }
 }
 const DOCTRINE_ROWS: { key: keyof Doctrine; label: string; opts: { id: string; label: string }[]; note?: string }[] = [
   { key: 'formation', label: '陣形', opts: [{ id: 'line', label: '橫陣' }, { id: 'crane', label: '鶴翼' }, { id: 'fish', label: '魚鱗' }], note: '橫陣四隊並列；鶴翼兩翼前伸包抄；魚鱗中央突出' },
@@ -170,14 +161,13 @@ const enemyAI = S.ai;
 S.ai = WATCH ? enemyAI : (s: typeof S) => { playerOrders(s); enemyAI(s); };
 S.fx = [];
 if (!WATCH && params.get('cmd') === 'manual') for (const u of S.units) if (u.side === 0) { u.hasDest = false; u.role = ''; u.target = -1; } // 全手動：清掉 AI 佈陣給的任務；大名模式保留，AI 要靠它帶兵
-const views = S.units.map(u => new UnitView(scene, u));
-// 2D 繪卷戰場（預設）；#view=3d 回到原本的 3D。2D 時 WebGL 畫布留著接收觸控但不繪製
-const VIEW2D = params.get('view') !== '3d';
-const v2 = VIEW2D ? new View2D(S, canvas) : null;
-if (v2) { canvas.style.opacity = '0'; rig.minD = 60; }
+// 內插用：每隊與每名忍者上一步的位置
+const views = S.units.map(u => ({ u, prevX: u.x, prevY: u.y }));
+const ninViews = S.ninjas.map(n => ({ n, prevX: n.x, prevY: n.y }));
+// 2D 繪卷戰場：直接畫在 #view 這張畫布上（3D 版已移除，最後一個 3D 版本見 HANDOFF）
+const v2 = new View2D(S, canvas);
+rig.minD = 60;
 let preview2d: { x: number; y: number; f: number; w: number; d: number }[] | null = null;
-const ninViews = S.ninjas.map(n => new NinjaView(scene, n));
-const areas = new AreaFx(scene), smoke = new Dust(scene, 600, '#d9dcd8', 2.2, 0.55), hoof = new Dust(scene, 500, '#b9a888', 0.8, 0.5), ash = new Dust(scene, 300, '#3b332c', 2.4, 0.6), ember = new Dust(scene, 200, '#e0703a', 0.4, 0.9);
 let selNin = -1;                 // 選取的忍者
 let jutsu: string | null = null; // 正在選目標的忍術
 const myNinjas = () => S.ninjas.filter(n => n.side === 0 && n.alive);
@@ -193,13 +183,9 @@ const intelOf = (u: Unit) => {
   }
   return Math.max(S.vis[visMode][u.id], canSee(S, visMode, u) ? 2 : 0);
 };
-const viewOf = (id: number) => views[id];
-const corpses = new Corpses(scene), arrows = new Arrows(scene), dust = new Dust(scene), pulses = new Pulses(scene);
-const discTarget = new FacingDisc(scene), discInfo = new FacingDisc(scene);
 let inspect = -1;   // 正在查看的敵軍
 let infoClosed = -1; // 關掉資訊面板的部隊（重新選取時再打開）
 let hoverEnemy = -1;
-const sink: CorpseSink = (k, g, cav, x, y, hd, dir) => corpses.add(k, g, cav, x, y, hd, dir);
 const isCavU = (u: Unit) => u.type === 'cav' || u.type === 'general';
 const nameOf = (u: Unit) => `${u.cmd || '援軍'}隊`;
 const mine = (u: Unit) => u.side === 0;
@@ -216,7 +202,6 @@ const setSel = (ids: number[], add: boolean) => {
   if (ids.length) { inspect = -1; selNin = -1; }
   infoClosed = -1;
   for (const id of ids) { if (!mine(S.units[id]) || WATCH) continue; if (add && selected.has(id)) selected.delete(id); else selected.add(id); }
-  views.forEach(v => (v.selected = selected.has(v.u.id)));
 };
 if (!DAIMYO) setSel([S.units.find(u => u.side === 0 && u.key === 'spear1')!.id], false);
 
@@ -232,7 +217,7 @@ const hud = new Hud(S.units.filter(mine), {
   onRetreat: () => orderRetreat(),
 });
 hud.setArmyTicks(S.R.collapseAt, S.R.armyHighThresh);
-hud.setDaimyo(DAIMYO); hud.setDebug(params.get('debug') === '1'); hud.setV2(VIEW2D);
+hud.setDaimyo(DAIMYO); hud.setDebug(params.get('debug') === '1'); hud.setV2(true);
 hud.onLog = () => hud.showLog(battleLog.length ? battleLog.map(l => `<div class="${l.major ? 'mj' : ''}"><time>${l.t}</time>${l.text}</div>`).join('') : '<div>還沒有戰報</div>');
 let boxMode = false;
 // 出陣畫面：模式與忍者眾（換了就寫入網址並重新載入，讓佈陣與情報從頭計算）
@@ -280,79 +265,25 @@ if (params.get('go') === '1') {
 }); }
 
 // ---------------- 拾取 ----------------
-const ray = new THREE.Raycaster();
-const ndc = new THREE.Vector2();
-function setRay(sx: number, sy: number) {
-  ndc.set((sx / window.innerWidth) * 2 - 1, -(sy / window.innerHeight) * 2 + 1);
-  ray.setFromCamera(ndc, rig.cam);
-}
-function groundAt(sx: number, sy: number): { x: number; y: number } | null {
-  if (v2) return v2.toSim(sx, sy);
-  setRay(sx, sy);
-  const hit = ray.intersectObject(terrain.ground, false)[0];
-  return hit ? toSim(hit.point) : null;
-}
-const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-const tmp = new THREE.Vector3();
-function planeAt(sx: number, sy: number): { x: number; y: number } | null {
-  if (v2) { v2.setCam(rig.vx, rig.vy, rig.vd); return v2.toSim(sx, sy); }
-  setRay(sx, sy);
-  plane.constant = -height(rig.tx, rig.ty);
-  return ray.ray.intersectPlane(plane, tmp) ? toSim(tmp) : null;
-}
-function screenOf(x: number, y: number, h: number) {
-  if (v2) return { x: v2.X(x), y: v2.Y(y) - h * Math.max(1, v2.k) * 0.9, ok: true };
-  const v = toWorld(x, y); v.y += h; v.project(rig.cam);
-  return { x: (v.x + 1) / 2 * window.innerWidth, y: (1 - v.y) / 2 * window.innerHeight, ok: v.z < 1 };
-}
+function groundAt(sx: number, sy: number): { x: number; y: number } | null { return v2.toSim(sx, sy); }
+function planeAt(sx: number, sy: number): { x: number; y: number } | null { v2.setCam(rig.vx, rig.vy, rig.vd); return v2.toSim(sx, sy); }
+function screenOf(x: number, y: number, h: number) { return { x: v2.X(x), y: v2.Y(y) - h * Math.max(1, v2.k) * 0.9, ok: true }; }
 function pickUnit(sx: number, sy: number, want: 'mine' | 'enemy' = 'mine'): Unit | null {
   const ok = (u: Unit) => (want === 'mine') === mine(u) && u.state !== 'gone' && !u.away && intelOf(u) >= 1;
   let best: Unit | null = null, bd = 1e9;
-  if (v2) { // 2D：點到陣形或幟旗附近就算（手指容錯 14 px）
-    for (const u of S.units) {
-      if (!ok(u)) continue;
-      const lvl = intelOf(u); const p = lvl >= 2 ? u : seenPos(S, viewSide(), u); if (!p) continue;
-      const px = v2.X(p.x), py = v2.Y(p.y), r = Math.max(u.width, u.depth) / 2 * v2.k + 14;
-      const d = Math.min(Math.hypot(sx - px, sy - py), Math.hypot(sx - px, sy - (py - 18)) + 4);
-      if (d < r && d < bd) { bd = d; best = u; }
-    }
-    return best;
-  }
-  for (const v of views) {
-    if (!ok(v.u)) continue;
-    const gx = v.intel === 1 ? v.ghostX : v.u.x, gy = v.intel === 1 ? v.ghostY : v.u.y;
-    const b = screenOf(gx, gy, v.banner.position.y - toWorld(gx, gy).y);
-    const bh = v.banner.scale.y * window.innerHeight * 0.95, bw = bh * 0.72;
-    if (b.ok && sx > b.x - bw / 2 - 6 && sx < b.x + bw / 2 + 6 && sy < b.y + 6 && sy > b.y - bh - 6) {
-      const d = Math.abs(sx - b.x); if (d < bd) { bd = d; best = v.u; }
-    }
-  }
-  if (best) return best;
-  const g = groundAt(sx, sy); if (!g) return null;
-  for (const v of views) {
-    if (!ok(v.u) || intelOf(v.u) < 2) continue;
-    const d = Math.hypot(g.x - v.u.x, g.y - v.u.y);
-    if (d < Math.max(v.u.width, v.u.depth) / 2 + 4 && d < bd) { bd = d; best = v.u; }
+  // 點到陣形或幟旗附近就算（手指容錯 14 px）
+  for (const u of S.units) {
+  if (!ok(u)) continue;
+  const lvl = intelOf(u); const p = lvl >= 2 ? u : seenPos(S, viewSide(), u); if (!p) continue;
+  const px = v2.X(p.x), py = v2.Y(p.y), r = Math.max(u.width, u.depth) / 2 * v2.k + 14;
+  const d = Math.min(Math.hypot(sx - px, sy - py), Math.hypot(sx - px, sy - (py - 18)) + 4);
+  if (d < r && d < bd) { bd = d; best = u; }
   }
   return best;
 }
 
 // ---------------- 指令 ----------------
-const marker = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 40).rotateX(-Math.PI / 2),
-  new THREE.MeshBasicMaterial({ color: '#efe6d2', transparent: true, depthWrite: false }));
-marker.renderOrder = 4; marker.visible = false; scene.add(marker);
-let markerT = 0;
-function flash(x: number, y: number, attack = false, r = 0) {
-  v2?.flash(x, y, attack, r);
-  marker.position.copy(toWorld(x, y)).add(new THREE.Vector3(0, 0.5, 0)); marker.visible = true; markerT = 0; markerR = r;
-  (marker.material as THREE.MeshBasicMaterial).color.set(attack ? '#e0574a' : '#efe6d2');
-}
-let markerR = 0;
-// 選取部隊的攻擊目標標示
-const tgtRing = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 48).rotateX(-Math.PI / 2),
-  new THREE.MeshBasicMaterial({ color: '#e0574a', transparent: true, opacity: 0.85, depthWrite: false }));
-tgtRing.renderOrder = 3; tgtRing.visible = false; scene.add(tgtRing);
-
+function flash(x: number, y: number, attack = false, r = 0) { v2.flash(x, y, attack, r); }
 const selUnits = () => [...selected].map(id => S.units[id]).filter(u => u && u.state !== 'gone');
 // 大名模式：對部隊直接下令就等於接管，AI 不再碰它；資訊面板「交回」還給 AI
 function takeOver(us: Unit[]): string {
@@ -571,7 +502,7 @@ function evalAdvice() {
 }
 
 // ---------------- 忍者與忍術 ----------------
-function selectNinja(id: number) { selNin = id; selected.clear(); views.forEach(v => (v.selected = false)); inspect = -1; }
+function selectNinja(id: number) { selNin = id; selected.clear(); inspect = -1; }
 function nextNinja(focus: boolean) {
   const ns = myNinjas(); if (!ns.length) return;
   const i = ns.findIndex(n => n.id === selNin);
@@ -584,8 +515,7 @@ function pickNinja(sx: number, sy: number): Ninja | null {
   for (const v of ninViews) {
     if (v.n.side !== 0 || !v.n.alive) continue;
     const b = screenOf(v.n.x, v.n.y, 4.2);
-    const r = v2 ? 16 : v.banner.scale.y * window.innerHeight * 0.6 + 8;
-    const cy = v2 ? b.y + 4 : b.y - r * 0.8;
+    const r = 16, cy = b.y + 4;
     const d = Math.hypot(sx - b.x, sy - cy);
     if (b.ok && d < r && d < bd) { bd = d; best = v.n; }
   }
@@ -635,30 +565,8 @@ function castAt(sx: number, sy: number) {
 }
 
 // 陣線預覽
-const prevMat = new THREE.LineBasicMaterial({ color: '#efe6d2', transparent: true, opacity: 0.9, depthTest: false });
-const preview = new THREE.LineSegments(new THREE.BufferGeometry(), prevMat);
-preview.renderOrder = 5; preview.visible = false; scene.add(preview);
 function showPreview(a: { x: number; y: number } | null, b?: { x: number; y: number }) {
-  if (!a || !b) { preview.visible = false; preview2d = null; return; }
-  if (v2) { preview2d = lineTargets(a, b).map(t => ({ x: t.x, y: t.y, f: t.f, w: (t.files - 1) * t.u.sp / 2 + 1, d: Math.ceil(t.u.men / t.files) * t.u.sp / 2 + 1 })); return; }
-  const pts: THREE.Vector3[] = [];
-  const lift = (x: number, y: number) => toWorld(x, y).add(new THREE.Vector3(0, 0.8, 0));
-  for (const t of lineTargets(a, b)) {
-    const fx = Math.cos(t.f), fy = Math.sin(t.f), rx = Math.sin(t.f), ry = -Math.cos(t.f);
-    const w = (t.files - 1) * t.u.sp / 2 + 1, d = Math.ceil(t.u.men / t.files) * t.u.sp / 2 + 1;
-    const c = [[-w, -d], [w, -d], [w, d], [-w, d]].map(([l, k]) => lift(t.x + rx * l + fx * k, t.y + ry * l + fy * k));
-    for (let i = 0; i < 4; i++) pts.push(c[i], c[(i + 1) % 4]);
-    // 朝向箭頭
-    const tip = lift(t.x + fx * (d + 8), t.y + fy * (d + 8));
-    const base = lift(t.x + fx * (d + 2), t.y + fy * (d + 2));
-    pts.push(lift(t.x + fx * d, t.y + fy * d), tip,
-      tip, lift(t.x + fx * (d + 4) + rx * 3, t.y + fy * (d + 4) + ry * 3),
-      tip, lift(t.x + fx * (d + 4) - rx * 3, t.y + fy * (d + 4) - ry * 3));
-    void base;
-  }
-  preview.geometry.dispose();
-  preview.geometry = new THREE.BufferGeometry().setFromPoints(pts);
-  preview.visible = true;
+  preview2d = a && b ? lineTargets(a, b).map(t => ({ x: t.x, y: t.y, f: t.f, w: (t.files - 1) * t.u.sp / 2 + 1, d: Math.ceil(t.u.men / t.files) * t.u.sp / 2 + 1 })) : null;
 }
 
 // ---------------- 輸入：滑鼠 ----------------
@@ -1055,13 +963,6 @@ hud.onInfoClose = () => { if (cmdOpen) { cmdOpen = false; hud.setCmdOpen(false);
 // ---------------- 戰鬥事件 ----------------
 const menBefore: number[] = [];
 const surroundT = new Map<number, number>();
-const SECRET_NAME: Record<string, string> = { m: '沼澤（移動 −60%、無法衝鋒）', a: '伏兵地（森林中可藏兵）', t: '森林小徑（騎兵可通行不減速）' };
-function revealSecret(id: string, announce: boolean) {
-  if (id === 'trail') terrain.reveal('trail', S.secrets.trailX, 350);
-  else { const p = id[0] === 'm' ? S.secrets.marsh[+id[1]] : S.secrets.ambush[+id[1]]; terrain.reveal(id[0] === 'm' ? 'marsh' : 'ambush', p.x, p.y); }
-  if (announce) hud.toast(`探明地形：${SECRET_NAME[id[0]]}`);
-}
-if (S.R.secretsOn) for (const id of WATCH ? ['m0', 'm1', 'trail', 'a0', 'a1'] : [...S.known[0]]) revealSecret(id, false);
 const armyFlag = [{ low: false, col: false }, { low: false, col: false }];
 function armyAlerts() {
   for (const s of [0, 1] as const) {
@@ -1071,7 +972,6 @@ function armyAlerts() {
     if (v < S.R.collapseAt && !f.col && (s === 0 || hud.armyExact[1])) { f.col = true; sayM(`${SIDE_NAME[s]}軍總崩潰！`); }
   }
 }
-const arrowLand = new Map<number, number>(); // 本步被射擊的部隊 → 箭矢落地的模擬時間
 type Float = { el: HTMLElement; x: number; y: number; h: number; t: number };
 const floats: Float[] = [];
 const floatLayer = document.createElement('div'); floatLayer.className = 'floats'; document.getElementById('hud')!.prepend(floatLayer);
@@ -1090,18 +990,6 @@ function updateFloats(dt: number) {
     f.el.style.transform = `translate(${s.x}px, ${s.y - f.t * 22}px) translate(-50%, -100%)`;
     f.el.style.opacity = String(f.t < 1.2 ? 1 : 1 - (f.t - 1.2) / 0.6);
   }
-}
-function volleyFx(A: Unit, T: Unit) {
-  const va = viewOf(A.id), vt = viewOf(T.id);
-  const shots = Math.min(28, Math.ceil(va.alive * 0.6));
-  let land = 0;
-  for (let i = 0; i < shots; i++) {
-    const a = Math.floor(Math.random() * Math.max(1, va.alive)), b = Math.floor(Math.random() * Math.max(1, vt.alive));
-    const x0 = va.alive ? va.px[a] : A.x, y0 = va.alive ? va.py[a] : A.y;
-    const x1 = (vt.alive ? vt.px[b] : T.x) + (Math.random() - 0.5) * 6, y1 = (vt.alive ? vt.py[b] : T.y) + (Math.random() - 0.5) * 6;
-    land = Math.max(land, arrows.fire(x0, y0, x1, y1, Math.random() * 0.35));
-  }
-  arrowLand.set(T.id, S.t + land * 0.8);
 }
 function jutsuFx(side: 0 | 1, j: string, unit?: number, point?: number) {
   const [name, res] = j.split(':'); const J = JUTSU[name];
@@ -1338,12 +1226,11 @@ function afterStep() {
   if (views.length < S.units.length) {
     for (let i = views.length; i < S.units.length; i++) {
       const u = S.units[i];
-      const v = new UnitView(scene, u); v.setBannerScale(bannerH); views.push(v);
+      views.push({ u, prevX: u.x, prevY: u.y });
       if (u.side === 0 && !WATCH) { hud.addCard(u); hud.toast(`村落援軍抵達：${TYPE_NAME[u.type]} ${u.men} 人（第 ${S.reinfUsed[0]}／2 批）`); }
       if (WATCH) hud.feed(clock(), `村落援軍抵達（第 ${S.reinfUsed[u.side]}／2 批）`, u.side);
     }
   }
-  arrowLand.clear();
   if (WATCH) {
     for (const e of S.fx!) watchFeed(e);
     S.points.forEach((p, i) => { if (p.owner !== pointOwner[i]) { pointOwner[i] = p.owner; if (p.owner >= 0) hud.feed(clock(), `奪取${POINT_NAME[i]}`, p.owner, true); } });
@@ -1356,14 +1243,10 @@ function afterStep() {
   });
   for (const e of S.fx!) {
     const A = S.units[e.a], T = e.b !== undefined ? S.units[e.b] : null;
-    if (v2 && A && A.side !== undefined) v2.event(e, A, T, mine(A) || intelOf(A) >= 2 || (!!T && (mine(T) || intelOf(T) >= 2)));
+    if (A && A.side !== undefined) v2.event(e, A, T, mine(A) || intelOf(A) >= 2 || (!!T && (mine(T) || intelOf(T) >= 2)));
     switch (e.k) {
-      case 'volley': if (T) { if (e.s === 'gun') sfx.gun(); else if (e.s === 'cannon') sfx.cannon(); else sfx.arrows(e.n ?? 1); if (e.s === 'gun') { for (let i = 0; i < 6; i++) dust.burst(A!.x + (Math.random() - 0.5) * A!.width, A!.y + Math.cos(A!.f) * 2, 1, 2.2); if (intelOf(A!) >= 2 || mine(A!)) floatText(A!, '放銃', 'hit'); } else if (e.s === 'cannon') { dust.burst(A!.x, A!.y, 14, 6); floatText(T, `轟 ${e.n ? `−${e.n * S.R.cannonDmg / 8 | 0}` : ''}`, 'bad'); } else volleyFx(A, T); } break;
+      case 'volley': if (T) { if (e.s === 'gun') sfx.gun(); else if (e.s === 'cannon') sfx.cannon(); else sfx.arrows(e.n ?? 1); if (e.s === 'gun') { if (intelOf(A!) >= 2 || mine(A!)) floatText(A!, '放銃', 'hit'); } else if (e.s === 'cannon') floatText(T, `轟 ${e.n ? `−${e.n * S.R.cannonDmg / 8 | 0}` : ''}`, 'bad'); } break;
       case 'charge': if (T) { if (e.n) sfx.charge(); else sfx.clash(0.6);
-        const d = dist(A, T) || 1, dx = (T.x - A.x) / d, dy = (T.y - A.y) / d;
-        const ix = T.x - dx * Math.min(d * 0.5, T.depth / 2 + 2), iy = T.y - dy * Math.min(d * 0.5, T.depth / 2 + 2);
-        dust.burst(ix, iy, e.n ? 26 : 12, e.n ? 10 : 6, dx, dy);
-        if (e.n) viewOf(T.id).push(ix, iy, dx, dy, 12);
         floatText(T, e.n ? '衝鋒' : '突擊', 'hit', true);
       } break;
       case 'blocked': if (T) floatText(A, isCavU(A) && T.type === 'spear' ? '槍衾受阻' : '衝鋒受阻', 'bad'); break;
@@ -1373,20 +1256,18 @@ function afterStep() {
       case 'cheer': floatText(A, `敵潰 ${pct(e.n ?? 0)}`, 'good'); break;
       case 'surround': if ((surroundT.get(A.id) ?? -99) < S.t - 6) { surroundT.set(A.id, S.t); floatText(A, '被包圍', 'bad'); } break;
       case 'army': if (Math.abs(e.n ?? 0) >= 3) armyEv.push({ t: S.t, side: e.a, n: e.n!, src: ARMY_SRC[e.s!] || '軍勢' }); if (e.s === 'genDeath' || e.s === 'viceDeath' || e.s === 'advisorDeath') sfx.death(); if (Math.abs(e.n ?? 0) >= 0.5) hud.armyEvent(e.a as 0 | 1, e.n!, ARMY_SRC[e.s!] || '軍勢'); break;
-      case 'found': if (e.a === 0) revealSecret(e.s!, true); break;
       case 'skill': {
         const sk = SKILL[e.s!]; if (!sk) break;
         floatText(A, sk.name, mine(A) ? 'good' : 'hit');
         if (mine(A)) say(`${A.cmd}「${sk.name}」`);
         else if (intelOf(A) >= 2) say(`敵將 ${A.cmd}「${sk.name}」：${sk.desc}`);
         if (T && e.s === 'toseki') floatText(T, '投石', 'hit');
-        if (e.s === 'kuruma' || e.s === 'furin') pulses.add(A.x, A.y, 100, mine(A) ? '#c9a227' : '#7fa3e0', 1.6);
       } break;
       case 'strat': {
         const st = STRATEGY[e.s!]; if (!st) break;
         say(mine(A) ? `${A.advisor}獻策「${st.name}」：${st.desc}` : `上杉軍師 ${A.advisor}「${st.name}」：${e.s === 'kanpa' ? '我軍 20 秒內無法施放武將技與軍略' : st.desc}`);
       } break;
-      case 'cry': sfx.cry(); floatText(A, '鬨聲', mine(A) ? 'good' : 'hit'); if (intelOf(A) >= 2) pulses.add(A.x, A.y, S.R.cryR, mine(A) ? '#efe6d2' : '#7fa3e0', 0.9); break;
+      case 'cry': sfx.cry(); floatText(A, '鬨聲', mine(A) ? 'good' : 'hit'); break;
       case 'jutsu': if (e.a === 0 || e.s === 'rumor' || e.s === 'kirigakure') sfx.jutsu(); jutsuFx(e.a as 0 | 1, e.s!, e.b, e.n); break;
       case 'ninjaDead': {
         const n = S.ninjas[e.a];
@@ -1396,7 +1277,6 @@ function afterStep() {
       case 'rout': case 'shatter':
         if (mine(A) || intelOf(A) >= 1) sfx.rout();
         floatText(A, e.k === 'shatter' ? '潰滅' : '潰走', 'bad', true);
-        if (intelOf(A) >= 2) pulses.add(A.x, A.y, S.R.friendlyRoutR, '#e0574a');
         if (mine(A) || intelOf(A) >= 2) say(mine(A) ? `${nameOf(A)}${e.k === 'shatter' ? '潰滅' : '潰走'}！` : `敵軍 ${nameOf(A)}${e.k === 'shatter' ? '潰滅' : '潰走'}`);
         break;
       case 'merit': if (mine(A) || intelOf(A) >= 2) { floatText(A, `功績 ${'★'.repeat(Math.min(3, e.n ?? 1))}`, 'good'); if (mine(A)) { say(`${nameOf(A)}${e.s === 'gen' ? '討取敵大將' : e.s === 'cmd' ? '討取敵將' : '擊潰敵隊'}，功績 ${e.n}${(e.n ?? 0) <= 3 ? `・${MERIT_NAME[e.n ?? 1]}` : ''}`); sfx.drum(1, 0.45); } } break;
@@ -1409,48 +1289,16 @@ function afterStep() {
   }
   S.fx!.length = 0;
   armyAlerts();
-  // 傷亡：箭矢等落地才倒下；近戰的倒在敵方那一側
-  for (const u of S.units) {
-    const lost = (menBefore[u.id] ?? u.men) - u.men;
-    if (lost <= 0 || (u.state === 'gone' && u.hp > 0)) continue;
-    const v = viewOf(u.id);
-    const land = arrowLand.get(u.id);
-    if (land !== undefined) { v.kill(lost, land, u.x, u.y, true); continue; }
-    const E = u.contacts.length ? S.units[u.contacts.includes(u.primary) ? u.primary : u.contacts[0]] : u;
-    v.kill(lost, S.t + Math.random() * 0.3, E.x, E.y, false);
-  }
 }
 
 // ---------------- 主迴圈 ----------------
-function resize() {
-  const w = window.innerWidth, h = window.innerHeight;
-  renderer.setSize(w, h, false);
-  rig.cam.aspect = w / h; rig.cam.updateProjectionMatrix();
-  views.forEach(v => v.setBannerScale(h));
-  ninViews.forEach(v => v.setBannerScale(h));
-  bannerH = h;
-  v2?.resize();
-}
-let bannerH = window.innerHeight;
+function resize() { v2.resize(); }
 window.addEventListener('resize', resize);
-resize();
 rig.tx = MAP.base[0].x; rig.ty = MAP.base[0].yl + 60 + S.R.deployFwd; rig.dist = 280; rig.snap(); // 佈陣前移時鏡頭跟著前移，戰線與溪流在畫面中段
 
-let infoT = 0, smokeAcc = 0, hoofAcc = 0;
+let infoT = 0;
 hud.addNinjaCard(dbl => nextNinja(dbl), S.clan[0]);
 let last = performance.now(), acc = 0, fpsN = 0, fpsT = 0, cpu = 0;
-// 自動畫質：連續 3 秒低於 30 fps 就降低解析度
-let lowFor = 0;
-const PR_STEPS = [Math.min(window.devicePixelRatio, 2), 1.5, 1, 0.75].filter((v, i, a) => i === 0 || v < a[0]);
-let prIdx = 0;
-function autoQuality(fps: number) {
-  if (document.hidden || paused) return;
-  lowFor = fps < 30 ? lowFor + 0.5 : 0;
-  if (lowFor >= 3 && prIdx < PR_STEPS.length - 1) {
-    prIdx++; renderer.setPixelRatio(PR_STEPS[prIdx]); resize(); lowFor = 0;
-    if (params.get('debug') === '1') hud.toast(`畫質自動降低（解析度 ${PR_STEPS[prIdx]}×）`); // 開發訊息，只在除錯時顯示
-  }
-}
 // 每幀分段耗時累計（ms）：sim 模擬步、units 士兵矩陣、fx 特效與其他、hud 介面、render 送出繪製；window.__kessen.prof 可讀取
 const prof = { frames: 0, sim: 0, units: 0, fx: 0, hud: 0, render: 0 };
 function frame(now: number) {
@@ -1473,43 +1321,12 @@ function frame(now: number) {
   keyboardCamera(dt);
   rig.apply(dt);
   const gdt = paused || decision ? 0 : dt * speed;
-  if (v2) rig.yaw = 0; // 2D 不旋轉
-  if (!v2) for (const v of views) {
-    const lvl = intelOf(v.u);
-    v.update(gdt, alpha, effM(S, v.u), S.t, S.units, sink, lvl, lvl === 1 ? seenPos(S, viewSide(), v.u) ?? undefined : undefined);
-  }
+  rig.yaw = 0; // 2D 不旋轉
   prof.units += performance.now() - tp; tp = performance.now();
-  if (!v2) for (const v of ninViews) {
-    v.selected = v.n.id === selNin; v.showRange = jutsu !== null && v.n.side === 0;
-    v.update(gdt, alpha, visMode === 'all' || v.n.side === visMode || v.n.detUntil > S.t, S.t);
-  }
-  // 霧隱的煙、物見範圍
-  smokeAcc += gdt;
-  if (smokeAcc > 0.3) { smokeAcc = 0; for (const sm of S.smokes) if (sm.until > S.t) for (let i = 0; i < 4; i++) { const a = Math.random() * 6.28, r = Math.sqrt(Math.random()) * 55; smoke.burst(sm.x + Math.cos(a) * r, sm.y + Math.sin(a) * r, 1, 2); } }
-  smoke.update(gdt);
-  // 遭放火的據點冒煙
-  for (const p of S.points) if (p.burnedUntil > S.t && Math.random() < gdt * 6) {
-    const a = Math.random() * 6.28, r = Math.random() * 18;
-    ash.burst(p.x + Math.cos(a) * r, p.y + Math.sin(a) * r, 1, 2);
-    if (Math.random() < 0.6) ember.burst(p.x + Math.cos(a) * r * 0.6, p.y + Math.sin(a) * r * 0.6, 1, 1);
-  }
-  ash.update(gdt); ember.update(gdt);
-  // 奔馳中的騎兵揚起塵土
-  hoofAcc += gdt;
-  if (hoofAcc > 0.12) {
-    hoofAcc = 0;
-    for (const v of views) if (v.galloping && v.alive && intelOf(v.u) >= 2 && !inPaddy(v.u.x, v.u.y)) {
-      for (let k = 0; k < 2; k++) { const i = Math.floor(Math.random() * v.alive); hoof.burst(v.px[i] - Math.cos(v.u.f) * 1.5, v.py[i] - Math.sin(v.u.f) * 1.5, 1, 0.8, -Math.cos(v.u.f) * 0.3, -Math.sin(v.u.f) * 0.3); }
-    }
-  }
-  hoof.update(gdt);
-  areas.sync(S.monomi.filter(m => m.side === 0 && m.until > S.t).map((m, i) => ({ key: `mo${m.x | 0},${m.y | 0},${i}`, x: m.x, y: m.y, r: 150, color: '#c9a227', opacity: 0.12 })));
   hud.armyExact = WATCH ? [true, true] : [true, general(S, 0).advAlive];
   director(dt);
   if (WATCH) hud.setWatchState(camAuto && performance.now() >= manualUntil, visMode === 'all' ? '全' : visMode === 0 ? '武' : '上');
-  corpses.update(gdt); arrows.update(gdt); dust.update(gdt);
   updateFloats(dt);
-  pulses.update(gdt);
   // 扇區：滑鼠指著的敵軍＞選取部隊的攻擊目標；資訊面板中的部隊另外一個
   if (inspect >= 0 && S.units[inspect].state === 'gone') inspect = -1;
   if (selNin >= 0 && !S.ninjas[selNin].alive) selNin = -1;
@@ -1517,23 +1334,11 @@ function frame(now: number) {
   const infoU = selNin >= 0 ? null : infoUnit();
   const tu = selUnits().find(u => u.target >= 0 && S.units[u.target].state !== 'gone');
   const dU = hoverEnemy >= 0 && S.units[hoverEnemy].state !== 'gone' ? S.units[hoverEnemy] : tu ? S.units[tu.target] : null;
-  const discAt = (d: FacingDisc, u: Unit | null) => {
-    if (!u || u.state === 'gone' || intelOf(u) < 2) { d.hide(); return; }
-    const c = viewOf(u.id).center(alpha); d.show(c.x, c.y, u.f, Math.max(u.width, u.depth) / 2 + 7);
-  };
-  discAt(discInfo, infoU && infoU.state !== 'rout' && infoU.state !== 'shattered' ? infoU : null);
-  discAt(discTarget, dU && dU !== infoU ? dU : null);
-  tgtRing.visible = !!tu && (dU === S.units[tu.target] || intelOf(S.units[tu.target]) === 1);
-  if (tu) {
-    const T = S.units[tu.target], tv = viewOf(T.id), c = tv.intel === 1 ? { x: tv.ghostX, y: tv.ghostY } : tv.center(alpha), w = toWorld(c.x, c.y);
-    tgtRing.position.set(w.x, w.y + 0.5, w.z); tgtRing.scale.setScalar(Math.max(T.width, T.depth) / 2 + 4);
-  }
   infoT -= dt;
   if (infoT <= 0) {
     infoT = 0.25;
     hud.setInfo(cmdOpen ? cmdHtml() : selNin >= 0 ? ninjaHtml(S.ninjas[selNin]) : infoU && infoU.id !== infoClosed ? infoHtml(infoU) : inspectPoint >= 0 ? pointHtml(inspectPoint) : null);
     if (DAIMYO && !paused && !decision) { for (const line of tickDecisions(S, 0)) sayM(line); evalDecisionCard(); }
-    { const fm = fogMul(S); const fg = scene.fog as THREE.Fog | null; if (fg) { fg.near = 700 * (0.3 + 0.7 * fm); fg.far = 2100 * (0.38 + 0.62 * fm); } } // 朝霧：場景霧跟著視野倍率
     if (lead >= 0) { const u = S.units[lead]; if (!active(u)) exitLead(u.state === 'gone' ? `${nameOf(u)}已離場，返回俯瞰` : `${nameOf(u)}潰走，返回俯瞰`); else { rig.tx += (u.x - rig.tx) * 0.15; rig.ty += (u.y - rig.ty) * 0.15; if (!selected.has(lead)) setSel([lead], false); } }
     // 接戰環境音：有部隊接戰時每 0.5～0.9 秒一陣兵刃聲，強度看接戰隊數
     if (!paused && S.t - lastClashT > 0.5 + Math.random() * 0.4) { lastClashT = S.t; let n = 0; for (const u of S.units) if (u.contacts.length && active(u)) n++; if (n > 0) sfx.clash(Math.min(1, n / 8)); }
@@ -1545,26 +1350,19 @@ function frame(now: number) {
       const segs = lv.sort((a, b) => b - a).map(l => `<i class="${l ? 'l' + l : ''}"></i>`).join('');
       const nSec = S.secrets.marsh.length + S.secrets.ambush.length + 1;
       hud.setIntel(`<b>情報</b><span class="seg">${segs}</span>`, `敵軍 ${en.length} 隊：察覺 ${lv.filter(l => l >= 1).length}・識別 ${lv.filter(l => l >= 2).length}・洞悉 ${lv.filter(l => l >= 3).length}${S.R.secretsOn ? `　地形秘密 ${S.known[vs].size}／${nSec}` : ''}`);
-      terrain.shroud(S.explored[vs]);
-    } else { hud.setIntel(null); terrain.shroud(null); }
+    } else hud.setIntel(null);
     hud.setHands(manualSet.size > 0 || lead >= 0);
     const us = selUnits().filter(u => u.skill);
     hud.setSkillReady(us.length > 0, us.some(u => skillState(u).ok));
     for (const u of S.units) if (u.side === 0) hud.setCardReady(u.id, skillState(u).ok);
     hud.updateNinjaCard(myNinjas().length, Math.max(0, S.jutsuCd[0] - S.t) / 90, CLAN_INFO[S.clan[0]].name, selNin >= 0);
   }
-  for (const id of [...selected]) if (!active(S.units[id])) { selected.delete(id); views.forEach(v => (v.selected = selected.has(v.u.id))); }
-  S.points.forEach((p, i) => terrain.setOwner(i, p.owner, p.prog / 20, p.progSide));
-  if (marker.visible) {
-    markerT += dt; const k = markerT / 0.6;
-    marker.scale.setScalar(markerR ? markerR * (1.4 - k * 0.4) : 2 + k * 6); (marker.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 1 - k);
-    if (k >= 1) marker.visible = false;
-  }
+  for (const id of [...selected]) if (!active(S.units[id])) { selected.delete(id); }
   prof.fx += performance.now() - tp; tp = performance.now();
   const fs = selUnits().filter(u => u.type !== 'cav' && u.type !== 'general');
   hud.update(S.t, S.army, S.units.filter(mine), selected, u => effM(S, u), paused, speed, fs.length ? FORM_NAME[fs[0].form].slice(0, 1) : '', boxMode, manualSet);
   prof.hud += performance.now() - tp; tp = performance.now();
-  if (v2) {
+  {
     v2.setCam(rig.vx, rig.vy, rig.vd);
     const fogged = S.R.fogV2 && S.R.fogOn && !(WATCH && visMode === 'all');
     v2.draw({
@@ -1576,14 +1374,13 @@ function frame(now: number) {
       explored: fogged ? S.explored[viewSide()] : null, fog: fogMul(S),
       target: dU, info: infoU, preview: preview2d,
     });
-  } else renderer.render(scene, rig.cam);
+  }
   prof.render += performance.now() - tp; prof.frames++;
   cpu += performance.now() - t0; fpsN++; fpsT += dt;
   if (fpsT >= 0.5) {
     const fps = fpsN / fpsT;
-    autoQuality(fps);
     const men = S.units.reduce((a, u) => a + (u.state === 'gone' ? 0 : u.men), 0);
-    hud.setFps(fps, cpu / fpsN, men, renderer.info.render.calls, renderer.getPixelRatio());
+    hud.setFps(fps, cpu / fpsN, men, 0, Math.min(2, window.devicePixelRatio || 1));
     fpsN = 0; fpsT = 0; cpu = 0;
   }
   requestAnimationFrame(frame);
@@ -1601,7 +1398,7 @@ requestAnimationFrame(frame);
       step(S); afterStep();
       if (S.over) break;
     }
-    for (const v of views) v.snap();
+    for (const v of views) { v.prevX = v.u.x; v.prevY = v.u.y; }
   },
   setSpeed(s: number) { speed = s; },
 };

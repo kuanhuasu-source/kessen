@@ -8,7 +8,7 @@
 
 | 項目 | 位置 |
 | --- | --- |
-| 遊戲（可直接玩） | https://claude.ai/artifact/UjqYxfDUxLHEW3CA6xsy7R （第 51 版：2D 繪卷戰場＋瘦身（一）（二）＋歷史導入＋配樂層）。更新時發布 `dist/kessen-m1.html` 到同一個 URL |
+| 遊戲（可直接玩） | https://claude.ai/artifact/UjqYxfDUxLHEW3CA6xsy7R （第 52 版：純 2D 繪卷戰場、瘦身（一）（二）、歷史導入、配樂層）。更新時發布 `dist/kessen-m1.html` 到同一個 URL |
 | GitHub Pages（公開可玩） | https://kuanhuasu-source.github.io/kessen/ ，倉庫 `kuanhuasu-source/kessen`（只放遊戲，公開）。發布流程：在 LVV-Studio 的 `kessen/` 開發，`git subtree push --prefix=kessen https://github.com/kuanhuasu-source/kessen main` 推過去，Actions（`kessen/.github/workflows/pages.yml`）自動建置部署 |
 | 設計文件（線上，含圖表） | https://claude.ai/artifact/JAXq85B8a3UheAm2xAcFwL |
 | 進度與待辦 | `BACKLOG.md` |
@@ -40,7 +40,7 @@
 
 ## 4. 架構與檔案地圖
 
-TypeScript + Vite + Three.js，單一 HTML 輸出（約 1.66 MB，其中美術約 1.3 MB）。模擬固定步長 0.1 秒、確定性（同 seed 同結果），畫面插值。
+TypeScript + Vite + Canvas 2D，單一 HTML 輸出（約 3.1 MB：美術、歷史導入的圖與旁白佔大半）。模擬固定步長 0.1 秒、確定性（同 seed 同結果），畫面插值。3D（Three.js）版已於 2026-11-12 移除，最後一個含 3D 的提交是 LVV-Studio `d2c1094`（kessen 倉庫 `81ffec9`），要找回就從那裡取 `src/game/{units,terrain,ground,effects,ninja}.ts`。
 
 | 檔案 | 內容 |
 | --- | --- |
@@ -50,14 +50,12 @@ TypeScript + Vite + Three.js，單一 HTML 輸出（約 1.66 MB，其中美術�
 | `src/sim/data.ts` | 兵種數值、武將名單、忍者眾、地圖 |
 | `src/game/intro.ts`、`src/intro/` | 歷史導入（腳本 script.json、旁白 s1～s8.mp3 內嵌）；`tools/gen-intro-voice.mjs` 重生旁白 |
 | `src/game/music.ts`、`public/music/` | 配樂層（外部 MP3，Pages 才有聲） |
-| `src/game/view2d.ts` | 2D 繪卷戰場（預設）；只負責畫，狀態由 `main.ts` 的 `v2.draw({...})` 傳入；`#view=3d` 走原本的 Three.js |
+| `src/game/view2d.ts` | 2D 繪卷戰場：只負責畫，狀態由 `main.ts` 的 `v2.draw({...})` 傳入；靜態地圖烤成離屏畫布，戰鬥事件由 `v2.event` 轉成特效 |
+| `src/game/names.ts`、`camera.ts`、`coords.ts` | 兵種漢字與名稱；2D 鏡頭（目標點、縮放、平滑）；固定種子亂數 |
 | `src/game/main.ts` | 主迴圈、輸入、指令、資訊面板、事件處理、觀戰導播、結算；大名模式的軍議（`DOCTRINE_ROWS`）、大名令（`doCmd`／`cmdHtml`）、軍師建議卡（`evalAdvice`，規則在 `src/sim/advisor.ts`）、接管（`takeOver`／`handBack`） |
 | `src/sim/decisions.ts` | 決策卡引擎（大名模式主迴圈，2026-10-23）：`evalDecision(S, side)` 回傳該問的卡（方針卡／事件卡、發言人、選項、建議）、`applyDecision` 套用選項（大名令、方針、翼方針、部隊狀態）並排程 40 秒後的戰報、`tickDecisions` 吐戰報與還原翼方針。狀態在 `S.meta.dec`。遊戲層 `evalDecisionCard`（main.ts）每 0.5 秒評估，卡片出現時 `decision` 旗標讓模擬暫停 |
 | `src/sim/advisor.ts` | 軍師建議規則（`adviseSide`，含不帶令的「派忍者偵察」提示 `act: 'scout'` 與 `dispatchScouts`）、大名令冷卻與可否下達（`CMD_CD`／`cmdBlocked`）、情報等級（`intelLvl`）。放模擬層是為了 `tools/daimyo.ts` 能量玩家採納建議的勝率 |
 | `src/game/orders.ts` | 玩家指令層（攻擊追擊、弓兵自由射擊、撤退令） |
-| `src/game/units.ts` | 士兵 InstancedMesh、陣型槽位、接戰動作、陣亡、旗號（含家紋淡印） |
-| `src/game/effects.ts`、`ninja.ts`、`terrain.ts` | 特效、忍者顯示、地形與據點（延伸原野、河、遠山、灌木石頭） |
-| `src/game/ground.ts` | 地表合成貼圖（草地／林地／稻田／土路紋理、山丘、道路、河、溪流與渡口）；`GROUND` 是延伸範圍，`groundH` 是河床下陷（只影響畫面） |
 | `src/game/hud.ts` | 全部介面 |
 | `src/game/audio.ts` | 合成音效（Web Audio）：`sfx.*` 各 cue、`unlock()`（手勢後建立 AudioContext）、`setMuted`。呼叫點在 main.ts 的事件迴圈、`begin`、`doCmd`、`evalAdvice`、`showEnd` 與每幀的接戰環境音 |
 | `src/game/art.ts` | 2D 美術查表：`portraitOf(武將名)`、`ninjaPortrait(忍者眾)`、`skillIcon`、`jutsuIcon`、`kamon(side)`、`illus('title'|'loading')`；沒有圖檔時回傳 undefined，介面退回漢字與色塊 |
