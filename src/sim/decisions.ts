@@ -9,7 +9,7 @@ import { intelLvl, weakestEngaged, dispatchScouts, cmdBlocked, CMD_CD, unitName 
 export type DOption = { id: string; label: string; hint?: string; rec?: boolean };
 export type Decision = { id: string; kind: 'doctrine' | 'event'; speaker: string; advisor: boolean; text: string; options: DOption[]; unit?: number; target?: number; cd: number; lead?: number }; // lead：「我親自帶隊」要切視角的部隊
 type Pending = { at: number; text: string; unit?: number; men0?: number; mor0?: number };
-export type DecState = { last: Record<string, number>; lastKind: Record<string, number>; nDoc: number; nEv: number; cmdCd: Partial<Record<CmdKind, number>>; pending: Pending[]; wingRestore: { at: number; w: 'L' | 'C' | 'R'; prev: Wing }[]; docRestore?: { at: number; attack: Doctrine['attack'] }; log: { t: number; id: string; opt: string; who: string; text: string; label: string }[] };
+export type DecState = { last: Record<string, number>; lastKind: Record<string, number>; nDoc: number; nEv: number; cmdCd: Partial<Record<CmdKind, number>>; pending: Pending[]; wingRestore: { at: number; w: 'L' | 'C' | 'R'; prev: Wing }[]; docRestore?: { at: number; attack: Doctrine['attack'] }; log: { t: number; id: string; opt: string; who: string; text: string; label: string; auto?: boolean }[]; autoOut?: string[] };
 export function decState(S: State): DecState {
   let d = S.meta.dec as DecState | undefined;
   if (!d) { d = { last: {}, lastKind: {}, nDoc: 0, nEv: 0, cmdCd: {}, pending: [], wingRestore: [], log: [] }; S.meta.dec = d; }
@@ -40,6 +40,19 @@ function wingOfUnit(S: State, s: Side, u: Unit): 'L' | 'C' | 'R' { const ax = (S
 
 // 評估：回傳目前最該問的一張卡（沒有就 null）。只在玩家方、開戰 10 秒後。
 export function evalDecision(S: State, s: Side): Decision | null {
+  // 沒有取捨的卡（R.decAuto）：不問玩家，照軍師建議辦，戰報一行（由 tickDecisions 吐出）
+  const auto = new Set(S.R.decAuto.split(',').filter(Boolean));
+  for (let guard = 0; guard < 4; guard++) {
+    const d = evalDecisionRaw(S, s);
+    if (!d || !auto.has(d.id.split(':')[1])) return d;
+    const rec = d.options.find(o => o.rec) ?? d.options[0];
+    const msg = applyDecision(S, s, d, rec.id);
+    const D = decState(S); const L = D.log[D.log.length - 1]; if (L) L.auto = true;
+    (D.autoOut ??= []).push(`${d.speaker}：${rec.label}（${msg.replace(/^依令：/, '')}）`);
+  }
+  return null;
+}
+function evalDecisionRaw(S: State, s: Side): Decision | null {
   const D = decState(S), t = S.t, e = (1 - s) as Side, R = S.R;
   if (t < 10 || S.over) return null;
   const okId = (id: string, cd: number) => (D.last[id] ?? -1e9) + (id.startsWith('ev:') && cd < 1e8 ? cd * (R.decCdMul ?? 1) : cd) <= t; // 事件卡冷卻 × decCdMul
@@ -237,6 +250,7 @@ export function applyDecision(S: State, s: Side, d: Decision, optId: string): st
 export function tickDecisions(S: State, s: Side): string[] {
   const D = decState(S), t = S.t, out: string[] = [];
   const dep = deployOf(S, s);
+  if (D.autoOut?.length) { out.push(...D.autoOut); D.autoOut = []; }
   if (S.meta.holdShiftUntil && t >= (S.meta.holdShiftUntil as number)) { S.meta.holdShift = undefined; S.meta.holdShiftUntil = 0; out.push('戰報・霧已散，戰線回到原對峙線'); }
   D.wingRestore = D.wingRestore.filter(r => { if (t >= r.at) { if (dep) dep.wings[r.w] = r.prev; return false; } return true; });
   if (D.docRestore && t >= D.docRestore.at) { const doc = (S.meta.doctrine as Doctrine[] | undefined)?.[s]; if (doc && doc.attack === 'hold') doc.attack = D.docRestore.attack; D.docRestore = undefined; out.push('戰報・岸上列陣期滿，恢復原方針'); }

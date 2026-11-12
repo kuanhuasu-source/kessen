@@ -94,6 +94,8 @@ export const V1 = {
   leadMorale: 10, leadMeritMul: 2, leadGenDeath: -30, // 視角模式：親自帶隊的部隊士氣 +N、功績倍率；大將親征討死時軍勢額外 −N
   detachOn: false, detachT0: 190, detachTR: 40, // 別働隊（八幡原地圖）：抵達時間 T0 + 亂數 × TR 秒
   fogDur: 0, fogFade: 30,                       // 朝霧：前 fogDur 秒視野減半，之後 fogFade 秒內散去（0＝沒有霧）
+  secretsOn: true,       // 地形秘密（沼澤、伏兵點、林間小徑）；關閉＝戰場上沒有這些隱藏地形
+  decAuto: '',           // 這些決策卡不問玩家，直接照軍師建議辦並出一行戰報（逗號分隔：point,cannon,ammo）
   decGapDoctrine: 45, decGapEvent: 20, decCdMul: 1, // 決策卡：同層最短間隔（秒）、事件卡各自冷卻的倍率
   decDetachRec: 'pincer' as 'pincer' | 'rear', decBehindRec: 'regroup' as 'regroup' | 'allin', // 別働隊抵達卡與軍勢落後卡的軍師建議
   decRelieveGap: 0, decPointGap: 0, // 友軍動搖卡不分部隊的最短間隔、據點卡不分據點的最短間隔（秒；0＝不限）

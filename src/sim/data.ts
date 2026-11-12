@@ -20,7 +20,7 @@ export type RosterEntry = {
   advisor?: string; strategy?: string; advisorPassive?: string;
 };
 
-// 武田軍（side 0）：甲州流，以騎兵與火器見長。長槍 2、武士 1、騎兵 2、弓 1、鐵砲 1（282 人；八幡原：別働隊 高坂／小山田／飯富 ×1.5 → 主力 192＋別働隊 135）
+// 武田軍（side 0）：甲州流，以騎兵與火器見長。長槍 2、武士 1、騎兵 2、弓 1、鐵砲 1（282 人；八幡原：別働隊 高坂／小山田／飯富 ×1.75 → 主力 192＋別働隊 158）
 // 將領性格（決策卡「交給他判斷」與台詞用）：bold 猛、steady 穩、cautious 慎
 export type Trait = 'bold' | 'steady' | 'cautious';
 export const TRAIT: Record<string, Trait> = {

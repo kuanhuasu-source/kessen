@@ -104,7 +104,15 @@ body { font-family: var(--ui); -webkit-user-select: none; user-select: none; -we
 #hud .rail #b-cmd.on { background: var(--gold); color: var(--ink); border-color: var(--gold); }
 /* 情報讀數 */
 .intel { position: fixed; left: var(--edge-l); top: var(--edge-t); display: flex; gap: 6px; align-items: center; padding: 3px 9px; height: 26px; border-radius: 999px;
-  background: var(--ink-a); border: 1px solid var(--line); font-size: 11px; white-space: nowrap; }
+  background: var(--ink-a); border: 1px solid var(--line); font-size: 11px; white-space: nowrap; pointer-events: auto; cursor: pointer; }
+.intel .more { position: absolute; left: 0; top: 30px; padding: 4px 10px; border-radius: 8px; background: var(--ink-b); border: 1px solid var(--line); }
+/* 瘦身（2026-11）：效能列只在 #debug=1 顯示；大名模式沒有親自指揮的部隊時，收起手動操作鈕 */
+.fps { display: none; } #hud.debug .fps { display: block; }
+#hud.daimyo:not(.hands) #b-form, #hud.daimyo:not(.hands) #b-halt, #hud.daimyo:not(.hands) #b-box, #hud.daimyo:not(.hands) #b-retreat, #hud.daimyo:not(.hands) #b-skill, #hud.daimyo:not(.hands) .rail .sep { display: none !important; }
+.strip .clock { pointer-events: auto; cursor: pointer; }
+.advice:not([hidden]) ~ .toast { opacity: 0 !important; } /* 決策卡開著時不疊戰報提示 */
+.logv .ll { max-height: 56vh; overflow: auto; font-size: 13px; line-height: 1.6; }
+.logv .ll div { padding: 2px 0; border-bottom: 1px solid rgba(239,230,210,0.08); opacity: 0.75; } .logv .ll div.mj { opacity: 1; font-weight: 600; } .logv .ll time { display: inline-block; min-width: 38px; color: var(--gold); font-variant-numeric: tabular-nums; }
 .intel b { font-family: var(--display); font-weight: 700; color: var(--gold); }
 .intel .seg { display: flex; gap: 2px; }
 .intel .seg i { width: 5px; height: 10px; border-radius: 1px; background: rgba(239,230,210,0.15); }
@@ -339,7 +347,18 @@ export class Hud {
   }
   hideDecision() { const el = this.root.querySelector<HTMLElement>('.advice')!; el.hidden = true; el.classList.remove('dec'); }
   // 情報讀數（情報 v2）：察覺／識別／洞悉的敵軍數與已知地形秘密
-  setIntel(html: string | null) { const el = this.root.querySelector<HTMLElement>('.intel')!; if (html === null) { el.hidden = true; return; } el.hidden = false; if (el.innerHTML !== html) el.innerHTML = html; }
+  // 平常只顯示量表；點一下展開數字（4 秒後自動收起）
+  private intelOpenUntil = 0;
+  setIntel(html: string | null, detail = '') {
+    const el = this.root.querySelector<HTMLElement>('.intel')!; if (html === null) { el.hidden = true; return; } el.hidden = false;
+    if (!el.onclick) el.onclick = () => { this.intelOpenUntil = performance.now() < this.intelOpenUntil ? 0 : performance.now() + 4000; };
+    const full = performance.now() < this.intelOpenUntil && detail ? `${html}<span class="more">${detail}</span>` : html;
+    if (el.innerHTML !== full) el.innerHTML = full;
+  }
+  setHands(on: boolean) { this.root.classList.toggle('hands', on); }
+  setDebug(on: boolean) { this.root.classList.toggle('debug', on); }
+  onLog: () => void = () => {};
+  showLog(html: string | null) { const el = this.root.querySelector<HTMLElement>('.logv')!; if (html === null) { el.hidden = true; return; } el.querySelector('.ll')!.innerHTML = html; el.hidden = false; const ll = el.querySelector('.ll')!; ll.scrollTop = ll.scrollHeight; }
   private formBtn!: HTMLButtonElement; private haltBtn!: HTMLButtonElement; private boxBtn!: HTMLButtonElement;
 
   constructor(units: Unit[], cb: HudCallbacks) {
@@ -366,7 +385,7 @@ export class Hud {
         ${railBtn('b-cmd', 'cmd', '大名令', '令', '大名令：馳援、集中弓火、騎兵繞後、全軍整頓', 'c', false)}
         ${railBtn('b-cam', 'cam', '導播鏡頭', '鏡', '導播鏡頭：自動跟隨戰況', 'w', true)}
         ${railBtn('b-vis', 'vis', '視野', '全', '切換視野：全知／武田／上杉', 'w')}
-        ${railBtn('b-snd', 'snd', '音效', '音', '音效開關', 'w', true)}
+        ${railBtn('b-snd', 'snd', '音效', '音', '音效與音樂開關', '', true)}
       </div>
       <div class="cards" role="toolbar" aria-label="部隊"></div>
       <div class="info" hidden aria-live="polite"></div>
@@ -381,6 +400,7 @@ export class Hud {
       <div class="fps"></div>
       <div class="box"></div>
       <div class="toast" role="status"></div>
+      <div class="help logv" hidden><div class="sheet" role="dialog" aria-label="戰報紀錄"><h2>戰報紀錄</h2><div class="ll"></div><button class="close" id="b-logclose">關閉</button></div></div>
       <div class="help" hidden>
         <div class="sheet" role="dialog" aria-label="操作說明">
           <h2>決戰・M6 原型</h2>
@@ -446,7 +466,7 @@ export class Hud {
     this.retreatBtn = this.root.querySelector('#b-retreat')!; this.retreatBtn.onclick = () => cb.onRetreat();
     this.holdEl = this.root.querySelector('.hold')!;
     this.toastEl = this.root.querySelector('.toast')!;
-    this.helpEl = this.root.querySelector('.help')!;
+    this.helpEl = this.root.querySelector('.help:not(.logv)')!;
     this.pauseBtn = this.root.querySelector('#b-pause')!;
     this.pauseBtn.onclick = () => cb.onPause();
     this.speedBtn = this.root.querySelector('#b-speed')!;
@@ -456,6 +476,8 @@ export class Hud {
     this.haltBtn = this.root.querySelector('#b-halt')!; this.haltBtn.onclick = () => cb.onHalt();
     this.boxBtn = this.root.querySelector('#b-box')!; this.boxBtn.onclick = () => cb.onBoxMode();
     this.root.querySelector<HTMLButtonElement>('#b-close')!.onclick = () => this.showHelp(false);
+    this.root.querySelector<HTMLButtonElement>('#b-logclose')!.onclick = () => this.showLog(null);
+    this.clock.onclick = () => this.onLog();
     this.cb = cb;
     for (const u of units) this.addCard(u);
   }
@@ -482,9 +504,9 @@ export class Hud {
   }
   showHelp(on: boolean) { this.helpEl.hidden = !on; if (on) this.root.querySelector<HTMLButtonElement>('#b-close')!.focus(); }
   helpOpen() { return !this.helpEl.hidden; }
-  toast(msg: string) {
+  toast(msg: string, ms = 1400) {
     this.toastEl.textContent = msg; this.toastEl.classList.add('on');
-    clearTimeout(this.toastT); this.toastT = window.setTimeout(() => this.toastEl.classList.remove('on'), 1400);
+    clearTimeout(this.toastT); this.toastT = window.setTimeout(() => this.toastEl.classList.remove('on'), ms);
   }
   update(t: number, army: [number, number], units: Unit[], selected: Set<number>, morale: (u: Unit) => number, paused: boolean, speed: number, form: string, boxMode: boolean, manual?: Set<number>) {
     this.formBtn.disabled = !form; const fl = this.formBtn.querySelector('.lb'); if (fl && fl.textContent !== (form || '陣')) fl.textContent = form || '陣';

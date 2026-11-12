@@ -40,6 +40,7 @@ npm run build:single # 單一 HTML（dist/kessen-m1.html）
 - 地圖（2026-10-21）：合成貼圖地表（草地、林地、稻田田塊、土路）、外圍犀川與千曲川、遠山、灌木石頭；水域規則（涉水減速、不能衝鋒、半渡而擊）以 `streams` 規則選用，`#ai=two|east` 試玩
 - 2026-10-24 八幡原地圖：依第四次川中島之戰地理重做（千曲川與三渡口、妻女山、茶臼山、小島田／八幡社／丹波島），兩軍佈陣不對稱
 - 2026-10-24 別働隊與朝霧：武田三隊開場不在場，第 3 分多從妻女山方向渡河趕到；開戰 90 秒內有朝霧、視野減半
+- 2026-11-12 瘦身（一）：戰鬥畫面只留必要資訊（效能列、手動鈕、情報數字、多數飄字收起；訊息分大事小事並有戰報紀錄；資訊面板精簡）；據點、敵大筒、彈盡三種卡由軍師代辦（每局 9.5 張）；地形秘密移除，別働隊改 158 人補償。AI 對 AI 武田 58%、大名模式不介入 55%／全採納 63%
 - 2026-10-24 歷史導入：第一次開啟播放約 2 分鐘的川中島之戰小動畫（八幕浮世繪場景圖慢速推拉、Gemini 語音合成的日文旁白 Charon、繁中加日文字幕、可略過；出陣畫面「川中島の戦い」鈕可重看）。旁白與場景圖在開發時生成後內嵌（`src/intro/`、`art/web/intro/`，單檔 2.2 → 4.0 MB），遊戲不呼叫任何 API。重生旁白：`node tools/gen-intro-voice.mjs`
 - 2026-10-24 配樂層：`src/game/music.ts`，三段外部 MP3（`public/music/council|battle|climax.mp3` → Pages 的 `music/`）；軍議、出陣、別働隊抵達各自切換並淡入淡出，結算時壓低；跟音效鍵共用靜音；單檔 artifact 沒有音樂。來源（Pixabay Content License）：council《Sakura dance background music, traditional japanese》 by 38534292（#165338，原 4:26 剪成前 120 秒淡出、112 kbps）；battle《Sport Sequence Taiko Loop》 by Sonican（#558900，原 256 kbps 轉 128 kbps）；climax《Against All Gods (Epic Viking Tribal Adventure Music)》 by joelfazhari（#464889，轉 128 kbps）
 - 2026-10-24 決策卡：別働隊抵達時請示夾擊方式；朝霧中可選「趁霧前推到河岸」；友軍動搖卡至少隔 60 秒。大名模式 240 局 不問 48%／全採納 60%

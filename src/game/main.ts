@@ -226,7 +226,8 @@ const hud = new Hud(S.units.filter(mine), {
   onRetreat: () => orderRetreat(),
 });
 hud.setArmyTicks(S.R.collapseAt, S.R.armyHighThresh);
-hud.setDaimyo(DAIMYO);
+hud.setDaimyo(DAIMYO); hud.setDebug(params.get('debug') === '1');
+hud.onLog = () => hud.showLog(battleLog.length ? battleLog.map(l => `<div class="${l.major ? 'mj' : ''}"><time>${l.t}</time>${l.text}</div>`).join('') : '<div>還沒有戰報</div>');
 let boxMode = false;
 // 出陣畫面：模式與忍者眾（換了就寫入網址並重新載入，讓佈陣與情報從頭計算）
 function reloadWith(over: Record<string, string | null>) {
@@ -236,7 +237,7 @@ function reloadWith(over: Record<string, string | null>) {
   for (const [k, v] of Object.entries(over)) { if (v === null) p.delete(k); else p.set(k, v); }
   location.hash = p.toString(); location.reload();
 }
-function begin() { applyWarCouncil(); started = true; paused = false; hud.toast(WATCH ? '開始觀戰' : '出陣！'); unlockAudio(); sfx.battleStart(); music.play('battle'); if (S.R.fogDur) say(`朝霧瀰漫，視野減半（約 ${Math.round(S.R.fogDur / 60 * 10) / 10} 分鐘後散去）`); if (S.R.detachOn) { const away = S.units.filter(u => u.away); const here = S.units.filter(u => u.side === 0 && !u.away && !u.reinf).reduce((a, u) => a + u.men0, 0); const foe = S.units.filter(u => u.side === 1 && !u.reinf).reduce((a, u) => a + u.men0, 0); say(`別働隊（${away.map(u => u.cmd).join('、')}，${away.reduce((a, u) => a + u.men0, 0)} 人）尚在妻女山方向，稍後渡河趕到；此刻本隊 ${here} 人對上杉約 ${foe} 人，以寡擊眾先撐住`); } }
+function begin() { applyWarCouncil(); started = true; paused = false; hud.toast(WATCH ? '開始觀戰' : '出陣！'); unlockAudio(); sfx.battleStart(); music.play('battle'); if (S.R.fogDur) sayM(`朝霧瀰漫，視野減半（約 ${Math.round(S.R.fogDur / 60 * 10) / 10} 分鐘後散去）`); if (S.R.detachOn) { const away = S.units.filter(u => u.away); const here = S.units.filter(u => u.side === 0 && !u.away && !u.reinf).reduce((a, u) => a + u.men0, 0); const foe = S.units.filter(u => u.side === 1 && !u.reinf).reduce((a, u) => a + u.men0, 0); sayM(`別働隊（${away.map(u => u.cmd).join('、')}，${away.reduce((a, u) => a + u.men0, 0)} 人）尚在妻女山方向，稍後渡河趕到；此刻本隊 ${here} 人對上杉約 ${foe} 人，以寡擊眾先撐住`); } }
 if (DAIMYO) document.querySelector<HTMLElement>('#b-cmd')?.classList.add('gone'); // 大名令併入決策卡（有 !important 的顯示規則，用 class 蓋）
 hud.setSound(!isMuted()); music.setMuted(isMuted()); hud.onSound = () => { setMuted(!isMuted()); music.setMuted(isMuted()); hud.setSound(!isMuted()); hud.toast(isMuted() ? '音效與音樂關閉' : '音效與音樂開啟'); if (!isMuted()) sfx.drum(1, 0.4); };
 hud.speeds = SPEEDS;
@@ -507,7 +508,7 @@ function evalDecisionCard() {
   sfx.advice();
   hud.showDecision(`<div class="hd2">${d.kind === 'doctrine' ? '軍師提案' : '請示'}・戰場暫停</div><div style="display:flex;gap:8px;align-items:center">${img(pic, 'pp')}<div class="tx"><b>${d.speaker}</b>：${d.text}</div></div>`,
     d.options.map(o => ({ label: o.label, hint: o.hint, rec: o.rec })),
-    i => { const o = d.options[i]; const msg = applyDecision(S, 0, d, o.id); decision = null; hud.hideDecision(); hud.toast(msg); say(msg); sfx.cmd(); if (o.id === 'charge' || o.id === 'allin') say('全軍突擊！');
+    i => { const o = d.options[i]; const msg = applyDecision(S, 0, d, o.id); decision = null; hud.hideDecision(); sayM(msg); sfx.cmd(); if (o.id === 'charge' || o.id === 'allin') say('全軍突擊！');
       const req = S.meta.leadReq as { unit: number; target?: number } | undefined; if (req) { S.meta.leadReq = undefined; enterLead(req.unit, req.target); } });
 }
 function enterLead(id: number, target?: number) {
@@ -951,6 +952,7 @@ hud.onInfoAct = act => {
     const i = row.opts.findIndex(o => o.id === String(doctrine0[key])); setDoctrine(key, row.opts[(i + 1) % row.opts.length].id);
     hud.toast(`${row.label}：${doctrineLabel(key)}`); infoT = 0; return;
   }
+  if (act === 'more') { infoMore = !infoMore; infoT = 0; return; }
   if (act === 'hand:all') { for (const id of [...manualSet]) handBack(S.units[id]); hud.toast('全部交回 AI 指揮'); infoT = 0; return; }
   if (act === 'hand') { const u = infoUnit(); if (u && u.side === 0) { if (u.id === lead) { exitLead(); infoT = 0; return; } if (manualSet.has(u.id)) { handBack(u); hud.toast(`${nameOf(u)}交回 AI 指揮`); } else { manualSet.add(u.id); u.aiLockK = ''; hud.toast(`親自指揮${nameOf(u)}`); } } infoT = 0; return; }
   if (act.startsWith('j:')) { const j = act.slice(2); if (jutsu === j) cancelJutsu(); else startJutsu(j); return; }
@@ -961,13 +963,23 @@ hud.onInfoAct = act => {
   else if (act === 'strat') tryStrat();
   infoT = 0;
 };
+// 精簡面板的按鈕：我方未接管 →「親自指揮」「詳細」；已接管 → 技能鈕（不帶說明）；敵軍 →「詳細」
+function slimActs(u: Unit): string {
+  const more = '<button type="button" class="act" data-act="more">詳細</button>';
+  if (u.side !== 0) return `<div class="acts">${more}</div>`;
+  if (!manualSet.has(u.id)) return `<div class="acts"><button type="button" class="act on" data-act="hand">親自指揮</button>${more}</div>`;
+  const full = skillRows(u); const acts = full.slice(0, full.indexOf('<div class="desc">'));
+  return acts.replace(/<\/div>$/, `${more}</div>`);
+}
 function infoUnit(): Unit | null {
   if (inspect >= 0) return S.units[inspect];
   return selected.size === 1 ? S.units[[...selected][0]] : null;
 }
 const MERIT_NAME: Record<number, string> = { 1: '一番槍', 2: '武功', 3: '武名' }; // 功績 1／2／3+ 的稱號
+let infoMore = false; // 大名模式的資訊面板預設精簡，按「詳細」才展開
 function infoHtml(u: Unit): string {
   const lvl = intelOf(u);
+  const slim = DAIMYO && !infoMore && lead < 0;
   if (lvl <= 1) return fogHtml(u);
   const R = S.R, m = effM(S, u), side = u.side;
   const routing = u.state === 'rout' || u.state === 'shattered';
@@ -1008,8 +1020,8 @@ function infoHtml(u: Unit): string {
     <div><div class="nm">${WATCH ? `${SIDE_NAME[side]}・` : side === 1 ? '敵・' : ''}${u.cmd || '援軍'}隊</div><div class="sub">${TYPE_NAME[u.type]}${form}・${lvl >= 3 ? `${u.men}／${u.men0} 人` : `約 ${Math.max(5, Math.round(u.men / 5) * 5)} 人`}${side !== viewSide() && !(WATCH && visMode === 'all') ? (lvl >= 3 ? '・<span class="pos">洞悉</span>' : '・識別') : ''}</div></div>
     <button class="x" type="button" aria-label="關閉">×</button></div>
     <div class="mb"><span class="${stCls}">${stName}</span>${lvl >= 3 ? `<span class="bar"><i style="width:${m}%;background:${color}"></i><b style="left:${R.routAt}%"></b><b style="left:${R.waverAt}%"></b><b style="left:${R.highAt}%"></b></span><span class="v">${Math.round(m)}</span>` : '<span class="desc" style="margin:0">確切士氣需洞悉（忍者靠近或物見）</span>'}</div>
-    ${(lvl >= 3 ? rows : rows.filter(r => !r.includes('近況') && !r.includes('加成') && !r.includes('箭矢') && !r.includes('重整'))).join('')}
-    ${side === 0 && !WATCH ? skillRows(u) : lvl >= 3 && u.skill && SKILL[u.skill] ? `<div class="desc"><b>${SKILL[u.skill].name}</b>：${SKILL[u.skill].desc}${u.skillCd > S.t ? `（冷卻 ${Math.ceil(u.skillCd - S.t)} 秒）` : '（可施放）'}</div>` : ''}`;
+    ${(slim ? rows.filter(r => r.includes('<span>接戰</span>') || r.includes('<span>重整</span>') || r.includes('class="warn">' + u.ammo + '／')) : lvl >= 3 ? rows : rows.filter(r => !r.includes('近況') && !r.includes('加成') && !r.includes('箭矢') && !r.includes('重整'))).join('')}
+    ${slim ? slimActs(u) : DAIMYO && infoMore ? '<div class="acts"><button type="button" class="act" data-act="more">收合</button></div>' : ''}${slim ? '' : side === 0 && !WATCH ? skillRows(u) : lvl >= 3 && u.skill && SKILL[u.skill] ? `<div class="desc"><b>${SKILL[u.skill].name}</b>：${SKILL[u.skill].desc}${u.skillCd > S.t ? `（冷卻 ${Math.ceil(u.skillCd - S.t)} 秒）` : '（可施放）'}</div>` : ''}`;
 }
 
 hud.onInfoClose = () => { if (cmdOpen) { cmdOpen = false; hud.setCmdOpen(false); return; } if (inspectPoint >= 0 && !selected.size && inspect < 0 && selNin < 0) inspectPoint = -1; else if (selNin >= 0) { selNin = -1; cancelJutsu(); } else if (inspect >= 0) inspect = -1; else if (selected.size === 1) { infoClosed = [...selected][0]; hud.setInfo(null); } };
@@ -1023,22 +1035,23 @@ function revealSecret(id: string, announce: boolean) {
   else { const p = id[0] === 'm' ? S.secrets.marsh[+id[1]] : S.secrets.ambush[+id[1]]; terrain.reveal(id[0] === 'm' ? 'marsh' : 'ambush', p.x, p.y); }
   if (announce) hud.toast(`探明地形：${SECRET_NAME[id[0]]}`);
 }
-for (const id of WATCH ? ['m0', 'm1', 'trail', 'a0', 'a1'] : [...S.known[0]]) revealSecret(id, false);
+if (S.R.secretsOn) for (const id of WATCH ? ['m0', 'm1', 'trail', 'a0', 'a1'] : [...S.known[0]]) revealSecret(id, false);
 const armyFlag = [{ low: false, col: false }, { low: false, col: false }];
 function armyAlerts() {
   for (const s of [0, 1] as const) {
     const v = S.army[s], f = armyFlag[s];
-    if (S.R.armyLowPer10s < 0 && v < S.R.armyLowThresh && !f.low) { f.low = true; say(`${SIDE_NAME[s]}軍軍心動搖：全軍士氣每 10 秒 ${S.R.armyLowPer10s}`); }
+    if (S.R.armyLowPer10s < 0 && v < S.R.armyLowThresh && !f.low) { f.low = true; sayM(`${SIDE_NAME[s]}軍軍心動搖：全軍士氣每 10 秒 ${S.R.armyLowPer10s}`); }
     if (v >= S.R.armyLowThresh + 5) f.low = false;
-    if (v < S.R.collapseAt && !f.col && (s === 0 || hud.armyExact[1])) { f.col = true; say(`${SIDE_NAME[s]}軍總崩潰！`); }
+    if (v < S.R.collapseAt && !f.col && (s === 0 || hud.armyExact[1])) { f.col = true; sayM(`${SIDE_NAME[s]}軍總崩潰！`); }
   }
 }
 const arrowLand = new Map<number, number>(); // 本步被射擊的部隊 → 箭矢落地的模擬時間
 type Float = { el: HTMLElement; x: number; y: number; h: number; t: number };
 const floats: Float[] = [];
 const floatLayer = document.createElement('div'); floatLayer.className = 'floats'; document.getElementById('hud')!.prepend(floatLayer);
-function floatText(u: Unit, text: string, cls: string) {
+function floatText(u: Unit, text: string, cls: string, key = false) {
   if (floats.length > 24 || intelOf(u) < 2) return;
+  if (DAIMYO && lead < 0 && !key && !manualSet.has(u.id)) return; // 大名俯瞰：只留衝鋒、潰走、討死；親自指揮的部隊與視角模式照舊
   const el = document.createElement('div'); el.className = `ft ${cls}`; el.textContent = text; floatLayer.appendChild(el);
   floats.push({ el, x: u.x, y: u.y, h: 12, t: 0 });
 }
@@ -1084,7 +1097,21 @@ function jutsuFx(side: 0 | 1, j: string, unit?: number, point?: number) {
 }
 const ninDet = new Map<number, boolean>();
 // 指揮模式的提示；觀戰時改用左上角戰報
-function say(text: string) { if (!WATCH) hud.toast(text); }
+// 訊息分層（大名模式）：大事（major）一定顯示；小事只在沒有其他訊息時顯示、且至少隔 4 秒；全部進戰報紀錄（點時鐘可看）
+const battleLog: { t: string; text: string; major: boolean }[] = [];
+let toastUntil = 0, lastMinorT = -99; const lastSaid = new Map<string, number>();
+function say(text: string, major = false) {
+  if (WATCH) return;
+  const dup = !major && lastSaid.get(text) !== undefined && S.t - lastSaid.get(text)! < 30; lastSaid.set(text, S.t); // 同一句 30 秒內不重複
+  if (dup) return;
+  battleLog.push({ t: `${Math.floor(S.t / 60)}:${String(Math.floor(S.t % 60)).padStart(2, '0')}`, text, major }); if (battleLog.length > 80) battleLog.shift();
+  const now = performance.now();
+  if (DAIMYO && lead < 0 && !major && (now < toastUntil || now - lastMinorT < 4000)) return;
+  if (!major) lastMinorT = now;
+  toastUntil = now + (major ? 2600 : 1400);
+  hud.toast(text, major ? 2600 : 1400);
+}
+const sayM = (text: string) => say(text, true);
 const clock = () => `${Math.floor(S.t / 60)}:${String(Math.floor(S.t % 60)).padStart(2, '0')}`;
 const POINT_NAME = MAP.points.map(p => MAP.names[p.id] ?? p.id);
 const POINT_EFFECT = ['佔領 90 秒後起每 90 秒來一批援軍（長槍 60 人，最多 2 批）', `${S.R.templeR} m 內友軍士氣 +${S.R.templeAura}`, '60 m 內的弓兵每 20 秒回補 1 輪箭矢'];
@@ -1203,7 +1230,7 @@ function showEnd() {
     ${row('全滅（隊）', s => R.wipes.filter(r => r.side === s).length)}
     ${row('武將討死', s => R.cmdDeaths.filter(r => r.side === s && r.who !== 'advisor').length)}
     ${row('據點', s => S.points.filter(p => p.owner === s).length)}
-    ${(() => { const L = decState(S).log; return DAIMYO && L.length ? `<tr><th colspan="3" style="padding-top:8px">決策一覽（${L.length} 次）</th></tr>${L.map(l => `<tr><td colspan="3" style="font-size:12px;color:var(--paper-dim)">${Math.floor(l.t / 60)}:${String(Math.floor(l.t % 60)).padStart(2, '0')} ${l.who}：${l.text.slice(0, 28)}${l.text.length > 28 ? '…' : ''} → <b style="color:var(--paper)">${l.label}</b></td></tr>`).join('')}` : ''; })()}
+    ${(() => { const all = decState(S).log, L = all.filter(l => !l.auto), nAuto = all.length - L.length; return DAIMYO && all.length ? `<tr><th colspan="3" style="padding-top:8px">決策一覽（${L.length} 次${nAuto ? `，另有 ${nAuto} 件由軍師代辦` : ''}）</th></tr>${L.map(l => `<tr><td colspan="3" style="font-size:12px;color:var(--paper-dim)">${Math.floor(l.t / 60)}:${String(Math.floor(l.t % 60)).padStart(2, '0')} ${l.who}：${l.text.slice(0, 28)}${l.text.length > 28 ? '…' : ''} → <b style="color:var(--paper)">${l.label}</b></td></tr>`).join('')}` : ''; })()}
     ${row('勳功第一', s => { const u = S.units.filter(u => u.side === s && u.merit > 0).sort((a, b) => b.merit - a.merit)[0]; return u ? `${u.cmd || '援軍'}（${u.merit} 功）` : '—'; })}
     ${row('忍者存活', s => `${S.ninjas.filter(n => n.side === s && n.alive).length}／${S.ninjas.filter(n => n.side === s).length}`)}
     ${row('暗殺成功', s => `${R.nin[s].assKill}／${R.nin[s].assTry}`)}
@@ -1250,7 +1277,7 @@ function afterStep() {
         const ix = T.x - dx * Math.min(d * 0.5, T.depth / 2 + 2), iy = T.y - dy * Math.min(d * 0.5, T.depth / 2 + 2);
         dust.burst(ix, iy, e.n ? 26 : 12, e.n ? 10 : 6, dx, dy);
         if (e.n) viewOf(T.id).push(ix, iy, dx, dy, 12);
-        floatText(T, e.n ? '衝鋒' : '突擊', 'hit');
+        floatText(T, e.n ? '衝鋒' : '突擊', 'hit', true);
       } break;
       case 'blocked': if (T) floatText(A, isCavU(A) && T.type === 'spear' ? '槍衾受阻' : '衝鋒受阻', 'bad'); break;
       case 'flank': if (T) floatText(T, `側擊 ${pct(e.n ?? 0)}`, 'hit'); break;
@@ -1281,16 +1308,16 @@ function afterStep() {
       } break;
       case 'rout': case 'shatter':
         if (mine(A) || intelOf(A) >= 1) sfx.rout();
-        floatText(A, e.k === 'shatter' ? '潰滅' : '潰走', 'bad');
+        floatText(A, e.k === 'shatter' ? '潰滅' : '潰走', 'bad', true);
         if (intelOf(A) >= 2) pulses.add(A.x, A.y, S.R.friendlyRoutR, '#e0574a');
         if (mine(A) || intelOf(A) >= 2) say(mine(A) ? `${nameOf(A)}${e.k === 'shatter' ? '潰滅' : '潰走'}！` : `敵軍 ${nameOf(A)}${e.k === 'shatter' ? '潰滅' : '潰走'}`);
         break;
       case 'merit': if (mine(A) || intelOf(A) >= 2) { floatText(A, `功績 ${'★'.repeat(Math.min(3, e.n ?? 1))}`, 'good'); if (mine(A)) { say(`${nameOf(A)}${e.s === 'gen' ? '討取敵大將' : e.s === 'cmd' ? '討取敵將' : '擊潰敵隊'}，功績 ${e.n}${(e.n ?? 0) <= 3 ? `・${MERIT_NAME[e.n ?? 1]}` : ''}`); sfx.drum(1, 0.45); } } break;
-      case 'detach': { const names = S.units.filter(u => u.side === e.a && MAP.detach.keys.includes(u.key)).map(u => u.cmd).join('、'); say(`別働隊抵達！${names}從妻女山方向渡河而來`); hud.toast(`別働隊抵達：${names}`); sfx.battleStart(); if (e.a === 0) music.play('climax'); if (!WATCH && e.a === 0) for (const u of S.units) if (u.side === 0 && MAP.detach.keys.includes(u.key)) hud.refreshCard(u); break; }
+      case 'detach': { const names = S.units.filter(u => u.side === e.a && MAP.detach.keys.includes(u.key)).map(u => u.cmd).join('、'); sayM(`別働隊抵達！${names}從妻女山方向渡河而來`); hud.toast(`別働隊抵達：${names}`); sfx.battleStart(); if (e.a === 0) music.play('climax'); if (!WATCH && e.a === 0) for (const u of S.units) if (u.side === 0 && MAP.detach.keys.includes(u.key)) hud.refreshCard(u); break; }
       case 'fogLift': say('朝霧散了，視野恢復'); hud.toast('朝霧漸散'); break;
       case 'rally': sfx.rally(); floatText(A, '重整', 'good'); if (mine(A)) say(`${nameOf(A)}重整完畢，等候命令`); break;
-      case 'cmd': say(`${mine(A) ? '' : '敵將 '}${A.cmd} 討死！`); floatText(A, '討死', 'bad'); break;
-      case 'adv': say(`${mine(A) ? '' : '敵軍師 '}${A.advisor} 討死！`); break;
+      case 'cmd': sayM(`${mine(A) ? '' : '敵將 '}${A.cmd} 討死！`); floatText(A, '討死', 'bad', true); break;
+      case 'adv': sayM(`${mine(A) ? '' : '敵軍師 '}${A.advisor} 討死！`); break;
     }
   }
   S.fx!.length = 0;
@@ -1333,7 +1360,7 @@ function autoQuality(fps: number) {
   lowFor = fps < 30 ? lowFor + 0.5 : 0;
   if (lowFor >= 3 && prIdx < PR_STEPS.length - 1) {
     prIdx++; renderer.setPixelRatio(PR_STEPS[prIdx]); resize(); lowFor = 0;
-    hud.toast(`畫質自動降低（解析度 ${PR_STEPS[prIdx]}×）`);
+    if (params.get('debug') === '1') hud.toast(`畫質自動降低（解析度 ${PR_STEPS[prIdx]}×）`); // 開發訊息，只在除錯時顯示
   }
 }
 // 每幀分段耗時累計（ms）：sim 模擬步、units 士兵矩陣、fx 特效與其他、hud 介面、render 送出繪製；window.__kessen.prof 可讀取
@@ -1416,7 +1443,7 @@ function frame(now: number) {
   if (infoT <= 0) {
     infoT = 0.25;
     hud.setInfo(cmdOpen ? cmdHtml() : selNin >= 0 ? ninjaHtml(S.ninjas[selNin]) : infoU && infoU.id !== infoClosed ? infoHtml(infoU) : inspectPoint >= 0 ? pointHtml(inspectPoint) : null);
-    if (DAIMYO && !paused && !decision) { for (const line of tickDecisions(S, 0)) say(line); evalDecisionCard(); }
+    if (DAIMYO && !paused && !decision) { for (const line of tickDecisions(S, 0)) sayM(line); evalDecisionCard(); }
     { const fm = fogMul(S); const fg = scene.fog as THREE.Fog | null; if (fg) { fg.near = 700 * (0.3 + 0.7 * fm); fg.far = 2100 * (0.38 + 0.62 * fm); } } // 朝霧：場景霧跟著視野倍率
     if (lead >= 0) { const u = S.units[lead]; if (!active(u)) exitLead(u.state === 'gone' ? `${nameOf(u)}已離場，返回俯瞰` : `${nameOf(u)}潰走，返回俯瞰`); else { rig.tx += (u.x - rig.tx) * 0.15; rig.ty += (u.y - rig.ty) * 0.15; if (!selected.has(lead)) setSel([lead], false); } }
     // 接戰環境音：有部隊接戰時每 0.5～0.9 秒一陣兵刃聲，強度看接戰隊數
@@ -1428,9 +1455,10 @@ function frame(now: number) {
       const lv = en.map(u => S.vis[vs][u.id]);
       const segs = lv.sort((a, b) => b - a).map(l => `<i class="${l ? 'l' + l : ''}"></i>`).join('');
       const nSec = S.secrets.marsh.length + S.secrets.ambush.length + 1;
-      hud.setIntel(`<b>情報</b><span class="seg">${segs}</span><span>察覺 ${lv.filter(l => l >= 1).length}・識別 ${lv.filter(l => l >= 2).length}・洞悉 ${lv.filter(l => l >= 3).length}／${en.length}</span><span>秘密 ${S.known[vs].size}／${nSec}</span>`);
+      hud.setIntel(`<b>情報</b><span class="seg">${segs}</span>`, `敵軍 ${en.length} 隊：察覺 ${lv.filter(l => l >= 1).length}・識別 ${lv.filter(l => l >= 2).length}・洞悉 ${lv.filter(l => l >= 3).length}${S.R.secretsOn ? `　地形秘密 ${S.known[vs].size}／${nSec}` : ''}`);
       terrain.shroud(S.explored[vs]);
     } else { hud.setIntel(null); terrain.shroud(null); }
+    hud.setHands(manualSet.size > 0 || lead >= 0);
     const us = selUnits().filter(u => u.skill);
     hud.setSkillReady(us.length > 0, us.some(u => skillState(u).ok));
     for (const u of S.units) if (u.side === 0) hud.setCardReady(u.id, skillState(u).ok);

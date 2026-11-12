@@ -48,7 +48,7 @@ export const CLAN_PASSIVE: Record<string, { name: string; desc: string; icon: st
   koga: { name: '疑兵', desc: '敵軍識別我方部隊要多花一半時間', icon: 'sahou' },
 };
 export const CLAN_INFO: Record<string, { name: string; n: number; intel: string; stealth: string; note: string; jutsu: [string, string] }> = {
-  mitsumono: { name: '三ツ者', n: 4, intel: '高', stealth: '中', note: '武田家的情報網。開戰即知己方半場所有地形秘密。', jutsu: ['rumor', 'monomi'] },
+  mitsumono: { name: '三ツ者', n: 4, intel: '高', stealth: '中', note: '武田家的情報網，識別敵軍最快。', jutsu: ['rumor', 'monomi'] },
   iga: { name: '伊賀眾', n: 3, intel: '中', stealth: '中', note: '被發現時 50% 機率脫身。擅長破壞。', jutsu: ['ansatsu', 'houka'] },
   koga: { name: '甲賀眾', n: 5, intel: '高', stealth: '低', note: '人數最多、視野 +30%，但容易被發現，也沒有洞悉手段。', jutsu: ['kirigakure', 'sahou'] },
   nokizaru: { name: '軒猿', n: 4, intel: '中', stealth: '高', note: '上杉家的忍者，擅長反諜。', jutsu: ['sennyu', 'sakuteki'] },

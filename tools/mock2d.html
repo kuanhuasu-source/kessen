@@ -1,0 +1,114 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Serif+TC:wght@500;700&display=swap">
+<style>
+html,body{margin:0;height:100%;background:#1a1510;overflow:hidden;font-family:"LXGW WenKai TC","Noto Serif TC",serif}
+canvas{position:fixed;inset:0;width:100vw;height:100vh}
+.plaque{position:fixed;left:50%;top:8px;transform:translateX(-50%);display:flex;gap:10px;align-items:center;padding:2px 14px;border-radius:6px;background:linear-gradient(#2a1d14,#17100b);border:1.5px solid #c9a24c;box-shadow:0 2px 8px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,220,150,.15);color:#f1e6cf;font-size:14px}
+.plaque{white-space:nowrap}.plaque .n{font-weight:700;font-size:14px}.plaque .bar{width:92px;height:6px;border-radius:3px;background:#3a2a1e;overflow:hidden}.plaque .bar i{display:block;height:100%}
+.plaque .clk{font-size:17px;font-weight:700;letter-spacing:.04em;padding:0 6px;color:#f6e7b8}
+.intel{position:fixed;left:12px;top:10px;padding:3px 10px;border-radius:6px;background:linear-gradient(#2a1d14,#17100b);border:1.5px solid #c9a24c;color:#e6c97a;font-size:13px;display:flex;gap:6px;align-items:center}
+.intel i{display:inline-block;width:5px;height:11px;border-radius:1px;background:#c9a24c;margin-right:2px}.intel i.o{background:rgba(230,201,122,.25)}
+.rail{position:fixed;right:12px;top:50%;transform:translateY(-50%);display:grid;gap:8px}
+.rail b{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(#3a2a1e,#17100b);border:1.5px solid #c9a24c;color:#f1e6cf;font-size:15px;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.cards{position:fixed;left:12px;bottom:8px;display:flex;gap:6px}
+.cd{position:relative;width:40px;height:52px;border-radius:4px;overflow:hidden;border:1.5px solid #c9a24c;background:#17100b;box-shadow:0 2px 6px rgba(0,0,0,.45)}
+.cd img{width:100%;height:40px;object-fit:cover;display:block}.cd .m{position:absolute;left:0;right:0;bottom:0;height:12px;font-size:10px;line-height:12px;text-align:center;color:#f1e6cf;background:#2a1d14}
+.cd .mb{position:absolute;left:0;right:0;bottom:12px;height:3px;background:#3a2a1e}.cd .mb i{display:block;height:100%;background:#8fbf6a}
+.say{position:fixed;left:50%;top:44px;transform:translateX(-50%);padding:3px 14px;border-radius:4px;background:rgba(244,234,208,.94);border:1px solid #9a2b20;color:#2a1d14;font-size:13px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+</style></head><body><canvas id="c"></canvas>
+<div class="intel">情報 <span id="seg"></span></div>
+<div class="plaque"><span class="n" style="color:#f0a090">武田</span><span id="a0"></span><span class="bar"><i id="b0" style="background:#c0392b"></i></span><span class="clk" id="clk"></span><span class="bar"><i id="b1" style="background:#3f63a8;margin-left:auto"></i></span><span id="a1"></span><span class="n" style="color:#a9bde0">上杉</span></div>
+<div class="say">山本勘助：敵主力偏向西翼，戰線壓向西翼</div>
+<div class="rail"><b>Ⅱ</b><b>1×</b><b>？</b><b>♪</b></div>
+<div class="cards" id="cards"></div>
+<script src="mock2d-data.js"></script>
+<script>
+(async () => { try { await Promise.all([document.fonts.load('700 12px "LXGW WenKai TC"', '川中島合戰圖槍弓侍騎將銃筒毘忍八幡社小田丹波士氣援軍箭矢信玄'), document.fonts.ready]); } catch {}
+const D = window.DATA, st = D.st, MAP = D.map;
+const cv = document.getElementById('c'), W = innerWidth, H = innerHeight, dpr = devicePixelRatio || 1;
+cv.width = W * dpr; cv.height = H * dpr; const g = cv.getContext('2d'); g.scale(dpr, dpr);
+let seed = 12345; const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const cx = 480, cy = 392, k = W / 700;
+const X = x => (x - cx) * k + W / 2, Y = y => H / 2 - (y - cy) * k;
+const INK = '#2a1d14';
+// ---- 紙底 ----
+g.fillStyle = '#e9dcbd'; g.fillRect(0, 0, W, H);
+{ const gr = g.createRadialGradient(W / 2, H / 2, 60, W / 2, H / 2, W * 0.7); gr.addColorStop(0, 'rgba(196,205,150,0.55)'); gr.addColorStop(1, 'rgba(176,170,120,0.35)'); g.fillStyle = gr; g.fillRect(0, 0, W, H); }
+for (let i = 0; i < 9000; i++) { g.fillStyle = `rgba(${rnd() < 0.5 ? '90,70,40' : '255,250,230'},${0.03 + rnd() * 0.05})`; g.fillRect(rnd() * W, rnd() * H, 1 + rnd() * 1.5, 1); }
+for (let i = 0; i < 40; i++) { const x = rnd() * W, y = rnd() * H, r = 30 + rnd() * 90; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(${rnd() < 0.5 ? '150,165,105' : '205,190,140'},0.16)`); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, 2 * r, 2 * r); }
+// ---- 高地（暈染＋等高筆觸）----
+for (const h of MAP.hills) { const x = X(h.x), y = Y(h.y), r = h.r * k; const gr = g.createRadialGradient(x, y, r * 0.1, x, y, r); const a = Math.min(0.55, 0.18 + h.h / 80); gr.addColorStop(0, `rgba(108,128,82,${a})`); gr.addColorStop(1, 'rgba(108,128,82,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+  g.strokeStyle = 'rgba(42,29,20,0.16)'; g.lineWidth = 0.8; for (let q = 0.35; q < 0.95; q += 0.2) { g.beginPath(); g.ellipse(x, y, r * q, r * q * 0.82, 0.2, Math.PI * 1.05, Math.PI * 1.95); g.stroke(); } }
+// ---- 田 ----
+for (const p of MAP.paddies) { const x0 = X(p.x0), x1 = X(p.x1), y0 = Y(p.y1), y1 = Y(p.y0); g.fillStyle = 'rgba(150,172,120,0.5)'; g.fillRect(x0, y0, x1 - x0, y1 - y0); g.strokeStyle = 'rgba(70,90,60,0.45)'; g.lineWidth = 0.7; const stp = 20 * k;
+  for (let x = x0; x <= x1 + 0.5; x += stp) { g.beginPath(); g.moveTo(x + (rnd() - 0.5), y0); g.lineTo(x + (rnd() - 0.5), y1); g.stroke(); } for (let y = y0; y <= y1 + 0.5; y += stp * 0.8) { g.beginPath(); g.moveTo(x0, y + (rnd() - 0.5)); g.lineTo(x1, y + (rnd() - 0.5)); g.stroke(); }
+  g.fillStyle = 'rgba(200,220,235,0.35)'; for (let i = 0; i < 14; i++) g.fillRect(x0 + rnd() * (x1 - x0 - stp), y0 + rnd() * (y1 - y0 - stp * 0.8), stp * 0.9, stp * 0.7); }
+// ---- 街道 ----
+for (const r of D.roads) { g.lineJoin = g.lineCap = 'round'; g.strokeStyle = 'rgba(150,115,70,0.55)'; g.lineWidth = 4.2; g.beginPath(); r.forEach(([x, y], i) => i ? g.lineTo(X(x), Y(y)) : g.moveTo(X(x), Y(y))); g.stroke(); g.strokeStyle = 'rgba(222,200,150,0.8)'; g.lineWidth = 2.2; g.stroke(); }
+// ---- 千曲川 ----
+{ const pts = D.stream.pts, w = D.stream.w * k; const path = () => { g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(X(x), Y(y)) : g.moveTo(X(x), Y(y))); };
+  g.lineJoin = g.lineCap = 'round'; path(); g.strokeStyle = 'rgba(214,196,150,0.95)'; g.lineWidth = w * 2.3; g.stroke();
+  path(); g.strokeStyle = '#3f5f8c'; g.lineWidth = w * 1.55; g.stroke(); path(); g.strokeStyle = '#557aa6'; g.lineWidth = w * 1.05; g.stroke(); path(); g.strokeStyle = 'rgba(120,160,200,0.6)'; g.lineWidth = w * 0.45; g.stroke();
+  g.strokeStyle = 'rgba(240,246,250,0.75)'; g.lineWidth = 0.9; for (let i = 0; i < pts.length - 1; i++) { const [ax, ay] = pts[i], [bx, by] = pts[i + 1], L = Math.hypot(bx - ax, by - ay), n = Math.floor(L / 14); for (let j = 0; j < n; j++) { const t = (j + rnd()) / n, off = (rnd() - 0.5) * D.stream.w * 1.1; const px = ax + (bx - ax) * t, py = ay + (by - ay) * t; const nx = -(by - ay) / L, ny = (bx - ax) / L; const sx = X(px + nx * off), sy = Y(py + ny * off); const ang = Math.atan2(-(by - ay), bx - ax); g.beginPath(); g.ellipse(sx, sy, 4.5, 1.6, ang, Math.PI, Math.PI * 2); g.stroke(); } }
+  for (const f of D.stream.fords) { const x = X(f.x), y = Y(f.y); g.fillStyle = 'rgba(226,212,170,0.92)'; g.beginPath(); g.ellipse(x, y, f.r * k * 1.25, f.r * k * 0.8, -0.35, 0, 7); g.fill(); g.fillStyle = 'rgba(120,105,80,0.6)'; for (let i = 0; i < 7; i++) { g.beginPath(); g.arc(x + (i - 3) * 3.4, y + Math.sin(i) * 1.5 + (i - 3) * 1.2, 1.1, 0, 7); g.fill(); }
+    if (f.name) { g.font = '700 10px "LXGW WenKai TC"'; g.fillStyle = 'rgba(42,29,20,0.75)'; g.textAlign = 'center'; g.fillText(f.name, x, y - f.r * k - 3); } } }
+// ---- 松林 ----
+function pine(x, y, s) { g.fillStyle = '#5b4630'; g.fillRect(x - 0.6 * s, y, 1.2 * s, 4 * s); for (let i = 0; i < 3; i++) { g.fillStyle = ['#2f4d37', '#3a5d40', '#4a6f4a'][i]; g.beginPath(); g.ellipse(x + (i - 1) * 1.2 * s, y - i * 2.6 * s, (5.2 - i * 1.1) * s, (2.6 - i * 0.4) * s, 0, 0, 7); g.fill(); } g.strokeStyle = 'rgba(42,29,20,0.35)'; g.lineWidth = 0.5; g.beginPath(); g.ellipse(x - 1.2 * s, y, 5.2 * s, 2.6 * s, 0, 0, 7); g.stroke(); }
+{ const trees = []; for (const f of MAP.forests) for (let x = f.x0; x < f.x1; x += 15) for (let y = f.y0; y < f.y1; y += 12) trees.push([x + rnd() * 10, y + rnd() * 8]); trees.sort((a, b) => b[1] - a[1]); for (const [x, y] of trees) pine(X(x), Y(y), 0.9 + rnd() * 0.5); }
+// ---- 據點 ----
+function cartouche(x, y, name, sub, owner) { const h = name.length * 11 + 8; g.fillStyle = 'rgba(244,234,208,0.96)'; g.strokeStyle = owner === 0 ? '#b5392b' : owner === 1 ? '#2f4a7a' : '#7a6a50'; g.lineWidth = 1.4; g.fillRect(x, y, 14, h); g.strokeRect(x, y, 14, h); g.fillStyle = INK; g.font = '700 10.5px "LXGW WenKai TC"'; g.textAlign = 'center'; [...name].forEach((c, i) => g.fillText(c, x + 7, y + 13 + i * 11)); if (sub) { g.font = '9px "LXGW WenKai TC"'; g.fillStyle = 'rgba(42,29,20,0.7)'; g.textAlign = 'left'; g.fillText(sub, x + 17, y + 10); } }
+for (const p of st.points) { const x = X(p.x), y = Y(p.y);
+  g.strokeStyle = p.owner === 0 ? 'rgba(181,57,43,0.55)' : p.owner === 1 ? 'rgba(47,74,122,0.55)' : 'rgba(90,70,40,0.35)'; g.setLineDash([3, 3]); g.lineWidth = 1; g.beginPath(); g.arc(x, y, 34 * k, 0, 7); g.stroke(); g.setLineDash([]);
+  if (p.id === 'temple') { g.strokeStyle = '#a3301f'; g.lineWidth = 2; g.beginPath(); g.moveTo(x - 7, y + 6); g.lineTo(x - 7, y - 6); g.moveTo(x + 7, y + 6); g.lineTo(x + 7, y - 6); g.moveTo(x - 10, y - 6); g.lineTo(x + 10, y - 6); g.moveTo(x - 8, y - 2); g.lineTo(x + 8, y - 2); g.stroke(); g.lineWidth = 2.6; g.beginPath(); g.moveTo(x - 11, y - 8); g.quadraticCurveTo(x, y - 6, x + 11, y - 8); g.stroke(); }
+  else { const n = p.id === 'village' ? 5 : 2; for (let i = 0; i < n; i++) { const hx = x + (i - (n - 1) / 2) * 9 + (i % 2) * 2, hy = y + (i % 2 ? -5 : 4); g.fillStyle = p.id === 'village' ? '#c9b890' : '#e4dcc4'; g.fillRect(hx - 3.5, hy - 1, 7, 4.5); g.fillStyle = p.id === 'village' ? '#7a5a38' : '#3d3a36'; g.beginPath(); g.moveTo(hx - 5, hy - 1); g.lineTo(hx, hy - 5.5); g.lineTo(hx + 5, hy - 1); g.fill(); g.strokeStyle = 'rgba(42,29,20,0.6)'; g.lineWidth = 0.5; g.strokeRect(hx - 3.5, hy - 1, 7, 4.5); } }
+  cartouche(x + 14, y - 22, MAP.names[p.id], p.id === 'temple' ? '士氣' : p.id === 'village' ? '援軍' : '箭矢', p.owner); }
+// ---- 部隊 ----
+const COL = [{ fill: '#b5392b', dark: '#7d2219', man: '#f0c9b4' }, { fill: '#2f4a7a', dark: '#1d2f52', man: '#c9d6ee' }];
+const KAN = { spear: '槍', archer: '弓', samurai: '侍', cav: '騎', general: '將', gun: '銃', cannon: '筒' };
+function unit(u) {
+  const c = COL[u.side], x = X(u.x), y = Y(u.y), ang = -u.f; // 螢幕角度（y 軸反向）
+  const wpx = Math.max(20, u.width * k * 1.25), dpx = Math.max(9, u.depth * k * 1.25);
+  const rout = u.state === 'rout' || u.state === 'shattered', wav = u.state === 'waver';
+  g.save(); g.translate(x, y); g.rotate(ang + Math.PI / 2);
+  // 陣形色塊＋士兵點
+  g.fillStyle = 'rgba(42,29,20,0.18)'; g.fillRect(-wpx / 2 + 1.5, -dpx / 2 + 2, wpx, dpx);
+  g.fillStyle = rout ? '#8a8378' : c.fill; g.strokeStyle = c.dark; g.lineWidth = 1; g.beginPath(); g.roundRect(-wpx / 2, -dpx / 2, wpx, dpx, 1.5); g.fill(); g.stroke();
+  const cav = u.type === 'cav' || u.type === 'general'; const sp = cav ? 4.2 : 3; const cols = Math.max(2, Math.floor(wpx / sp) - 1), rows = Math.max(1, Math.floor(dpx / sp) - (dpx > 12 ? 1 : 0)); let left = Math.round(u.men / (cav ? 1.4 : 2.2));
+  for (let r = 0; r < rows && left > 0; r++) for (let q = 0; q < cols && left > 0; q++, left--) { const px = -wpx / 2 + sp * (q + 0.9), py = -dpx / 2 + sp * (r + 0.8) + (rout ? (rnd() - 0.5) * 3 : 0); g.fillStyle = c.man; g.beginPath(); g.arc(px, py, cav ? 1.25 : 0.95, 0, 7); g.fill(); if (u.type === 'spear' && r === 0) { g.strokeStyle = 'rgba(42,29,20,0.6)'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(px, py); g.lineTo(px, py - 5); g.stroke(); } }
+  // 正面箭頭
+  g.fillStyle = c.dark; g.beginPath(); g.moveTo(0, -dpx / 2 - 5); g.lineTo(-3.5, -dpx / 2 - 0.5); g.lineTo(3.5, -dpx / 2 - 0.5); g.fill();
+  g.restore();
+  // 幟旗：兵種大字＋家紋色；士氣看旗（高昂挺直、動搖傾斜、潰走倒下）
+  const bx = x + Math.cos(ang) * -(dpx / 2 + 3), by = y + Math.sin(ang) * -(dpx / 2 + 3) - 2; const tilt = rout ? 1.15 : wav ? 0.3 : 0;
+  g.save(); g.translate(bx, by); g.rotate(tilt);
+  g.strokeStyle = '#3b2a1a'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -27); g.stroke(); g.beginPath(); g.moveTo(0, -26); g.lineTo(11, -26); g.stroke();
+  g.fillStyle = rout ? '#9a9388' : c.fill; g.strokeStyle = c.dark; g.lineWidth = 0.8; g.beginPath(); g.rect(1, -26, 10.5, 21); g.fill(); g.stroke();
+  if (u.side === 0) { g.fillStyle = '#1c1410'; for (const [dx, dy] of [[0, -1.9], [-1.9, 0], [1.9, 0], [0, 1.9]]) { g.beginPath(); g.moveTo(6.2 + dx, -22.6 + dy - 1.5); g.lineTo(6.2 + dx + 1.5, -22.6 + dy); g.lineTo(6.2 + dx, -22.6 + dy + 1.5); g.lineTo(6.2 + dx - 1.5, -22.6 + dy); g.fill(); } }
+  else { g.fillStyle = '#eef1f6'; g.font = '700 6.5px "LXGW WenKai TC"'; g.textAlign = 'center'; g.fillText('毘', 6.2, -20.2); }
+  g.fillStyle = '#fbf4e2'; g.font = '700 10px "LXGW WenKai TC"'; g.textAlign = 'center'; g.fillText(KAN[u.type], 6.3, -8.3);
+  if (u.state === 'high') { g.fillStyle = '#e3c15a'; g.beginPath(); g.arc(0, -28, 1.7, 0, 7); g.fill(); }
+  g.restore();
+  // 武將名（直書）
+  if (u.cmd) { const nm = u.cmd.slice(-2); g.font = '700 9px "LXGW WenKai TC"'; g.textAlign = 'center'; [...nm].forEach((ch, i) => { const tx = bx + 18, ty = by - 18 + i * 9.5; g.strokeStyle = 'rgba(244,234,208,0.9)'; g.lineWidth = 2.6; g.strokeText(ch, tx, ty); g.fillStyle = u.side === 0 ? '#6d1d14' : '#1d2f52'; g.fillText(ch, tx, ty); }); }
+}
+function blot(u) { const x = X(u.x), y = Y(u.y); for (let i = 0; i < 5; i++) { const gr = g.createRadialGradient(x + (rnd() - 0.5) * 8, y + (rnd() - 0.5) * 6, 1, x, y, 15); gr.addColorStop(0, 'rgba(60,62,78,0.34)'); gr.addColorStop(1, 'rgba(60,62,78,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, 16, 0, 7); g.fill(); } g.font = '700 14px "LXGW WenKai TC"'; g.textAlign = 'center'; g.fillStyle = 'rgba(30,32,44,0.85)'; g.fillText('？', x, y + 5); }
+const us = st.units.filter(u => u.state !== 'gone' && !u.away).sort((a, b) => b.y - a.y);
+for (const u of us) { if (u.lvl >= 2) unit(u); else if (u.lvl === 1) blot(u); }
+// 接戰火花
+for (const u of us) for (const id of u.contacts) if (id > u.id) { const v = st.units[id]; const x = (X(u.x) + X(v.x)) / 2, y = (Y(u.y) + Y(v.y)) / 2; g.strokeStyle = '#fff6d8'; g.lineWidth = 1.4; for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.3; g.beginPath(); g.moveTo(x + Math.cos(a) * 2, y + Math.sin(a) * 2); g.lineTo(x + Math.cos(a) * 7, y + Math.sin(a) * 7); g.stroke(); } }
+// 忍者
+for (const n of st.ninjas) if (n.side === 0 && n.alive) { const x = X(n.x), y = Y(n.y); g.fillStyle = '#1c1a22'; g.beginPath(); g.arc(x, y, 4.2, 0, 7); g.fill(); g.strokeStyle = '#b5392b'; g.lineWidth = 1.2; g.stroke(); g.fillStyle = '#f1e6cf'; g.font = '700 6px "LXGW WenKai TC"'; g.textAlign = 'center'; g.fillText('忍', x, y + 2.2); }
+// ---- 金雲（屏風繪的雲帶：上下收邊，也讓介面有底）----
+function cloud(yEdge, dir) { g.save(); const gr = g.createLinearGradient(0, yEdge - dir * 46, 0, yEdge + dir * 10); gr.addColorStop(0, '#d9b962'); gr.addColorStop(1, '#ecd795'); g.fillStyle = gr; g.strokeStyle = 'rgba(140,105,40,0.75)'; g.lineWidth = 1.1; g.beginPath(); g.moveTo(-10, yEdge - dir * 60); g.lineTo(-10, yEdge); let x = -10; while (x < W + 30) { const r = 16 + rnd() * 20, dy = (rnd() - 0.3) * 12; g.arc(x + r, yEdge + dir * dy * 0.5, r, Math.PI, 0, dir < 0); x += r * 2 - 5; } g.lineTo(W + 30, yEdge - dir * 60); g.closePath(); g.shadowColor = 'rgba(60,40,10,0.35)'; g.shadowBlur = 6; g.shadowOffsetY = dir * 2; g.fill(); g.shadowColor = 'transparent'; g.stroke();
+  g.globalAlpha = 0.25; for (let i = 0; i < 260; i++) { g.fillStyle = rnd() < 0.5 ? '#fff3c4' : '#b08a3a'; g.fillRect(rnd() * W, yEdge - dir * (rnd() * 44), 1.5, 1.5); } g.restore(); }
+cloud(34, 1); cloud(H - 48, -1);
+// 題箋
+{ const x = W - 74, y = 44; g.fillStyle = '#a3301f'; g.fillRect(x, y, 17, 78); g.strokeStyle = '#e3c15a'; g.lineWidth = 1; g.strokeRect(x + 1.5, y + 1.5, 14, 75); g.fillStyle = '#fbf4e2'; g.font = '700 11px "LXGW WenKai TC"'; g.textAlign = 'center'; [...'川中島合戰圖'].forEach((c, i) => g.fillText(c, x + 8.5, y + 14 + i * 12)); }
+// ---- 介面 ----
+document.getElementById('a0').textContent = Math.round(st.army[0]); document.getElementById('a1').textContent = Math.round(st.army[1]);
+document.getElementById('b0').style.width = st.army[0] + '%'; document.getElementById('b1').style.width = st.army[1] + '%';
+const left = 600 - st.t; document.getElementById('clk').textContent = `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`;
+const en = st.units.filter(u => u.side === 1 && u.state !== 'gone' && !u.reinf); document.getElementById('seg').innerHTML = en.map(u => u.lvl).sort((a, b) => b - a).map(l => `<i class="${l >= 2 ? '' : 'o'}"></i>`).join('');
+document.getElementById('cards').innerHTML = st.units.filter(u => u.side === 0 && u.state !== 'gone' && !u.away && D.portraits[u.cmd]).map(u => `<div class="cd"><img src="/home/user/LVV-Studio/kessen/art/web/portraits/${D.portraits[u.cmd]}.webp"><div class="mb"><i style="width:${Math.round(u.morale)}%"></i></div><div class="m">${u.men}</div></div>`).join('');
+})();
+</script></body></html>

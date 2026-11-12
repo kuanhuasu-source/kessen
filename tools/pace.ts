@@ -44,6 +44,8 @@ const VARIANTS: Record<string, Partial<Rules>> = {
   u90: { menMul: [1, 0.9] }, u110: { menMul: [1, 1.1] }, u120: { menMul: [1, 1.2] }, t110: { menMul: [1.1, 1] }, t90: { menMul: [0.9, 1] }, det150: { menMulDetach: 1.5 },
   d190u90: { detachT0: 190, menMul: [1, 0.9] }, d190u85: { detachT0: 190, menMul: [1, 0.85] }, d190t110: { detachT0: 190, menMul: [1.1, 1] }, d190t115: { detachT0: 190, menMul: [1.15, 1] }, d190det150: { detachT0: 190, menMulDetach: 1.5 }, d190det200: { detachT0: 190, menMulDetach: 2 },
   d190det150u110: { detachT0: 190, menMulDetach: 1.5, menMul: [1, 1.1] }, d190det200u120: { detachT0: 190, menMulDetach: 2, menMul: [1, 1.2] }, d190det200u130: { detachT0: 190, menMulDetach: 2, menMul: [1, 1.3] }, d190det150u105: { detachT0: 190, menMulDetach: 1.5, menMul: [1, 1.05] }, d190det200u140: { detachT0: 190, menMulDetach: 2, menMul: [1, 1.4] },
+  noSec: { secretsOn: false },
+  nsU105: { secretsOn: false, menMul: [1, 1.05] }, nsU100: { secretsOn: false, menMul: [1, 1] }, nsD170: { secretsOn: false, detachT0: 170 }, nsD150: { secretsOn: false, detachT0: 150 }, nsDet175: { secretsOn: false, menMulDetach: 1.75 }, nsDet160: { secretsOn: false, menMulDetach: 1.6 },
   d150f90: { detachT0: 150, fogDur: 90 }, d120f90: { detachT0: 120, fogDur: 90 }, d120f60: { detachT0: 120, fogDur: 60 }, d150f60: { detachT0: 150, fogDur: 60 },
 };
 

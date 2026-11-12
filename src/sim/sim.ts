@@ -214,7 +214,7 @@ export function newState(R: Rules, seed: number, clan: [string, string]): State 
     points: MAP.points.map(p => ({ id: p.id, x: p.x, y: p.y, owner: -1 as -1, prog: 0, progSide: -1 as -1, burnedUntil: -1, ownSince: 0 })),
     holdAll: [0, 0], reinfUsed: [0, 0], reinfT: [0, 0], clan, jutsuCd: [0, 0], kanpaUntil: [-1, -1],
     vis: [new Uint8Array(64), new Uint8Array(64)], noisy: [new Map(), new Map()],
-    secrets: { marsh: pick(MAP.marshCand, 2), trailX: MAP.trailCand[Math.floor(rng() * 2)], ambush: pick(MAP.ambushCand, 2) },
+    secrets: ((sec) => R.secretsOn ? sec : { marsh: [], trailX: -9999, ambush: [] })({ marsh: pick(MAP.marshCand, 2), trailX: MAP.trailCand[Math.floor(rng() * 2)], ambush: pick(MAP.ambushCand, 2) }), // 關閉時仍抽籤（亂數序列不變）但不放進戰場
     known: [new Set(), new Set()], smokes: [], monomi: [], phantoms: [[], []], pairs: new Map(),
     obs: [new Map(), new Map()], mem: [new Map(), new Map()], explored: [new Uint8Array(40 * 28), new Uint8Array(40 * 28)], lastContactT: 0,
     kurumaAct: 0, kurumaHit: new Set(),
