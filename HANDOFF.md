@@ -8,7 +8,7 @@
 
 | 項目 | 位置 |
 | --- | --- |
-| 遊戲（可直接玩） | https://claude.ai/artifact/UjqYxfDUxLHEW3CA6xsy7R （第 49 版：瘦身（一）＋歷史導入＋配樂層＋八幡原地圖）。更新時發布 `dist/kessen-m1.html` 到同一個 URL |
+| 遊戲（可直接玩） | https://claude.ai/artifact/UjqYxfDUxLHEW3CA6xsy7R （第 50 版：2D 繪卷戰場＋瘦身（一）＋歷史導入＋配樂層）。更新時發布 `dist/kessen-m1.html` 到同一個 URL |
 | GitHub Pages（公開可玩） | https://kuanhuasu-source.github.io/kessen/ ，倉庫 `kuanhuasu-source/kessen`（只放遊戲，公開）。發布流程：在 LVV-Studio 的 `kessen/` 開發，`git subtree push --prefix=kessen https://github.com/kuanhuasu-source/kessen main` 推過去，Actions（`kessen/.github/workflows/pages.yml`）自動建置部署 |
 | 設計文件（線上，含圖表） | https://claude.ai/artifact/JAXq85B8a3UheAm2xAcFwL |
 | 進度與待辦 | `BACKLOG.md` |
@@ -50,6 +50,7 @@ TypeScript + Vite + Three.js，單一 HTML 輸出（約 1.66 MB，其中美術�
 | `src/sim/data.ts` | 兵種數值、武將名單、忍者眾、地圖 |
 | `src/game/intro.ts`、`src/intro/` | 歷史導入（腳本 script.json、旁白 s1～s8.mp3 內嵌）；`tools/gen-intro-voice.mjs` 重生旁白 |
 | `src/game/music.ts`、`public/music/` | 配樂層（外部 MP3，Pages 才有聲） |
+| `src/game/view2d.ts` | 2D 繪卷戰場（預設）；只負責畫，狀態由 `main.ts` 的 `v2.draw({...})` 傳入；`#view=3d` 走原本的 Three.js |
 | `src/game/main.ts` | 主迴圈、輸入、指令、資訊面板、事件處理、觀戰導播、結算；大名模式的軍議（`DOCTRINE_ROWS`）、大名令（`doCmd`／`cmdHtml`）、軍師建議卡（`evalAdvice`，規則在 `src/sim/advisor.ts`）、接管（`takeOver`／`handBack`） |
 | `src/sim/decisions.ts` | 決策卡引擎（大名模式主迴圈，2026-10-23）：`evalDecision(S, side)` 回傳該問的卡（方針卡／事件卡、發言人、選項、建議）、`applyDecision` 套用選項（大名令、方針、翼方針、部隊狀態）並排程 40 秒後的戰報、`tickDecisions` 吐戰報與還原翼方針。狀態在 `S.meta.dec`。遊戲層 `evalDecisionCard`（main.ts）每 0.5 秒評估，卡片出現時 `decision` 旗標讓模擬暫停 |
 | `src/sim/advisor.ts` | 軍師建議規則（`adviseSide`，含不帶令的「派忍者偵察」提示 `act: 'scout'` 與 `dispatchScouts`）、大名令冷卻與可否下達（`CMD_CD`／`cmdBlocked`）、情報等級（`intelLvl`）。放模擬層是為了 `tools/daimyo.ts` 能量玩家採納建議的勝率 |

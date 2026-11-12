@@ -110,6 +110,15 @@ body { font-family: var(--ui); -webkit-user-select: none; user-select: none; -we
 .fps { display: none; } #hud.debug .fps { display: block; }
 #hud.daimyo:not(.hands) #b-form, #hud.daimyo:not(.hands) #b-halt, #hud.daimyo:not(.hands) #b-box, #hud.daimyo:not(.hands) #b-retreat, #hud.daimyo:not(.hands) #b-skill, #hud.daimyo:not(.hands) .rail .sep { display: none !important; }
 .strip .clock { pointer-events: auto; cursor: pointer; }
+/* 2D 繪卷戰場的介面：黑漆金邊的牌子、圓鈕、紙條提示 */
+#hud.v2 .strip, #hud.v2 .intel { background: linear-gradient(#2a1d14, #17100b); border: 1.5px solid #c9a24c; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,220,150,0.12); }
+#hud.v2 .rail button { border-radius: 50%; background: radial-gradient(circle at 50% 35%, #3a2a1e, #17100b); border: 1.5px solid #c9a24c; box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+#hud.v2 .rail button[aria-pressed="true"] { background: radial-gradient(circle at 50% 35%, #f1e6cf, #d9c9a0); color: #2a1d14; }
+#hud.v2 .card { border-color: #c9a24c; box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+#hud.v2 .info { border: 1.5px solid #c9a24c; box-shadow: 0 3px 10px rgba(0,0,0,0.45); }
+#hud.v2 .toast { background: rgba(244,234,208,0.97); color: #2a1d14; border: 1px solid #9a2b20; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); font-weight: 600; max-width: 82vw; white-space: normal; text-align: center; }
+#hud.v2 .ft { text-shadow: 0 0 3px #f4ead0, 0 0 3px #f4ead0, 0 1px 2px #f4ead0; }
+#hud.v2 .ft.hit { color: #9a5a12; } #hud.v2 .ft.bad { color: #a3301f; } #hud.v2 .ft.good { color: #3d6b34; }
 .advice:not([hidden]) ~ .toast { opacity: 0 !important; } /* 決策卡開著時不疊戰報提示 */
 .logv .ll { max-height: 56vh; overflow: auto; font-size: 13px; line-height: 1.6; }
 .logv .ll div { padding: 2px 0; border-bottom: 1px solid rgba(239,230,210,0.08); opacity: 0.75; } .logv .ll div.mj { opacity: 1; font-weight: 600; } .logv .ll time { display: inline-block; min-width: 38px; color: var(--gold); font-variant-numeric: tabular-nums; }
@@ -356,6 +365,7 @@ export class Hud {
     if (el.innerHTML !== full) el.innerHTML = full;
   }
   setHands(on: boolean) { this.root.classList.toggle('hands', on); }
+  setV2(on: boolean) { this.root.classList.toggle('v2', on); }
   setDebug(on: boolean) { this.root.classList.toggle('debug', on); }
   onLog: () => void = () => {};
   showLog(html: string | null) { const el = this.root.querySelector<HTMLElement>('.logv')!; if (html === null) { el.hidden = true; return; } el.querySelector('.ll')!.innerHTML = html; el.hidden = false; const ll = el.querySelector('.ll')!; ll.scrollTop = ll.scrollHeight; }

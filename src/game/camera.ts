@@ -29,6 +29,8 @@ export class CameraRig {
     this.ty += -right * s + forward * c;
     this.clamp();
   }
+  // 平滑後的鏡頭值（2D 戰場用）
+  get vx() { return this.sx; } get vy() { return this.sy; } get vd() { return this.sd; }
   rotate(d: number) { this.yaw += d; }
   zoom(f: number) { this.dist *= f; this.clamp(); }
   snap() { this.sx = this.tx; this.sy = this.ty; this.sd = this.dist; this.syaw = this.yaw; this.apply(1); }

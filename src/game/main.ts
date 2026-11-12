@@ -21,6 +21,7 @@ import { toWorld, toSim } from './coords.ts';
 import { sfx, unlock as unlockAudio, isMuted, setMuted } from './audio.ts';
 import { music } from './music.ts';
 import { showIntro, INTRO_KEY } from './intro.ts';
+import { View2D } from './view2d.ts';
 window.addEventListener('pointerdown', () => { unlockAudio(); music.unlock(); }, { capture: true }); window.addEventListener('keydown', () => { unlockAudio(); music.unlock(); }, { capture: true }); // 手機要在手勢後才能出聲
 
 // ---------------- 場景 ----------------
@@ -170,6 +171,11 @@ S.ai = WATCH ? enemyAI : (s: typeof S) => { playerOrders(s); enemyAI(s); };
 S.fx = [];
 if (!WATCH && params.get('cmd') === 'manual') for (const u of S.units) if (u.side === 0) { u.hasDest = false; u.role = ''; u.target = -1; } // 全手動：清掉 AI 佈陣給的任務；大名模式保留，AI 要靠它帶兵
 const views = S.units.map(u => new UnitView(scene, u));
+// 2D 繪卷戰場（預設）；#view=3d 回到原本的 3D。2D 時 WebGL 畫布留著接收觸控但不繪製
+const VIEW2D = params.get('view') !== '3d';
+const v2 = VIEW2D ? new View2D(S, canvas) : null;
+if (v2) { canvas.style.opacity = '0'; rig.minD = 60; }
+let preview2d: { x: number; y: number; f: number; w: number; d: number }[] | null = null;
 const ninViews = S.ninjas.map(n => new NinjaView(scene, n));
 const areas = new AreaFx(scene), smoke = new Dust(scene, 600, '#d9dcd8', 2.2, 0.55), hoof = new Dust(scene, 500, '#b9a888', 0.8, 0.5), ash = new Dust(scene, 300, '#3b332c', 2.4, 0.6), ember = new Dust(scene, 200, '#e0703a', 0.4, 0.9);
 let selNin = -1;                 // 選取的忍者
@@ -226,7 +232,7 @@ const hud = new Hud(S.units.filter(mine), {
   onRetreat: () => orderRetreat(),
 });
 hud.setArmyTicks(S.R.collapseAt, S.R.armyHighThresh);
-hud.setDaimyo(DAIMYO); hud.setDebug(params.get('debug') === '1');
+hud.setDaimyo(DAIMYO); hud.setDebug(params.get('debug') === '1'); hud.setV2(VIEW2D);
 hud.onLog = () => hud.showLog(battleLog.length ? battleLog.map(l => `<div class="${l.major ? 'mj' : ''}"><time>${l.t}</time>${l.text}</div>`).join('') : '<div>還沒有戰報</div>');
 let boxMode = false;
 // 出陣畫面：模式與忍者眾（換了就寫入網址並重新載入，讓佈陣與情報從頭計算）
@@ -277,6 +283,7 @@ function setRay(sx: number, sy: number) {
   ray.setFromCamera(ndc, rig.cam);
 }
 function groundAt(sx: number, sy: number): { x: number; y: number } | null {
+  if (v2) return v2.toSim(sx, sy);
   setRay(sx, sy);
   const hit = ray.intersectObject(terrain.ground, false)[0];
   return hit ? toSim(hit.point) : null;
@@ -284,17 +291,29 @@ function groundAt(sx: number, sy: number): { x: number; y: number } | null {
 const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 const tmp = new THREE.Vector3();
 function planeAt(sx: number, sy: number): { x: number; y: number } | null {
+  if (v2) { v2.setCam(rig.vx, rig.vy, rig.vd); return v2.toSim(sx, sy); }
   setRay(sx, sy);
   plane.constant = -height(rig.tx, rig.ty);
   return ray.ray.intersectPlane(plane, tmp) ? toSim(tmp) : null;
 }
 function screenOf(x: number, y: number, h: number) {
+  if (v2) return { x: v2.X(x), y: v2.Y(y) - h * Math.max(1, v2.k) * 0.9, ok: true };
   const v = toWorld(x, y); v.y += h; v.project(rig.cam);
   return { x: (v.x + 1) / 2 * window.innerWidth, y: (1 - v.y) / 2 * window.innerHeight, ok: v.z < 1 };
 }
 function pickUnit(sx: number, sy: number, want: 'mine' | 'enemy' = 'mine'): Unit | null {
-  const ok = (u: Unit) => (want === 'mine') === mine(u) && u.state !== 'gone' && intelOf(u) >= 1;
+  const ok = (u: Unit) => (want === 'mine') === mine(u) && u.state !== 'gone' && !u.away && intelOf(u) >= 1;
   let best: Unit | null = null, bd = 1e9;
+  if (v2) { // 2D：點到陣形或幟旗附近就算（手指容錯 14 px）
+    for (const u of S.units) {
+      if (!ok(u)) continue;
+      const lvl = intelOf(u); const p = lvl >= 2 ? u : seenPos(S, viewSide(), u); if (!p) continue;
+      const px = v2.X(p.x), py = v2.Y(p.y), r = Math.max(u.width, u.depth) / 2 * v2.k + 14;
+      const d = Math.min(Math.hypot(sx - px, sy - py), Math.hypot(sx - px, sy - (py - 18)) + 4);
+      if (d < r && d < bd) { bd = d; best = u; }
+    }
+    return best;
+  }
   for (const v of views) {
     if (!ok(v.u)) continue;
     const gx = v.intel === 1 ? v.ghostX : v.u.x, gy = v.intel === 1 ? v.ghostY : v.u.y;
@@ -320,6 +339,7 @@ const marker = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 40).rotateX(-Math.
 marker.renderOrder = 4; marker.visible = false; scene.add(marker);
 let markerT = 0;
 function flash(x: number, y: number, attack = false, r = 0) {
+  v2?.flash(x, y, attack, r);
   marker.position.copy(toWorld(x, y)).add(new THREE.Vector3(0, 0.5, 0)); marker.visible = true; markerT = 0; markerR = r;
   (marker.material as THREE.MeshBasicMaterial).color.set(attack ? '#e0574a' : '#efe6d2');
 }
@@ -559,8 +579,8 @@ function pickNinja(sx: number, sy: number): Ninja | null {
   for (const v of ninViews) {
     if (v.n.side !== 0 || !v.n.alive) continue;
     const b = screenOf(v.n.x, v.n.y, 4.2);
-    const r = v.banner.scale.y * window.innerHeight * 0.6 + 8;
-    const cy = b.y - r * 0.8;
+    const r = v2 ? 16 : v.banner.scale.y * window.innerHeight * 0.6 + 8;
+    const cy = v2 ? b.y + 4 : b.y - r * 0.8;
     const d = Math.hypot(sx - b.x, sy - cy);
     if (b.ok && d < r && d < bd) { bd = d; best = v.n; }
   }
@@ -614,7 +634,8 @@ const prevMat = new THREE.LineBasicMaterial({ color: '#efe6d2', transparent: tru
 const preview = new THREE.LineSegments(new THREE.BufferGeometry(), prevMat);
 preview.renderOrder = 5; preview.visible = false; scene.add(preview);
 function showPreview(a: { x: number; y: number } | null, b?: { x: number; y: number }) {
-  if (!a || !b) { preview.visible = false; return; }
+  if (!a || !b) { preview.visible = false; preview2d = null; return; }
+  if (v2) { preview2d = lineTargets(a, b).map(t => ({ x: t.x, y: t.y, f: t.f, w: (t.files - 1) * t.u.sp / 2 + 1, d: Math.ceil(t.u.men / t.files) * t.u.sp / 2 + 1 })); return; }
   const pts: THREE.Vector3[] = [];
   const lift = (x: number, y: number) => toWorld(x, y).add(new THREE.Vector3(0, 0.8, 0));
   for (const t of lineTargets(a, b)) {
@@ -1270,6 +1291,7 @@ function afterStep() {
   });
   for (const e of S.fx!) {
     const A = S.units[e.a], T = e.b !== undefined ? S.units[e.b] : null;
+    if (v2 && A && A.side !== undefined) v2.event(e, A, T, mine(A) || intelOf(A) >= 2 || (!!T && (mine(T) || intelOf(T) >= 2)));
     switch (e.k) {
       case 'volley': if (T) { if (e.s === 'gun') sfx.gun(); else if (e.s === 'cannon') sfx.cannon(); else sfx.arrows(e.n ?? 1); if (e.s === 'gun') { for (let i = 0; i < 6; i++) dust.burst(A!.x + (Math.random() - 0.5) * A!.width, A!.y + Math.cos(A!.f) * 2, 1, 2.2); if (intelOf(A!) >= 2 || mine(A!)) floatText(A!, '放銃', 'hit'); } else if (e.s === 'cannon') { dust.burst(A!.x, A!.y, 14, 6); floatText(T, `轟 ${e.n ? `−${e.n * S.R.cannonDmg / 8 | 0}` : ''}`, 'bad'); } else volleyFx(A, T); } break;
       case 'charge': if (T) { if (e.n) sfx.charge(); else sfx.clash(0.6);
@@ -1342,6 +1364,7 @@ function resize() {
   views.forEach(v => v.setBannerScale(h));
   ninViews.forEach(v => v.setBannerScale(h));
   bannerH = h;
+  v2?.resize();
 }
 let bannerH = window.innerHeight;
 window.addEventListener('resize', resize);
@@ -1385,12 +1408,13 @@ function frame(now: number) {
   keyboardCamera(dt);
   rig.apply(dt);
   const gdt = paused || decision ? 0 : dt * speed;
-  for (const v of views) {
+  if (v2) rig.yaw = 0; // 2D 不旋轉
+  if (!v2) for (const v of views) {
     const lvl = intelOf(v.u);
     v.update(gdt, alpha, effM(S, v.u), S.t, S.units, sink, lvl, lvl === 1 ? seenPos(S, viewSide(), v.u) ?? undefined : undefined);
   }
   prof.units += performance.now() - tp; tp = performance.now();
-  for (const v of ninViews) {
+  if (!v2) for (const v of ninViews) {
     v.selected = v.n.id === selNin; v.showRange = jutsu !== null && v.n.side === 0;
     v.update(gdt, alpha, visMode === 'all' || v.n.side === visMode || v.n.detUntil > S.t, S.t);
   }
@@ -1475,7 +1499,19 @@ function frame(now: number) {
   const fs = selUnits().filter(u => u.type !== 'cav' && u.type !== 'general');
   hud.update(S.t, S.army, S.units.filter(mine), selected, u => effM(S, u), paused, speed, fs.length ? FORM_NAME[fs[0].form].slice(0, 1) : '', boxMode, manualSet);
   prof.hud += performance.now() - tp; tp = performance.now();
-  renderer.render(scene, rig.cam);
+  if (v2) {
+    v2.setCam(rig.vx, rig.vy, rig.vd);
+    const fogged = S.R.fogV2 && S.R.fogOn && !(WATCH && visMode === 'all');
+    v2.draw({
+      dt: gdt, t: S.t, lvl: intelOf,
+      pos: u => { const v = views[u.id]; return v ? { x: v.prevX + (u.x - v.prevX) * alpha, y: v.prevY + (u.y - v.prevY) * alpha } : u; },
+      ghost: u => seenPos(S, viewSide(), u),
+      selected, manual: manualSet,
+      showNinja: n => visMode === 'all' || n.side === visMode || n.detUntil > S.t, selNin, ninRange: jutsu !== null,
+      explored: fogged ? S.explored[viewSide()] : null, fog: fogMul(S),
+      target: dU, info: infoU, preview: preview2d,
+    });
+  } else renderer.render(scene, rig.cam);
   prof.render += performance.now() - tp; prof.frames++;
   cpu += performance.now() - t0; fpsN++; fpsT += dt;
   if (fpsT >= 0.5) {
